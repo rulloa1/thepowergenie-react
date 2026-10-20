@@ -1,0 +1,8 @@
+{
+  "name": "The Power Genie by Sunrun",
+  "description": "Scroll through the journey of solar energy — from the sun to your roof, battery, home, and community.",
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ],
+  "permissions": []
+}
