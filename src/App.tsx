@@ -112,6 +112,7 @@ const config: Config = {
   ]
 };
 
+// Main application component
 export default function App() {
   const [source, setSource] = useState<string | null>(null);
   const [view, setView] = useState<string>('journey');
