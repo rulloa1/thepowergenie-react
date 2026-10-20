@@ -10,6 +10,12 @@
 }
 
 @layer base {
+  html,
+  body {
+    /* The scroll track grows after first layout. Anchoring would jump to the quote panel. */
+    overflow-anchor: none;
+  }
+
   body {
     @apply bg-[var(--sw-bg)] text-[var(--sw-ink)] font-[family:var(--sw-font-body)];
     margin: 0;

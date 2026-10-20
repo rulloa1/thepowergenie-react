@@ -60,6 +60,11 @@ export interface Segment {
   img?: HTMLImageElement;
   video?: HTMLVideoElement | null;
   hasClip?: boolean;
+  /** True only after the video has presented a frame that is still available to draw. */
+  frameVisible?: boolean;
+  /** A frame has been presented at least once (requestVideoFrameCallback or equivalent). */
+  sawFrame?: boolean;
+  preloadMode?: 'auto' | 'metadata' | 'none';
   loading?: boolean;
   ready?: boolean;
   cur?: number;
