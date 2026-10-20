@@ -7,6 +7,36 @@ function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+/** Show the scrub video only while it is actually presenting a decoded frame. */
+function syncFrame(s: Segment) {
+  const video = s.video;
+  const visible = !!(video && s.sawFrame && video.readyState >= 2 && video.videoWidth > 0);
+  if (s.frameVisible === visible) return;
+  s.frameVisible = visible;
+  s.el?.classList.toggle('is-framed', visible);
+}
+
+function watchPresentedFrame(s: Segment) {
+  const video = s.video;
+  if (!video) return;
+  const mark = () => {
+    if (video.readyState >= 2 && video.videoWidth > 0) {
+      s.sawFrame = true;
+      syncFrame(s);
+    }
+  };
+  if (typeof video.requestVideoFrameCallback === 'function') {
+    video.requestVideoFrameCallback(() => mark());
+  } else {
+    requestAnimationFrame(() => requestAnimationFrame(mark));
+  }
+}
+
+function clipUrl(s: Segment, isMobile: boolean) {
+  if (isMobile && s.clipM) return s.clipM;
+  return s.clip || null;
+}
+
 interface ScrollWorldProps {
   config: Config;
   onQuoteClick?: () => void;
@@ -87,7 +117,8 @@ export default function ScrollWorld({ config, onQuoteClick }: ScrollWorldProps) 
     const eps = isMobile ? 0.02 : 0.008;
     
     segmentsRef.current.forEach((s, i) => {
-      if (!s.hasClip || !s.ready || !s.video || !s.visible) return;
+      if (s.video) syncFrame(s);
+      if (!s.ready || !s.video || !s.visible) return;
       if (s.video.seeking || s.video.readyState < 1) return;
       
       if (i === 0 && stateRef.current.idleActive) {
@@ -117,57 +148,81 @@ export default function ScrollWorld({ config, onQuoteClick }: ScrollWorldProps) 
     if (moving) wake();
   }, [isMobile, config.idlePeriod, config.idleRange, config.idle, wake]);
 
-  const loadClip = useCallback((s: Segment) => {
-    if (readingMode || s.failed || s.loading || !s.clip || !s.el) return;
+  const loadClip = useCallback((s: Segment, preload: 'auto' | 'metadata' = 'metadata') => {
+    if (readingMode || s.failed || !s.el) return;
+    const url = clipUrl(s, isMobile);
+    if (!url) return;
+
+    if (s.video) {
+      if (s.preloadMode !== preload) {
+        const previous = s.preloadMode;
+        s.preloadMode = preload;
+        s.video.preload = preload;
+        s.video.setAttribute('preload', preload);
+        // Chrome ignores a preload upgrade after the resource has been selected.
+        // Restart only when we still have no frame, so a visible frame is not discarded.
+        if (preload === 'auto' && previous !== 'auto' && s.video.readyState < 2) {
+          try { s.video.load(); } catch (e) {}
+        }
+      }
+      return;
+    }
+    if (s.loading) return;
     s.loading = true;
-    
-    const useMobile = isMobile && s.clipM;
-    const url = useMobile ? s.clipM! : s.clip!;
-    
+    s.preloadMode = preload;
+
     const v = document.createElement('video');
-    v.className = 'sw-scene__video absolute inset-0 w-full h-full object-cover object-[center_42%] z-1 opacity-0 transition-opacity duration-300';
+    v.className = 'sw-scene__video absolute inset-0 z-[1] w-full h-full object-cover object-[center_42%]';
     v.muted = true;
+    v.defaultMuted = true;
     v.playsInline = true;
-    v.preload = 'auto';
+    v.preload = preload;
     v.setAttribute('muted', '');
     v.setAttribute('playsinline', '');
-
-    const reveal = () => {
-      if (v.readyState >= 2 && s.el) {
-        s.el.classList.add('has-clip');
-      }
-    };
+    v.setAttribute('webkit-playsinline', '');
+    v.setAttribute('preload', preload);
+    v.disablePictureInPicture = true;
 
     v.addEventListener('loadedmetadata', () => {
       s.ready = Number.isFinite(v.duration) && v.duration > 0;
       requestRead();
     });
-    
-    v.addEventListener('seeked', () => {
-      reveal();
+
+    const onFrameMaybe = () => {
+      watchPresentedFrame(s);
+      syncFrame(s);
       wake();
-    });
-    
+    };
+
+    v.addEventListener('seeked', onFrameMaybe);
     v.addEventListener('loadeddata', () => {
-      reveal();
       if (stateRef.current.userReady) primeVideo(v);
-      wake();
+      onFrameMaybe();
     });
-    
+    v.addEventListener('seeking', () => syncFrame(s));
+    v.addEventListener('waiting', () => syncFrame(s));
+    v.addEventListener('stalled', () => syncFrame(s));
+    v.addEventListener('emptied', () => {
+      s.sawFrame = false;
+      syncFrame(s);
+    });
+
     v.addEventListener('canplay', wake);
     v.addEventListener('progress', wake);
     v.addEventListener('error', () => {
       s.failed = true;
       s.ready = false;
-      s.hasClip = false;
-      if (s.el) s.el.classList.remove('has-clip');
+      s.sawFrame = false;
+      s.frameVisible = false;
+      s.loading = false;
+      s.video = null;
+      s.el?.classList.remove('is-framed');
       v.remove();
       requestRead();
     });
 
     s.el.appendChild(v);
     s.video = v;
-    s.hasClip = true;
     v.src = url;
   }, [readingMode, isMobile, primeVideo, wake]);
 
@@ -187,14 +242,21 @@ export default function ScrollWorld({ config, onQuoteClick }: ScrollWorldProps) 
     }
 
     const fade = Math.max(1, (config.crossfade ?? 0.12) * vh);
-    let ci = 0;
+    let current = 0;
     segmentsRef.current.forEach((s, i) => {
-      if (y >= (s.start || 0)) ci = i;
+      if (y >= (s.start || 0)) current = i;
     });
 
     segmentsRef.current.forEach((s, i) => {
-      if (y > (s.start || 0) - 1.6 * vh && y < (s.end || 0) + 1.6 * vh) loadClip(s);
-      
+      const inPrefetch = y > (s.start || 0) - 1.6 * vh && y < (s.end || 0) + 1.6 * vh;
+      const adjacent = Math.abs(i - current) <= 1;
+      if (inPrefetch || adjacent) loadClip(s, adjacent ? 'auto' : 'metadata');
+      else if (s.video && s.preloadMode !== 'metadata') {
+        s.preloadMode = 'metadata';
+        s.video.preload = 'metadata';
+        s.video.setAttribute('preload', 'metadata');
+      }
+
       const local = clamp((y - (s.start || 0)) / ((s.end || 0) - (s.start || 0)), 0, 1);
       s.target = s.linger ? lingerEase(local, s.linger) : local;
       
@@ -207,7 +269,7 @@ export default function ScrollWorld({ config, onQuoteClick }: ScrollWorldProps) 
       }
       s.visible = inRange && op > 0.001;
       
-      if ((!s.hasClip || !s.ready) && s.img) {
+      if (!s.frameVisible && s.img) {
         const sc = 1.03 + local * 0.14;
         s.img.style.transform = `translateX(${stateRef.current.stageX - 2}vw) scale(${sc.toFixed(3)})`;
       }
@@ -241,7 +303,7 @@ export default function ScrollWorld({ config, onQuoteClick }: ScrollWorldProps) 
       });
     }
 
-    const cur = segmentsRef.current[ci];
+    const cur = segmentsRef.current[current];
     const near = clamp(cur?.kind === 'dive' ? cur.si : (((y - (cur?.start || 0)) / ((cur?.end || 0) - (cur?.start || 0))) > 0.5 ? (cur?.si || 0) + 1 : (cur?.si || 0)), 0, config.sections.length - 1);
     
     if (stateRef.current.jumpTarget < 0) {
@@ -331,7 +393,7 @@ export default function ScrollWorld({ config, onQuoteClick }: ScrollWorldProps) 
 
     const top = i === 0 ? 0 : (seg.start || 0) + ((seg.end || 0) - (seg.start || 0)) * 0.5;
     
-    loadClip(seg);
+    loadClip(seg, 'auto');
     updateActiveIndex(i);
     
     stateRef.current.jumpTarget = i;
@@ -380,15 +442,18 @@ export default function ScrollWorld({ config, onQuoteClick }: ScrollWorldProps) 
       newSegments.push(dive);
       s._seg = dive;
 
-      if (i < config.sections.length - 1 && config.connectors?.[i]) {
+      if (i < config.sections.length - 1) {
+        const next = config.sections[i + 1];
+        // A null desktop connector (home -> community) still needs a stage.
+        // Mobile can play its own clip; desktop keeps the next still until then.
         newSegments.push({
           kind: 'conn',
           si: i,
-          clip: config.connectors[i],
+          clip: config.connectors?.[i] || null,
           clipM: config.connectorsMobile?.[i] || null,
-          still: config.sections[i + 1].still,
-          stillM: config.sections[i + 1].stillMobile || null,
-          accent: config.sections[i + 1].accent,
+          still: next.still,
+          stillM: next.stillMobile || null,
+          accent: next.accent,
           w: config.connScroll ?? 0.9,
           cur: 0,
           target: 0,
@@ -399,6 +464,13 @@ export default function ScrollWorld({ config, onQuoteClick }: ScrollWorldProps) 
     setSegments(newSegments);
     segmentsRef.current = newSegments;
     layout();
+    return () => {
+      newSegments.forEach((s) => {
+        s.video?.remove();
+        s.video = null;
+        s.el?.classList.remove('is-framed');
+      });
+    };
   }, [config, layout]);
 
   // Event listeners
@@ -564,7 +636,7 @@ export default function ScrollWorld({ config, onQuoteClick }: ScrollWorldProps) 
             ref={(el) => { s.el = el || undefined; }}
             className={cn(
               "sw-scene absolute inset-0 opacity-0 overflow-hidden will-change-opacity",
-              s.hasClip && "has-clip"
+              s.frameVisible && "is-framed"
             )}
             style={{ '--sw-accent': s.accent || '' } as any}
           >
@@ -574,10 +646,7 @@ export default function ScrollWorld({ config, onQuoteClick }: ScrollWorldProps) 
               alt=""
               decoding="async"
               loading="eager"
-              className={cn(
-                "sw-scene__still absolute inset-0 w-full h-full object-cover object-[center_42%] transition-opacity duration-300 will-change-transform",
-                "has-clip:opacity-0"
-              )}
+              className="sw-scene__still absolute inset-0 z-[2] w-full h-full object-cover object-[center_42%] will-change-transform"
             />
           </div>
         ))}
@@ -690,7 +759,7 @@ export default function ScrollWorld({ config, onQuoteClick }: ScrollWorldProps) 
       </div>
 
       {/* Scroll Track */}
-      <div ref={trackRef} className="sw-track relative z-1 w-full pointer-events-none" />
+      <div ref={trackRef} className="sw-track relative z-1 w-full pointer-events-none [overflow-anchor:none]" />
 
       <style dangerouslySetInnerHTML={{ __html: `
         @keyframes sw-wheel {
@@ -704,8 +773,11 @@ export default function ScrollWorld({ config, onQuoteClick }: ScrollWorldProps) 
           88% { opacity: .45; }
           100% { opacity: 0; transform: scale(var(--sw-sc)) translate(4vw, -22vh) rotate(210deg); }
         }
-        .sw-scene.has-clip .sw-scene__still { opacity: 0; }
-        .sw-scene.has-clip .sw-scene__video { opacity: 1; }
+        .sw-scene__still { opacity: 1; }
+        .sw-scene.is-framed .sw-scene__still {
+          opacity: 0;
+          transition: opacity 180ms linear;
+        }
 
         @media (max-width: 640px) {
           .sw-topbar {
