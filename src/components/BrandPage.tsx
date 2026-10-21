@@ -196,7 +196,16 @@ function Header({ onNavigate }: { onNavigate: (v: string) => void }) {
         <img src="assets/brand/power-genie-lockup.webp" alt="The Power Genie" className="h-10 w-auto aspect-[647/180] object-contain max-md:h-8" />
       </button>
       <nav aria-label="Brand navigation" className="flex gap-6 text-sm max-md:gap-3 max-md:text-xs">
-        <button onClick={() => onNavigate('brands')} className="flex items-center min-h-[44px] bg-transparent border-0 text-inherit p-0 cursor-pointer hover:text-[#f6cf85] transition-colors">Our brands</button>
+        <span
+          role="link"
+          aria-disabled="true"
+          className="inline-flex items-center gap-2 min-h-[44px] cursor-not-allowed select-none text-[#8aa0ad]"
+        >
+          Our brands
+          <span className="inline-flex shrink-0 items-center rounded-full border border-[#FF6B0055] bg-[#FF6B0018] px-2 py-[3px] text-[0.62rem] font-semibold leading-none tracking-[0.04em] text-[#FFB07A]">
+            Coming soon
+          </span>
+        </span>
         <button onClick={() => onNavigate('journey')} className="md:flex hidden items-center min-h-[44px] bg-transparent border-0 text-inherit p-0 cursor-pointer hover:text-[#f6cf85] transition-colors">Explore solar ↗</button>
       </nav>
     </header>
