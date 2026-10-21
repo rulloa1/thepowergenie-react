@@ -536,12 +536,14 @@ export default function ScrollWorld({ config, onQuoteClick }: ScrollWorldProps) 
         )}
         
         <div className="flex items-center gap-6">
-          <button 
-            onClick={() => (config as any).onNavigateBrands?.()} 
-            className="hidden 2xl:block whitespace-nowrap text-[0.82rem] font-semibold text-[var(--sw-ink-soft)] hover:text-[var(--sw-ink)] transition-colors cursor-pointer bg-transparent border-0 p-0"
+          <span
+            role="link"
+            aria-disabled="true"
+            className="hidden 2xl:inline-flex items-center gap-2 whitespace-nowrap cursor-not-allowed select-none"
           >
-            Our brands
-          </button>
+            <span className="text-[0.82rem] font-semibold text-[#5A636E]">Our brands</span>
+            <ComingSoonPill />
+          </span>
           
           {config.nav !== false && (
             <>
@@ -588,15 +590,14 @@ export default function ScrollWorld({ config, onQuoteClick }: ScrollWorldProps) 
                     </button>
                   ))}
                   <div className="h-px bg-gray-100 my-1" />
-                  <button 
-                    onClick={() => {
-                      (config as any).onNavigateBrands?.();
-                      document.querySelector<HTMLDetailsElement>('details.sw-mobile-menu')!.open = false;
-                    }}
-                    className="block w-full text-left px-5 py-3 text-[0.9rem] font-medium text-[var(--sw-ink-soft)]"
+                  <span
+                    role="link"
+                    aria-disabled="true"
+                    className="flex w-full cursor-not-allowed select-none flex-col items-start gap-1.5 px-5 py-3 text-left"
                   >
-                    Our brands
-                  </button>
+                    <span className="text-[0.9rem] font-medium text-[#5A636E]">Our brands</span>
+                    <ComingSoonPill />
+                  </span>
                 </nav>
               </details>
             </>
@@ -808,6 +809,14 @@ export default function ScrollWorld({ config, onQuoteClick }: ScrollWorldProps) 
         }
       ` }} />
     </div>
+  );
+}
+
+function ComingSoonPill() {
+  return (
+    <span className="inline-flex shrink-0 items-center whitespace-nowrap rounded-full border border-[color-mix(in_srgb,#FF6B00_45%,transparent)] bg-[color-mix(in_srgb,#FF6B00_14%,#fff)] px-2.5 py-1 text-[0.68rem] font-semibold leading-none text-[#9A3412]">
+      Coming soon
+    </span>
   );
 }
 
