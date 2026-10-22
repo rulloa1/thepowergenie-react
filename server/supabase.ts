@@ -50,7 +50,9 @@ export function supabaseConfig(): { url: string; key: string } {
     process.env.ASSISTANT_ALLOW_LEGACY_KEY === '1' ||
     isServiceRoleJwt(key)
   if (!url || !key || !accepted) {
-    console.error('assistant_supabase_unconfigured', url ? 'url' : 'no_url', keyKind(key))
+    const marker = key.includes('_') ? key.slice(0, key.indexOf('_')) : ''
+    const prefix = /^[A-Za-z]{2,16}$/.test(marker) ? marker : 'noprefix'
+    console.error('assistant_supabase_unconfigured', url ? 'url' : 'no_url', keyKind(key), prefix, key.length)
     throw new HttpError(503, 'Scheduling is not configured yet. Please call Horace and we will set this up.')
   }
   return { url, key }
