@@ -50,10 +50,10 @@ const config: Config = {
       clip: 'assets/vid/encoded/03-battery-dive.mp4',
       clipMobile: 'assets/vid/mobile/03-battery-dive.mp4',
       accent: '#4CAF50',
-      eyebrow: 'Store & Protect',
-      title: 'Battery Backup',
-      body: 'Store excess energy for peak hours, storm season and grid emergencies. Keep your lights — and your AC — on when the grid goes dark.',
-      tags: ['Backup Power', 'Peak Savings', 'Grid Independence']
+      eyebrow: 'Tesla Powerwall',
+      title: 'Battery Backup, by Tesla',
+      body: 'Your panels charge a Tesla Powerwall all day. When the grid goes dark — storm season, peak hours, outages — it keeps your lights and your AC running.',
+      tags: ['Tesla Powerwall', 'Outage Protection', 'Peak Savings']
     },
     {
       id: 'home',
@@ -100,7 +100,7 @@ const config: Config = {
     'assets/vid/encoded/c01-sun-roof.mp4',
     'assets/vid/encoded/c02-roof-battery.mp4',
     'assets/vid/encoded/c03-battery-home.mp4',
-    null, // Missing c04 in encoded
+    'assets/vid/encoded/c04-home-community.mp4',
     'assets/vid/encoded/c05-community-cta.mp4'
   ],
   connectorsMobile: [
@@ -116,6 +116,10 @@ const config: Config = {
 export default function App() {
   const [source, setSource] = useState<string | null>(null);
   const [view, setView] = useState<string>('journey');
+  // The Salesforce form autofocuses a field on load, which scrolls the whole page
+  // down to it. Only mount it once the visitor is close to the quote panel.
+  const quoteRef = useRef<HTMLElement>(null);
+  const [formReady, setFormReady] = useState(false);
   const [toast, setToast] = useState<{ isVisible: boolean; message: string; submessage?: string }>({
     isVisible: false,
     message: '',
@@ -153,8 +157,21 @@ export default function App() {
     }
   }, []);
 
+  useEffect(() => {
+    if (formReady || view !== 'journey') return;
+    const el = quoteRef.current;
+    if (!el) return;
+    if (!('IntersectionObserver' in window)) { setFormReady(true); return; }
+    const io = new IntersectionObserver((entries) => {
+      if (entries.some((e) => e.isIntersecting)) { setFormReady(true); io.disconnect(); }
+    }, { rootMargin: '0px 0px 300px 0px' });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [formReady, view]);
+
   const triggerToast = (message = "Excellent choice!", submessage = "Opening your custom solar quote form below.") => {
     setToast({ isVisible: true, message, submessage });
+    setFormReady(true);
   };
 
   const getSalesforceUrl = (baseUrl: string) => {
@@ -230,7 +247,7 @@ export default function App() {
         submessage={toast.submessage}
       />
 
-      <section className="quote-panel relative z-45 min-h-screen bg-[#F6F7FB] text-[#1A1A2E] p-[calc(clamp(84px,10vw,112px)+env(safe-area-inset-top))_clamp(16px,5vw,64px)_calc(40px+env(safe-area-inset-bottom))]" id="quote" aria-labelledby="quote-title" tabIndex={-1}>
+      <section className="quote-panel relative z-45 min-h-screen bg-[#F6F7FB] text-[#1A1A2E] p-[calc(clamp(84px,10vw,112px)+env(safe-area-inset-top))_clamp(16px,5vw,64px)_calc(40px+env(safe-area-inset-bottom))]" id="quote" ref={quoteRef} aria-labelledby="quote-title" tabIndex={-1}>
         <p className="quote-panel__eyebrow m-0 mb-2 text-[0.74rem] font-semibold tracking-[0.14em] uppercase text-[#FF6B00]">Your free quote</p>
         <h2 id="quote-title" className="m-0 mb-7 text-[#1A1A2E] font-bold text-[clamp(1.7rem,3.6vw,2.6rem)] tracking-tight leading-[1.1]">Let's power your home.</h2>
         <div className="quote-panel__grid grid grid-cols-1 md:grid-cols-[minmax(260px,340px)_1fr] gap-[clamp(20px,3vw,40px)] items-start max-w-[1280px]">
@@ -253,18 +270,22 @@ export default function App() {
             </ul>
             <p className="rep-card__intro m-0 mb-[14px] text-[0.95rem] leading-[1.55] text-[#D9E6F2]">Hi, I'm Horace! I'm dedicated to making the process of going solar as easy as possible. Why solar?</p>
             <ul className="rep-card__why grid gap-[10px] m-0 p-0 list-none">
-              <li className="relative pl-[26px] text-[0.92rem] leading-[1.45] text-[#F7FBFF] before:content-[''] before:absolute before:left-0 before:top-[0.32em] before:w-[14px] before:height-[14px] before:rounded-full before:bg-[#FF6B00] before:shadow-[inset_0_0_0_4px_#0B2233]">Lock in a rate to avoid rising utility costs.</li>
-              <li className="relative pl-[26px] text-[0.92rem] leading-[1.45] text-[#F7FBFF] before:content-[''] before:absolute before:left-0 before:top-[0.32em] before:w-[14px] before:height-[14px] before:rounded-full before:bg-[#FF6B00] before:shadow-[inset_0_0_0_4px_#0B2233]">A more reliable source of energy for your home.</li>
-              <li className="relative pl-[26px] text-[0.92rem] leading-[1.45] text-[#F7FBFF] before:content-[''] before:absolute before:left-0 before:top-[0.32em] before:w-[14px] before:height-[14px] before:rounded-full before:bg-[#FF6B00] before:shadow-[inset_0_0_0_4px_#0B2233]">With a battery, protection during blackouts.</li>
+              <li className="relative pl-[26px] text-[0.92rem] leading-[1.45] text-[#F7FBFF] before:content-[''] before:absolute before:left-0 before:top-[0.32em] before:w-[14px] before:h-[14px] before:rounded-full before:bg-[#FF6B00] before:shadow-[inset_0_0_0_4px_#0B2233]">Lock in a rate to avoid rising utility costs.</li>
+              <li className="relative pl-[26px] text-[0.92rem] leading-[1.45] text-[#F7FBFF] before:content-[''] before:absolute before:left-0 before:top-[0.32em] before:w-[14px] before:h-[14px] before:rounded-full before:bg-[#FF6B00] before:shadow-[inset_0_0_0_4px_#0B2233]">A more reliable source of energy for your home.</li>
+              <li className="relative pl-[26px] text-[0.92rem] leading-[1.45] text-[#F7FBFF] before:content-[''] before:absolute before:left-0 before:top-[0.32em] before:w-[14px] before:h-[14px] before:rounded-full before:bg-[#FF6B00] before:shadow-[inset_0_0_0_4px_#0B2233]">With a battery, protection during blackouts.</li>
             </ul>
           </aside>
           <div className="quote-panel__formwrap bg-white rounded-[18px] overflow-hidden shadow-[0_12px_32px_rgba(10,20,40,0.12)]">
-            <iframe 
-              className="quote-panel__frame block w-full h-[min(900px,82vh)] border-0 bg-white" 
-              title="Sunrun quote request form"
-              src={getSalesforceUrl("https://sunrun.my.salesforce-sites.com/purl/?srep=/powergenie#form-group")}
-              referrerPolicy="strict-origin-when-cross-origin"
-            ></iframe>
+            {formReady ? (
+              <iframe
+                className="quote-panel__frame block w-full h-[min(900px,82vh)] border-0 bg-white"
+                title="Sunrun quote request form"
+                src={getSalesforceUrl("https://sunrun.my.salesforce-sites.com/purl/?srep=/powergenie#form-group")}
+                referrerPolicy="strict-origin-when-cross-origin"
+              ></iframe>
+            ) : (
+              <div className="quote-panel__frame block w-full h-[min(900px,82vh)] bg-white" aria-hidden="true" />
+            )}
             <p className="quote-panel__alt m-0 p-[12px_18px] text-[0.86rem] text-[#4A5568] border-t border-[rgba(26,26,46,0.08)]">
               Form not loading? <a href={getSalesforceUrl("https://sunrun.my.salesforce-sites.com/purl/?srep=/powergenie")} target="_blank" rel="noopener" className="text-[#0066CC] font-semibold">Open it in a new tab</a>.
             </p>
