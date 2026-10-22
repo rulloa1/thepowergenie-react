@@ -1,12 +1,15 @@
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import type { ServerEnv } from './env'
 import { HttpError } from './http'
 
 /**
  * Talks to PostgREST and Storage with fetch.
  *
- * The hub's secret key is `sb_secret_...`, which is not a JWT. It goes on the
- * `apikey` header only. Putting it on `Authorization: Bearer` makes Supabase
- * try to verify it as a JWT and reject the call. supabase-js does that, so
- * this client does not use supabase-js.
+ * The hub's secret key is `sb_secret_...`, which is not a JWT. The assistant
+ * sends it on the `apikey` header only. Putting it on `Authorization: Bearer`
+ * makes Supabase try to verify it as a JWT and reject the call, so these
+ * helpers use fetch. The dashboard helpers further down use supabase-js and
+ * need the JWT service_role key on this same project.
  *
  * The key is also rejected when the User-Agent looks like a browser, so this
  * server identifies itself and never forwards the visitor's User-Agent.
@@ -142,8 +145,37 @@ export async function deleteObject(objectPath: string): Promise<void> {
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ prefixes: [objectPath] }),
   })
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import type { ServerEnv } from './env';
+}
+
+/** Confirmed one-hour calls from the public booking page. A missing table does not block the assistant. */
+export async function confirmedAppointmentRanges(fromIso: string, toIso: string): Promise<Array<{ start: Date; end: Date }>> {
+  let response: Response
+  try {
+    const params = new URLSearchParams()
+    params.set('select', 'starts_at,ends_at')
+    params.set('status', 'eq.confirmed')
+    params.set('starts_at', `lt.${toIso}`)
+    params.set('ends_at', `gt.${fromIso}`)
+    params.set('limit', '500')
+    response = await supabaseFetch(`/rest/v1/appointments?${params.toString()}`)
+  } catch (error) {
+    if (error instanceof HttpError && error.status === 503) return []
+    throw error
+  }
+  if (!response.ok) return []
+  const payload = await response.json()
+  if (!Array.isArray(payload)) return []
+  const rows = payload as Array<{ starts_at?: unknown; ends_at?: unknown }>
+  const ranges: Array<{ start: Date; end: Date }> = []
+  for (const row of rows) {
+    if (typeof row.starts_at !== 'string' || typeof row.ends_at !== 'string') continue
+    const start = new Date(row.starts_at)
+    const end = new Date(row.ends_at)
+    if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime()) || end <= start) continue
+    ranges.push({ start, end })
+  }
+  return ranges
+}
 
 export type DashboardProfile = {
   id: string;

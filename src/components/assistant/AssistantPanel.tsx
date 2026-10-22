@@ -362,7 +362,8 @@ export default function AssistantPanel({ frameClass, mode, nonce, onClose }: Pan
           <section className="space-y-3">
             <h3 className="text-lg font-bold">Book a free savings consult</h3>
             <p className="text-sm leading-relaxed text-[#4A5568]">
-              Horace Lawrence will use this to reach you. Times are in Central Time, weekdays and Saturday.
+              Horace Lawrence will use this to reach you. Times are in Central Time, weekdays and Saturday. This savings consult is filed with your bill for Horace. A separate one-hour calendar call is on the{' '}
+              <a className="font-semibold text-[#0066CC]" href="/book">booking page</a>.
             </p>
             <label className="block text-sm font-semibold">
               Name

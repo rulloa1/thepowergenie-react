@@ -21,6 +21,8 @@ import {
   type BusyRange,
 } from '../src/lib/slots';
 import type { ServerEnv } from './env';
+import { hubConsultRanges } from './hub-busy';
+import { loadSlotRules } from './slot-rules';
 import {
   CalendarCheckFailed,
   CalendarNotConnected,
@@ -87,12 +89,41 @@ async function loadDbBusy(admin: SupabaseClient, now: Date): Promise<BusyRange[]
   return ranges;
 }
 
+async function loadHubConsults(admin: SupabaseClient, now: Date): Promise<BusyRange[]> {
+  const horizon = new Date(now.getTime() + HORIZON_DAYS * 24 * 60 * 60 * 1000);
+  const fromKey = new Date(now.getTime() - 36 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const toKey = new Date(horizon.getTime() + 36 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  let durationMs = 120 * 60 * 1000;
+  try {
+    durationMs = loadSlotRules().durationMinutes * 60 * 1000;
+  } catch {
+    durationMs = 120 * 60 * 1000;
+  }
+  const { data, error } = await admin
+    .from('powergenie_customers')
+    .select('appointment_date')
+    .gte('appointment_date', fromKey)
+    .lt('appointment_date', toKey)
+    .limit(500);
+  if (error) {
+    console.error('load hub consults failed', error.code);
+    return [];
+  }
+  return hubConsultRanges(
+    (data ?? []).map((row) => (row as { appointment_date?: unknown }).appointment_date),
+    durationMs,
+    now,
+    horizon,
+  );
+}
+
 async function collectBusy(admin: SupabaseClient, env: ServerEnv, now: Date): Promise<BusySnapshot> {
   const dbRanges = await loadDbBusy(admin, now);
+  const hubRanges = await loadHubConsults(admin, now);
   const horizon = new Date(now.getTime() + HORIZON_DAYS * 24 * 60 * 60 * 1000);
   const google = await fetchGoogleBusy(admin, env, now, horizon);
   return {
-    ranges: [...dbRanges, ...google.ranges],
+    ranges: [...dbRanges, ...hubRanges, ...google.ranges],
     calendarConnected: google.connected,
   };
 }
