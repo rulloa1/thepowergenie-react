@@ -65,6 +65,8 @@ To add someone later: insert them into `hub_allowlist` (role `owner` or `admin`)
 3. **Google Auth Platform → Branding / Audience** (OAuth consent screen):
    - User type **External**, app name "The Power Genie", support email.
    - **Data access / Scopes**: add `.../auth/calendar.events` and `.../auth/calendar.freebusy`.
+   - **Privacy policy**: `https://thepowergenie.theroyeffect.com/privacy`
+   - **Terms of service**: `https://thepowergenie.theroyeffect.com/terms`
    - **Audience → Publish app** ("In production"). In *Testing* mode Google expires the
      connection after 7 days. Unverified is fine for a single user — Horace will see
      "Google hasn't verified this app" → **Advanced → Go to The Power Genie**.

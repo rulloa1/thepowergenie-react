@@ -6,6 +6,7 @@ import Toast from './components/Toast';
 import BookPage from './pages/BookPage';
 import DashboardPage from './pages/DashboardPage';
 import { Config } from './types';
+import LegalFooter from './components/LegalFooter';
 import { openAssistant } from './lib/openAssistant';
 
 const config: Config = {
@@ -234,12 +235,15 @@ export default function App() {
 
   if (view !== 'journey') {
     return (
-      <BrandPage 
-        id={view as any} 
-        onNavigate={handleNavigate} 
-        getSalesforceUrl={getSalesforceUrl} 
-        onQuoteClick={triggerToast}
-      />
+      <>
+        <BrandPage
+          id={view as any}
+          onNavigate={handleNavigate}
+          getSalesforceUrl={getSalesforceUrl}
+          onQuoteClick={triggerToast}
+        />
+        <LegalFooter />
+      </>
     );
   }
 
@@ -336,6 +340,7 @@ export default function App() {
         <p className="mt-8 max-w-[1280px] text-[0.98rem] leading-relaxed text-[#4A5568]">
           <a href="/book" className="font-semibold text-[#0066CC] no-underline hover:underline focus-visible:underline">Book a one-hour call on Horace’s calendar</a>
         </p>
+        <LegalFooter homeChrome />
       </section>
     </div>
   );
