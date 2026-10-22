@@ -6,3 +6,9 @@ dist/
 !.env.example
 sample-light-bill.png
 *.log
+node_modules
+dist
+.env
+.env.local
+.env.*.local
+

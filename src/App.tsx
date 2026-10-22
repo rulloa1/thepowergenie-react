@@ -3,6 +3,8 @@ import { Mail, Phone } from 'lucide-react';
 import ScrollWorld from './components/ScrollWorld';
 import BrandPage from './components/BrandPage';
 import Toast from './components/Toast';
+import BookPage from './pages/BookPage';
+import DashboardPage from './pages/DashboardPage';
 import { Config } from './types';
 import { openAssistant } from './lib/openAssistant';
 
@@ -119,10 +121,16 @@ const config: Config = {
   ]
 };
 
+function normalizePath(pathname: string): string {
+  if (pathname.length > 1 && pathname.endsWith('/')) return pathname.replace(/\/+$/, '');
+  return pathname || '/';
+}
+
 // Main application component
 export default function App() {
   const [source, setSource] = useState<string | null>(null);
   const [view, setView] = useState<string>('journey');
+  const [path, setPath] = useState(() => normalizePath(window.location.pathname));
   const [toast, setToast] = useState<{ isVisible: boolean; message: string; submessage?: string }>({
     isVisible: false,
     message: '',
@@ -160,6 +168,12 @@ export default function App() {
     }
   }, []);
 
+  useEffect(() => {
+    const syncPath = () => setPath(normalizePath(window.location.pathname));
+    window.addEventListener('popstate', syncPath);
+    return () => window.removeEventListener('popstate', syncPath);
+  }, []);
+
   const triggerToast = (message = "Excellent choice!", submessage = "Opening your custom solar quote form below.") => {
     setToast({ isVisible: true, message, submessage });
   };
@@ -191,6 +205,14 @@ export default function App() {
     }
     window.history.pushState({}, '', url);
   };
+
+  if (path === '/dashboard') {
+    return <DashboardPage />;
+  }
+
+  if (path === '/book') {
+    return <BookPage />;
+  }
 
   if (view !== 'journey') {
     return (
@@ -287,6 +309,9 @@ export default function App() {
             </p>
           </div>
         </div>
+        <p className="mt-8 max-w-[1280px] text-[0.98rem] leading-relaxed text-[#4A5568]">
+          <a href="/book" className="font-semibold text-[#0066CC] no-underline hover:underline focus-visible:underline">Book a call with Horace</a>
+        </p>
       </section>
     </div>
   );
