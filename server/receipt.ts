@@ -1,5 +1,6 @@
 import { createHmac, timingSafeEqual } from 'node:crypto'
 import { HttpError } from './http.js'
+import { supabaseConfig } from './supabase.js'
 
 export type UploadReceipt = {
   uploadId: string
@@ -10,9 +11,7 @@ export type UploadReceipt = {
 }
 
 function signingKey(): string {
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!key) throw new HttpError(503, 'Scheduling is not configured yet. Please call Horace and we will set this up.')
-  return key
+  return supabaseConfig().key
 }
 
 export function sealReceipt(receipt: UploadReceipt): string {

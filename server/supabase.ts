@@ -5,22 +5,34 @@ import { HttpError } from './http.js'
 /**
  * Talks to PostgREST and Storage with fetch.
  *
- * The hub's secret key is `sb_secret_...`, which is not a JWT. The assistant
- * sends it on the `apikey` header only. Putting it on `Authorization: Bearer`
- * makes Supabase try to verify it as a JWT and reject the call, so these
- * helpers use fetch. The dashboard helpers further down use supabase-js and
- * need the JWT service_role key on this same project.
+ * The hub's secret key is `sb_secret_...`, which is not a JWT. A legacy
+ * service_role JWT is also accepted. The assistant sends either key on the
+ * `apikey` header only. Putting it on `Authorization: Bearer` makes Supabase
+ * try to verify `sb_secret_` as a JWT and reject the call, so these helpers
+ * use fetch. The dashboard helpers further down use supabase-js.
  *
  * The key is also rejected when the User-Agent looks like a browser, so this
  * server identifies itself and never forwards the visitor's User-Agent.
  */
-export function supabaseConfig(): { url: string; key: string } {
-  const url = process.env.SUPABASE_URL?.replace(/\/$/, '') || ''
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
-  if (!url || !key) {
-    throw new HttpError(503, 'Scheduling is not configured yet. Please call Horace and we will set this up.')
+function isServiceRoleJwt(key: string): boolean {
+  const parts = key.split('.')
+  if (parts.length !== 3 || !parts[1]) return false
+  try {
+    const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8')) as { role?: unknown }
+    return payload.role === 'service_role'
+  } catch {
+    return false
   }
-  if (!key.startsWith('sb_secret_') && process.env.ASSISTANT_ALLOW_LEGACY_KEY !== '1') {
+}
+
+export function supabaseConfig(): { url: string; key: string } {
+  const url = (process.env.SUPABASE_URL || '').trim().replace(/\/$/, '')
+  const key = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim()
+  const accepted =
+    key.startsWith('sb_secret_') ||
+    process.env.ASSISTANT_ALLOW_LEGACY_KEY === '1' ||
+    isServiceRoleJwt(key)
+  if (!url || !key || !accepted) {
     throw new HttpError(503, 'Scheduling is not configured yet. Please call Horace and we will set this up.')
   }
   return { url, key }
