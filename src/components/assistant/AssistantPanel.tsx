@@ -59,7 +59,7 @@ export default function AssistantPanel({ frameClass, mode, nonce, onClose }: Pan
   const transport = useMemo(
     () =>
       new DefaultChatTransport({
-        api: '/api/chat',
+        api: '/api/assistant/chat',
         body: () => ({ pg_leave_blank: honeypotRef.current?.value ?? '' }),
       }),
     [],
@@ -113,7 +113,7 @@ export default function AssistantPanel({ frameClass, mode, nonce, onClose }: Pan
     if (phase !== 'book') return
     let cancel = false
     setBusy('Loading open times…')
-    fetch('/api/slots')
+    fetch('/api/assistant/slots')
       .then(async response => {
         const payload = await response.json()
         if (!response.ok) throw new Error(payload.error || 'Times are unavailable.')
@@ -154,7 +154,7 @@ export default function AssistantPanel({ frameClass, mode, nonce, onClose }: Pan
     setBusy('Uploading your bill…')
     try {
       const prepared = await prepareBillFile(file)
-      const started = await postJson<{ signedUrl: string; receipt: string }>('/api/uploads', {
+      const started = await postJson<{ signedUrl: string; receipt: string }>('/api/assistant/uploads', {
         fileName: prepared.name,
         mimeType: prepared.type,
         sizeBytes: prepared.size,
@@ -166,7 +166,7 @@ export default function AssistantPanel({ frameClass, mode, nonce, onClose }: Pan
       const uploaded = await fetch(started.signedUrl, { method: 'PUT', body })
       if (!uploaded.ok) throw new Error('The bill could not be uploaded. Please try again.')
       setBusy('Reading your bill…')
-      const read = await postJson<{ fields: BillFields; warning: string | null }>('/api/bill', {
+      const read = await postJson<{ fields: BillFields; warning: string | null }>('/api/assistant/bill', {
         receipt: started.receipt,
         pg_leave_blank: honeypotRef.current?.value ?? '',
       })
@@ -200,7 +200,7 @@ export default function AssistantPanel({ frameClass, mode, nonce, onClose }: Pan
       } catch {
         referralSource = null
       }
-      const result = await postJson<{ confirmation: Confirmation }>('/api/lead', {
+      const result = await postJson<{ confirmation: Confirmation }>('/api/assistant/lead', {
         clientRequestId,
         pg_leave_blank: honeypotRef.current?.value ?? '',
         consent,

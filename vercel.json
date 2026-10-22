@@ -1,5 +1,10 @@
 {
   "rewrites": [
+    { "source": "/api/chat", "destination": "/api/assistant/chat" },
+    { "source": "/api/uploads", "destination": "/api/assistant/uploads" },
+    { "source": "/api/bill", "destination": "/api/assistant/bill" },
+    { "source": "/api/lead", "destination": "/api/assistant/lead" },
+    { "source": "/api/slots", "destination": "/api/assistant/slots" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }

@@ -123,6 +123,13 @@ function requestUrl(request: Request): URL {
   }
 }
 
+/** The five assistant routes share one function so the Hobby plan stays under its function cap. */
+function assistantRoute(pathname: string): string {
+  const nested = pathname.match(/^\/api\/assistant\/(chat|uploads|bill|lead|slots)$/)
+  if (nested) return `/api/${nested[1]}`
+  return pathname
+}
+
 function isBlankBill(fields: BillFields): boolean {
   return Object.values(fields).every(value => value == null)
 }
@@ -130,11 +137,12 @@ function isBlankBill(fields: BillFields): boolean {
 export async function handleApi(request: Request): Promise<Response> {
   const url = requestUrl(request)
   try {
-    if (url.pathname === '/api/chat' && request.method === 'POST') return await handleChat(request)
-    if (url.pathname === '/api/uploads' && request.method === 'POST') return await handleUploads(request)
-    if (url.pathname === '/api/bill' && request.method === 'POST') return await handleBill(request)
-    if (url.pathname === '/api/lead' && request.method === 'POST') return await handleLead(request)
-    if (url.pathname === '/api/slots' && request.method === 'GET') return await handleSlots(request)
+    const pathname = assistantRoute(url.pathname)
+    if (pathname === '/api/chat' && request.method === 'POST') return await handleChat(request)
+    if (pathname === '/api/uploads' && request.method === 'POST') return await handleUploads(request)
+    if (pathname === '/api/bill' && request.method === 'POST') return await handleBill(request)
+    if (pathname === '/api/lead' && request.method === 'POST') return await handleLead(request)
+    if (pathname === '/api/slots' && request.method === 'GET') return await handleSlots(request)
     return json({ error: 'Not found.' }, 404)
   } catch (error) {
     if (error instanceof HttpError) return json({ error: error.message }, error.status)
