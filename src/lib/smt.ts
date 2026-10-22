@@ -202,7 +202,7 @@ export function readSmtError(json: unknown): string | null {
  * TODO(smt-jwt): When SMT sends the portal guide "FTPS and API Security Upgrade",
  * replace this. A pasted SMT_API_TOKEN is sent as Bearer. Otherwise Basic is used.
  */
-export function smtAuthorizationHeader(input: { username: string; password: string; token: string | null }): string {
+export function smtAuthorizationHeader(input: { username: string; portalPassword: string; token: string | null }): string {
   if (input.token) return `Bearer ${input.token}`;
-  return `Basic ${btoa(`${input.username}:${input.password}`)}`;
+  return `Basic ${btoa(`${input.username}:${input.portalPassword}`)}`;
 }

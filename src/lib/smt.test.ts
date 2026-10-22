@@ -46,8 +46,8 @@ describe('SMT request bodies', () => {
   });
 
   it('sends Basic auth unless a token from SMT was provided', () => {
-    expect(smtAuthorizationHeader({ username: 'user', password: 'secret', token: null })).toMatch(/^Basic /);
-    expect(smtAuthorizationHeader({ username: 'user', password: 'secret', token: 'jwt-from-smt' })).toBe('Bearer jwt-from-smt');
+    expect(smtAuthorizationHeader({ username: 'user', portalPassword: 'example', token: null })).toMatch(/^Basic /);
+    expect(smtAuthorizationHeader({ username: 'user', portalPassword: 'example', token: 'example-token' })).toBe('Bearer example-token');
   });
 });
 

@@ -3,7 +3,7 @@ import { SMT_PRODUCTION_BASE } from '../../src/lib/smt';
 export type SmtConfig = {
   base: string;
   username: string;
-  password: string;
+  portalPassword: string;
   requestorId: string;
   duns: string;
   token: string | null;
@@ -23,10 +23,10 @@ function pem(value: string | null): string | null {
 
 export function readSmtConfig(): SmtConfig | null {
   const username = blank(process.env.SMT_USERNAME);
-  const password = blank(process.env.SMT_PASSWORD);
+  const portalPassword = blank(process.env.SMT_PASSWORD);
   const requestorId = blank(process.env.SMT_REQUESTOR_ID);
   const duns = blank(process.env.SMT_DUNS);
-  if (!username || !password || !requestorId || !duns) return null;
+  if (!username || !portalPassword || !requestorId || !duns) return null;
   if (requestorId.length > 32 || duns.length > 18) return null;
   let base = SMT_PRODUCTION_BASE;
   const configured = blank(process.env.SMT_API_BASE);
@@ -42,7 +42,7 @@ export function readSmtConfig(): SmtConfig | null {
   return {
     base,
     username,
-    password,
+    portalPassword,
     requestorId,
     duns,
     token: blank(process.env.SMT_API_TOKEN),
