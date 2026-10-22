@@ -1,5 +1,6 @@
 import React, { useEffect, useLayoutEffect, useRef, useState, useCallback } from 'react';
 import { Config, Section, Segment } from '../types';
+import { openAssistant } from '../lib/openAssistant';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -505,6 +506,9 @@ export default function ScrollWorld({ config, onQuoteClick }: ScrollWorldProps) 
       event.preventDefault();
       onQuoteClick?.();
       document.getElementById('quote')?.scrollIntoView({ behavior: 'smooth' });
+    } else if (id === 'consult') {
+      event.preventDefault();
+      openAssistant('book');
     }
   }, [config.sections, jumpTo, onQuoteClick]);
 
