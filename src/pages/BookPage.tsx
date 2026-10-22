@@ -1,9 +1,13 @@
 import { useEffect, useState, type ChangeEvent } from 'react';
 import { isNotConfiguredResult, publicFetch, readMessage, readSlots } from '../lib/api';
 import { validateCustomer } from '../lib/bookingForm';
-import { readBillUpload, validateLightBill } from '../lib/lightBill';
+import { readMeterRequest } from '../lib/esiId';
+import { isConfirmToken, readBillUpload, validateLightBill } from '../lib/lightBill';
 import { putLightBill } from '../lib/putLightBill';
 import { supabaseUrl } from '../lib/supabaseClient';
+import { usageStatusCopy } from '../lib/usage';
+import BookingAssistant, { type AssistantBooking } from '../components/dashboard/BookingAssistant';
+import { MeterFields, emptyMeter, meterBodyFrom, type MeterFormValues } from '../components/dashboard/MeterFields';
 import {
   formatChicagoDay,
   formatChicagoTime,
@@ -31,7 +35,50 @@ type Phase =
   | { name: 'not_configured' }
   | { name: 'error'; message: string }
   | { name: 'ready' }
-  | { name: 'done'; startsAt: string; endsAt: string; bill: 'skipped' | 'attached' | 'failed'; retry: BillRetry | null };
+  | {
+    name: 'done';
+    startsAt: string;
+    endsAt: string;
+    bill: 'skipped' | 'attached' | 'failed';
+    retry: BillRetry | null;
+    meterStatus: string | null;
+    billClaim: string | null;
+  };
+
+function bookedPhase(input: {
+  startsAt: string;
+  endsAt: string;
+  bill: 'skipped' | 'attached' | 'failed';
+  retry: BillRetry | null;
+  meterStatus: string | null;
+  billClaim: string | null;
+}): Phase {
+  return { name: 'done', ...input };
+}
+
+function previewMeter(): MeterFormValues {
+  if (!import.meta.env.DEV) return emptyMeter();
+  return {
+    esiId: '10443720001234567',
+    meterNumber: '144054330',
+    email: 'jamie@example.com',
+    consent: true,
+  };
+}
+
+function readMeterStatus(json: unknown): string | null {
+  if (!json || typeof json !== 'object') return null;
+  const meter = (json as { meter?: unknown }).meter;
+  if (!meter || typeof meter !== 'object') return null;
+  const status = (meter as { status?: unknown }).status;
+  return typeof status === 'string' ? status : null;
+}
+
+function readBillClaim(json: unknown): string | null {
+  if (!json || typeof json !== 'object') return null;
+  const claim = (json as { billClaim?: unknown }).billClaim;
+  return typeof claim === 'string' && isConfirmToken(claim) ? claim : null;
+}
 
 export default function BookPage() {
   if (import.meta.env.DEV) {
@@ -66,6 +113,9 @@ function BookExperience({ preview = false }: { preview?: boolean }) {
   const [customer, setCustomer] = useState<CustomerFormValues>(emptyCustomer);
   const [bill, setBill] = useState<File | null>(null);
   const [billError, setBillError] = useState<string | null>(null);
+  const [meter, setMeter] = useState<MeterFormValues>(() => (
+    import.meta.env.DEV && preview ? previewMeter() : emptyMeter()
+  ));
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [pendingLabel, setPendingLabel] = useState('Booking…');
@@ -159,6 +209,12 @@ function BookExperience({ preview = false }: { preview?: boolean }) {
       setFormError(billError);
       return;
     }
+    const meterBody = meterBodyFrom(meter);
+    const meterCheck = readMeterRequest(meterBody, customer.email);
+    if (!meterCheck.ok) {
+      setFormError(meterCheck.message);
+      return;
+    }
     if (preview) {
       setFormError('Preview only. Booking runs on the server once it is configured.');
       return;
@@ -172,6 +228,7 @@ function BookExperience({ preview = false }: { preview?: boolean }) {
         slot: selectedSlot.toISOString(),
         ...customer,
         lightBill: bill ? { name: bill.name, type: bill.type, size: bill.size } : null,
+        meter: meterBody,
       }),
     });
     if (isNotConfiguredResult(result)) {
@@ -202,13 +259,78 @@ function BookExperience({ preview = false }: { preview?: boolean }) {
       outcome = upload ? await attachBill(bill, upload.signedUrl, upload.confirmToken) : 'stopped';
     }
     setSubmitting(false);
-    setPhase({
-      name: 'done',
+    setPhase(bookedPhase({
       startsAt: record.startsAt,
       endsAt: record.endsAt,
       bill: outcome === 'attached' ? 'attached' : outcome === 'skipped' ? 'skipped' : 'failed',
       retry: outcome === 'retry' && bill && upload ? { file: bill, ...upload } : null,
+      meterStatus: readMeterStatus(result.json),
+      billClaim: outcome === 'skipped' ? readBillClaim(result.json) : null,
+    }));
+  }
+
+  function onAssistantBooked(booking: AssistantBooking) {
+    if (bill && booking.billClaim) {
+      void uploadClaimedBill(bill, booking.billClaim, booking.startsAt, booking.endsAt, booking.meterStatus);
+      return;
+    }
+    setPhase(bookedPhase({
+      startsAt: booking.startsAt,
+      endsAt: booking.endsAt,
+      bill: 'skipped',
+      retry: null,
+      meterStatus: booking.meterStatus,
+      billClaim: booking.billClaim,
+    }));
+  }
+
+  async function uploadClaimedBill(
+    file: File,
+    claim: string,
+    startsAt: string,
+    endsAt: string,
+    meterStatus: string | null,
+  ) {
+    const checked = validateLightBill({ name: file.name, type: file.type, size: file.size });
+    if (!checked.ok) {
+      setFormError(checked.message);
+      setPhase(bookedPhase({ startsAt, endsAt, bill: 'failed', retry: null, meterStatus, billClaim: claim }));
+      return;
+    }
+    setSubmitting(true);
+    setPendingLabel('Uploading light bill…');
+    const started = await publicFetch('/api/book-bill', {
+      method: 'POST',
+      body: JSON.stringify({
+        claimToken: claim,
+        lightBill: { name: file.name, type: file.type, size: file.size },
+      }),
     });
+    const upload = readBillUpload(started.json, supabaseUrl);
+    if (!started.ok || !upload) {
+      setSubmitting(false);
+      const code = billCode(started.json);
+      const stopped = code === 'bill_rejected' || code === 'bill_closed' || code === 'invalid_bill';
+      setPhase(bookedPhase({
+        startsAt,
+        endsAt,
+        bill: 'failed',
+        retry: null,
+        meterStatus,
+        billClaim: stopped ? null : claim,
+      }));
+      return;
+    }
+    const outcome = await attachBill(file, upload.signedUrl, upload.confirmToken);
+    setSubmitting(false);
+    setPhase(bookedPhase({
+      startsAt,
+      endsAt,
+      bill: outcome === 'attached' ? 'attached' : 'failed',
+      retry: outcome === 'retry' ? { file, ...upload } : null,
+      meterStatus,
+      billClaim: null,
+    }));
   }
 
   async function retryBill(retry: BillRetry, startsAt: string, endsAt: string) {
@@ -216,13 +338,14 @@ function BookExperience({ preview = false }: { preview?: boolean }) {
     setPendingLabel('Uploading light bill…');
     const outcome = await attachBill(retry.file, retry.signedUrl, retry.confirmToken);
     setSubmitting(false);
-    setPhase({
-      name: 'done',
+    setPhase((current) => bookedPhase({
       startsAt,
       endsAt,
       bill: outcome === 'attached' ? 'attached' : 'failed',
       retry: outcome === 'retry' ? retry : null,
-    });
+      meterStatus: current.name === 'done' ? current.meterStatus : null,
+      billClaim: null,
+    }));
   }
 
   return (
@@ -270,6 +393,25 @@ function BookExperience({ preview = false }: { preview?: boolean }) {
             {phase.bill === 'failed' ? (
               <p className="text-[#4A5568]">The call is booked. The light bill did not finish uploading. Try again below, or email the bill to Horace.</p>
             ) : null}
+            {formError ? <Notice tone="error">{formError}</Notice> : null}
+            {phase.meterStatus ? <p className="text-[#4A5568]">{usageStatusCopy(phase.meterStatus)}</p> : null}
+            {phase.bill !== 'attached' && phase.billClaim ? (
+              <label className="mt-2 grid gap-1 text-sm font-semibold" htmlFor="done-light-bill">
+                Upload last month's light bill
+                <input
+                  id="done-light-bill"
+                  className={`${fieldClass} file:mr-3 file:rounded-full file:border-0 file:bg-[#0B2233] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white`}
+                  type="file"
+                  accept=".pdf,.jpg,.jpeg,.jfif,.png,.heic,.heif,.webp,.gif,.bmp,.tif,.tiff,application/pdf,image/jpeg,image/png,image/heic,image/heif,image/webp,image/gif,image/bmp,image/tiff"
+                  disabled={submitting}
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (!file || phase.name !== 'done' || !phase.billClaim) return;
+                    void uploadClaimedBill(file, phase.billClaim, phase.startsAt, phase.endsAt, phase.meterStatus);
+                  }}
+                />
+              </label>
+            ) : null}
             {phase.retry ? (
               <button
                 type="button"
@@ -284,6 +426,8 @@ function BookExperience({ preview = false }: { preview?: boolean }) {
           </section>
         ) : null}
         {phase.name === 'ready' ? (
+          <>
+          <BookingAssistant preview={preview} onBooked={onAssistantBooked} />
           <form
             className="grid gap-5 rounded-[18px] bg-white p-4 shadow-[0_12px_32px_rgba(10,20,40,0.08)] sm:p-6"
             onSubmit={(event) => {
@@ -337,6 +481,7 @@ function BookExperience({ preview = false }: { preview?: boolean }) {
             ) : null}
             {formError ? <Notice tone="error">{formError}</Notice> : null}
             <CustomerFields idPrefix="book" values={customer} onChange={setCustomer} yourDetails />
+            <MeterFields values={meter} onChange={setMeter} />
             <div id="light-bill" className="grid gap-2 rounded-2xl bg-[#FFF6E8] px-4 py-4">
               <label className="grid gap-1 text-sm font-semibold" htmlFor="book-light-bill">
                 Upload last month's light bill
@@ -359,6 +504,7 @@ function BookExperience({ preview = false }: { preview?: boolean }) {
               {submitting ? pendingLabel : 'Book this time'}
             </button>
           </form>
+          </>
         ) : null}
       </main>
     </SiteShell>

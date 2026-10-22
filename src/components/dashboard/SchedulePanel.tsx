@@ -5,6 +5,8 @@ import { validateCustomer } from '../../lib/bookingForm';
 import { formatBytes, type DashboardProfile } from '../../lib/dashboard';
 import { isBillDownloadUrl } from '../../lib/lightBill';
 import { supabaseUrl } from '../../lib/supabaseClient';
+import UsageCard, { type CustomerUsage } from './UsageCard';
+import type { MonthlyRow } from '../../lib/usage';
 import {
   calendarWeekday,
   chicagoDayRange,
@@ -79,6 +81,102 @@ function readSize(value: unknown): number | null {
   if (typeof value === 'number' && Number.isFinite(value)) return value;
   if (typeof value === 'string' && value.trim() && Number.isFinite(Number(value))) return Number(value);
   return null;
+}
+
+const USAGE_STATUSES = new Set<CustomerUsage['status']>(['pending_setup', 'requested', 'approved', 'expired', 'failed']);
+
+function devPreviewUsage(): Record<string, CustomerUsage> {
+  if (!import.meta.env.DEV) return {};
+  const rows: MonthlyRow[] = [
+    ['2025-11-01', '2025-12-01', 920],
+    ['2025-12-01', '2026-01-01', 1100],
+    ['2026-01-01', '2026-02-01', 1280],
+    ['2026-02-01', '2026-03-01', 1140],
+    ['2026-03-01', '2026-04-01', 980],
+    ['2026-04-01', '2026-05-01', 1050],
+    ['2026-05-01', '2026-06-01', 1420],
+    ['2026-06-01', '2026-07-01', 1680],
+    ['2026-07-01', '2026-08-01', 1890],
+    ['2026-08-01', '2026-09-01', 2010],
+    ['2026-09-01', '2026-10-01', 1760],
+    ['2026-10-01', '2026-11-01', 1320],
+  ].map(([periodStart, periodEnd, kwh]) => ({
+    periodStart: String(periodStart),
+    periodEnd: String(periodEnd),
+    kwh: Number(kwh),
+  }));
+  return {
+    '00000000-0000-4000-8000-000000000001': {
+      status: 'approved',
+      esiId: '10443720001234567',
+      rows,
+      hasIntervals: true,
+    },
+  };
+}
+
+function readKwh(value: unknown): number | null {
+  const number = typeof value === 'number' ? value : typeof value === 'string' ? Number(value) : Number.NaN;
+  return Number.isFinite(number) ? number : null;
+}
+
+async function loadMeterUsage(client: SupabaseClient, appointmentIds: string[]): Promise<Record<string, CustomerUsage> | null> {
+  if (appointmentIds.length === 0) return {};
+  const auths = await client
+    .from('smt_authorizations')
+    .select('id, appointment_id, status, esi_id')
+    .in('appointment_id', appointmentIds);
+  if (auths.error || !auths.data) return null;
+  const byAuth = new Map<string, { appointmentId: string; status: CustomerUsage['status']; esiId: string | null }>();
+  for (const item of auths.data) {
+    if (!item || typeof item !== 'object') continue;
+    const row = item as { id?: unknown; appointment_id?: unknown; status?: unknown; esi_id?: unknown };
+    if (typeof row.id !== 'string' || typeof row.appointment_id !== 'string') continue;
+    if (typeof row.status !== 'string' || !USAGE_STATUSES.has(row.status as CustomerUsage['status'])) continue;
+    byAuth.set(row.id, {
+      appointmentId: row.appointment_id,
+      status: row.status as CustomerUsage['status'],
+      esiId: typeof row.esi_id === 'string' ? row.esi_id : null,
+    });
+  }
+  const authIds = [...byAuth.keys()];
+  const monthly = authIds.length === 0
+    ? { data: [], error: null }
+    : await client
+      .from('smt_usage_monthly')
+      .select('authorization_id, period_start, period_end, kwh')
+      .in('authorization_id', authIds);
+  if (monthly.error) return null;
+  const rowsByAuth = new Map<string, MonthlyRow[]>();
+  for (const item of monthly.data ?? []) {
+    if (!item || typeof item !== 'object') continue;
+    const row = item as { authorization_id?: unknown; period_start?: unknown; period_end?: unknown; kwh?: unknown };
+    const kwh = readKwh(row.kwh);
+    if (typeof row.authorization_id !== 'string' || typeof row.period_start !== 'string' || typeof row.period_end !== 'string' || kwh == null) continue;
+    const list = rowsByAuth.get(row.authorization_id) ?? [];
+    list.push({ periodStart: row.period_start, periodEnd: row.period_end, kwh });
+    rowsByAuth.set(row.authorization_id, list);
+  }
+  const withIntervals = new Set<string>();
+  if (authIds.length > 0 && authIds.length <= 30) {
+    await Promise.all(authIds.map(async (id) => {
+      const count = await client
+        .from('smt_usage_intervals')
+        .select('id', { count: 'exact', head: true })
+        .eq('authorization_id', id);
+      if ((count.count ?? 0) > 0) withIntervals.add(id);
+    }));
+  }
+  const usage: Record<string, CustomerUsage> = {};
+  for (const [authId, auth] of byAuth) {
+    usage[auth.appointmentId] = {
+      status: auth.status,
+      esiId: auth.esiId,
+      rows: rowsByAuth.get(authId) ?? [],
+      hasIntervals: withIntervals.has(authId),
+    };
+  }
+  return usage;
 }
 
 function devPreviewAppointments(): Appointment[] {
@@ -160,6 +258,10 @@ export default function SchedulePanel({
   const [loading, setLoading] = useState(!preview);
   const [saving, setSaving] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [usageByAppointment, setUsageByAppointment] = useState<Record<string, CustomerUsage>>(() => (
+    import.meta.env.DEV && preview ? devPreviewUsage() : {}
+  ));
+  const [usageLoaded, setUsageLoaded] = useState(Boolean(import.meta.env.DEV && preview));
 
   useEffect(() => {
     if (preview) {
@@ -188,8 +290,18 @@ export default function SchedulePanel({
         apiFetch(client, '/api/availability'),
       ]);
       if (cancelled) return;
-      if (rows.error) setError('Could not load appointments.');
-      else setAppointments((rows.data ?? []).map(parseAppointment).filter((row): row is Appointment => Boolean(row)));
+      if (rows.error) {
+        setError('Could not load appointments.');
+        setUsageLoaded(false);
+      } else {
+        const parsed = (rows.data ?? []).map(parseAppointment).filter((row): row is Appointment => Boolean(row));
+        setAppointments(parsed);
+        const usage = await loadMeterUsage(client, parsed.map((row) => row.id));
+        if (!cancelled) {
+          setUsageByAppointment(usage ?? {});
+          setUsageLoaded(usage != null);
+        }
+      }
 
       if (status.json && typeof status.json === 'object') {
         const record = status.json as { connected?: unknown; googleEmail?: unknown };
@@ -392,6 +504,10 @@ export default function SchedulePanel({
                   <p className="m-0 text-sm text-[#4A5568]">{appointment.customer_phone} · {appointment.customer_email}</p>
                   <p className="m-0 text-sm text-[#4A5568]">{appointment.customer_address}</p>
                   {appointment.note ? <p className="m-0 mt-1 text-sm">{appointment.note}</p> : null}
+                  {usageByAppointment[appointment.id] ? <UsageCard usage={usageByAppointment[appointment.id]} /> : null}
+                  {usageLoaded && !usageByAppointment[appointment.id] ? (
+                    <p className="m-0 mt-2 text-sm text-[#4A5568]">No Smart Meter Texas request for this call.</p>
+                  ) : null}
                   {appointment.light_bill_name ? (
                     <div className="mt-2 rounded-xl bg-[#F4F7FB] px-3 py-2">
                       <p className="m-0 text-sm font-semibold">Last month's light bill</p>

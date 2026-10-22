@@ -1,6 +1,8 @@
 import { randomBytes, randomUUID } from 'node:crypto';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { validateCustomer, type CustomerDetails } from '../src/lib/bookingForm';
+import { readMeterRequest } from '../src/lib/esiId';
+import type { SmtStatus } from '../src/lib/smt';
 import {
   LIGHT_BILL_BUCKET,
   LIGHT_BILL_MAX_BYTES,
@@ -21,6 +23,7 @@ import {
   type BusyRange,
 } from '../src/lib/slots';
 import type { ServerEnv } from './env';
+import { saveMeterAuthorization } from './smt/store';
 import {
   CalendarCheckFailed,
   CalendarNotConnected,
@@ -45,6 +48,8 @@ export type BookSuccess = {
   endsAt: string;
   calendarSynced: boolean;
   upload: BillUploadGrant | null;
+  billClaim: string | null;
+  meterStatus: SmtStatus | null;
 };
 
 export type BookFailure = {
@@ -114,6 +119,7 @@ export async function bookSlot(
     slot: string;
     customer: unknown;
     lightBill?: unknown;
+    meter?: unknown;
     source: 'public' | 'dashboard';
     createdBy: string | null;
     now?: Date;
@@ -127,6 +133,10 @@ export async function bookSlot(
   const customerResult = validateCustomer(input.customer);
   if (!customerResult.ok) {
     return { ok: false, status: 400, code: 'invalid_customer', error: customerResult.message };
+  }
+  const meterResult = readMeterRequest(input.meter, customerResult.value.email);
+  if (!meterResult.ok) {
+    return { ok: false, status: 400, code: 'invalid_meter', error: meterResult.message };
   }
   const bill = readRequestedBill(input.source, input.lightBill);
   if (bill && 'ok' in bill) return bill;
@@ -203,6 +213,16 @@ export async function bookSlot(
   }
 
   const upload = bill ? await issueLightBillUpload(admin, id, bill) : null;
+  const billClaim = input.source === 'public' && !upload ? await issueBillClaim(admin, id) : null;
+  let meterStatus: SmtStatus | null = null;
+  if (meterResult.value) {
+    try {
+      meterStatus = await saveMeterAuthorization(admin, id, meterResult.value);
+    } catch (error) {
+      console.error('meter save failed', error instanceof Error ? error.name : 'error');
+      meterStatus = 'failed';
+    }
+  }
 
   return {
     ok: true,
@@ -210,7 +230,81 @@ export async function bookSlot(
     endsAt: ends.toISOString(),
     calendarSynced,
     upload,
+    billClaim,
+    meterStatus,
   };
+}
+
+async function issueBillClaim(admin: SupabaseClient, appointmentId: string): Promise<string | null> {
+  const claim = randomBytes(32).toString('hex');
+  const { error } = await admin
+    .from('appointments')
+    .update({ light_bill_upload_token: claim })
+    .eq('id', appointmentId)
+    .is('light_bill_path', null);
+  if (error) {
+    console.error('store bill claim failed', error.code);
+    return null;
+  }
+  return claim;
+}
+
+export async function startLightBillFromClaim(
+  admin: SupabaseClient,
+  claimToken: string,
+  lightBill: unknown,
+): Promise<{ ok: true; upload: BillUploadGrant } | BookFailure> {
+  if (!isConfirmToken(claimToken)) {
+    return { ok: false, status: 400, code: 'invalid_token', error: 'That light bill upload was not found.' };
+  }
+  const validated = validateLightBill(lightBill);
+  if (!validated.ok) {
+    return { ok: false, status: 400, code: 'invalid_bill', error: validated.message };
+  }
+  const { data, error } = await admin
+    .from('appointments')
+    .select('id, status, light_bill_uploaded_at, light_bill_path')
+    .eq('light_bill_upload_token', claimToken)
+    .maybeSingle();
+  if (error) {
+    console.error('load bill claim failed', error.code);
+    throw new BookingDataError();
+  }
+  const row = data as {
+    id?: unknown;
+    status?: unknown;
+    light_bill_uploaded_at?: unknown;
+    light_bill_path?: unknown;
+  } | null;
+  if (!row || typeof row.id !== 'string') {
+    return { ok: false, status: 404, code: 'bill_not_found', error: 'That light bill upload was not found.' };
+  }
+  if (row.status !== 'confirmed') {
+    return {
+      ok: false,
+      status: 409,
+      code: 'bill_closed',
+      error: 'That appointment is no longer booked, so the bill was not saved.',
+    };
+  }
+  if (typeof row.light_bill_uploaded_at === 'string' || (typeof row.light_bill_path === 'string' && row.light_bill_path)) {
+    return {
+      ok: false,
+      status: 409,
+      code: 'bill_closed',
+      error: 'A light bill is already attached to this call.',
+    };
+  }
+  const upload = await issueLightBillUpload(admin, row.id, validated.value);
+  if (!upload) {
+    return {
+      ok: false,
+      status: 500,
+      code: 'save_failed',
+      error: 'The light bill could not be prepared. The call is still booked.',
+    };
+  }
+  return { ok: true, upload };
 }
 
 export async function cancelAppointment(

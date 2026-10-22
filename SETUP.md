@@ -23,6 +23,17 @@ Add every one of these in Vercel. The first two are also safe to put in a local 
 | `GOOGLE_CLIENT_SECRET` | Same credential | Yes. |
 | `GOOGLE_REDIRECT_URI` | You type this exact value: `https://thepowergenie.theroyeffect.com/api/google/callback` | No. |
 | `PUBLIC_SITE_URL` | You type this exact value: `https://thepowergenie.theroyeffect.com` | No. |
+| `OPENAI_API_KEY` | OpenAI → API keys | Yes. Leave it blank to hide the chat widget. The booking form still works. |
+| `OPENAI_MODEL` | Optional. Leave blank to use `gpt-4.1-mini`. | No. |
+| `SMT_USERNAME` | Smart Meter Texas portal user | Yes. Leave blank until the account exists. |
+| `SMT_PASSWORD` | That same portal user | Yes. |
+| `SMT_REQUESTOR_ID` | The portal user id SMT shows for API calls. 32 characters or fewer. | No, but keep it with the server keys. |
+| `SMT_DUNS` | The business DUNS number. 18 characters or fewer. | No, but keep it with the server keys. |
+| `SMT_API_TOKEN` | Optional. Only if SMT gives you a token from the newer guide. | Yes. |
+| `SMT_CLIENT_CERT` | Optional PEM certificate. Set this only together with the key. | Yes. |
+| `SMT_CLIENT_KEY` | Optional PEM private key. | Yes. |
+| `SMT_API_BASE` | Optional. Leave blank for `https://services.smartmetertexas.net`. | No. |
+| `CRON_SECRET` | You make up a long random password. Vercel’s daily job sends it. | Yes. |
 
 `VITE_SUPABASE_URL` and `SUPABASE_URL` are the same Project URL, pasted twice. The website build reads the `VITE_` copy. The booking server reads the other copy.
 
@@ -61,6 +72,46 @@ Customers can attach last month's electric bill while they book. That file lives
 5. Do not add a Storage policy on `light-bills`, and do not turn the bucket public. Customers upload through the booking page only. They cannot see anyone else's file. Horace and Rory open a bill from that appointment on the **Schedule** tab. The link lasts about two minutes.
 
 If the Schedule tab later says it could not load appointments, wait a minute and refresh so Supabase notices the new columns.
+
+### Smart Meter Texas tables
+
+Run this after the two scripts above, including on a project that already has appointments and light bills.
+
+1. Open `supabase/migrations/20261022160000_smt.sql`.
+2. In **SQL Editor** → **New query**, paste the whole script and click **Run**.
+3. You should see **Success**. Running it again is safe.
+
+This adds the consent table and the usage tables. Customers cannot read them. Horace and Rory can, from the Schedule tab. The browser cannot insert rows. The booking server does that.
+
+## Booking assistant
+
+The public booking page can show a chat box above the form. It answers general questions about going solar with Sunrun and The Power Genie. It does not promise a price, a savings amount, or a lower bill. It says Horace will confirm details that depend on the home.
+
+It books a call only through the same open-time rules as the form: weekdays, one hour, 9 AM to 7 PM Central, at least one hour from now, and a fresh check of Google Calendar and the database so two people cannot take the same hour. It asks for name, phone, email, address, and an optional note, and it offers the light-bill upload and the optional meter step.
+
+The OpenAI key stays on the server, in `OPENAI_API_KEY`. The website never sees it. `OPENAI_MODEL` is optional. When it is blank, the server uses `gpt-4.1-mini`. If OpenAI renames that small model, put the new name in `OPENAI_MODEL`.
+
+If `OPENAI_API_KEY` is empty, the chat box is hidden. The form underneath still books calls.
+
+Each message can be 1,000 characters. One address can send 15 messages in 10 minutes. That limit is remembered on each server copy, not in one shared counter, so a very busy moment can allow a few more. The assistant is not allowed to talk about anyone else’s appointment or usage.
+
+## Register as a Smart Meter Texas third party
+
+Smart Meter Texas is the statewide site a customer uses to let a company see their meter. The Power Genie has to be approved as an independent third-party provider before the approval emails and the usage downloads work. A missing DUNS number or a missing login does not block booking. The page still saves the ESI ID, the meter number, and the consent checkbox, with the status “waiting for setup.” The Schedule tab then says: “Usage will sync once Smart Meter Texas access is active.”
+
+Do this when you are ready to turn the connection on.
+
+1. Get a DUNS number for the business if you do not already have one. Dun & Bradstreet issues it. Smart Meter Texas wants 9 or 13 digits. You cannot change the number after they approve the account. If the number is still pending, leave the SMT keys blank and come back to this list.
+2. Open [https://www.smartmetertexas.com](https://www.smartmetertexas.com). The business portal is also called private.SmartMeterTexas.com. Choose **New User Register**, then **Create a New 3rd Party Account**.
+3. Use the business name customers should recognize. **The Power Genie** is the name that shows up when Smart Meter Texas emails the customer for approval.
+4. Finish their form and wait for the email that says the account is approved or declined. Their support address is Support@SmartMeterTexas.com and their phone is 1-844-217-8595.
+5. After approval, sign in as the company admin and create the API user they ask for. Copy that portal user id into `SMT_REQUESTOR_ID` (32 characters or fewer). Copy the DUNS into `SMT_DUNS` (18 characters or fewer). Put the portal username in `SMT_USERNAME` and the password in `SMT_PASSWORD`.
+6. Ask Smart Meter Texas for the current guide named “Quick Reference Guide (FTPS and API Security Upgrade Project).” It is only on the site after you log in. The older public PDF is not the whole story. On September 13, 2025 they turned off the API that did not use a token, and they said a client certificate is no longer required. The new token address is not in the public PDF, so this site does not guess one. If they give you a token, paste it into `SMT_API_TOKEN`. If they still want a client certificate, paste the certificate into `SMT_CLIENT_CERT` and the private key into `SMT_CLIENT_KEY`. A line break in those values can be written as `\n`.
+7. The older guide also asks for a static IP address on an allow list. This site runs on Vercel, which does not give you one fixed outbound address. Tell Smart Meter Texas that when you ask for API access. Until they allow the traffic, or they confirm the newer token API does not need an IP list, their server can reject the calls. Bookings still save, and the dashboard keeps the “will sync once access is active” message if the keys are empty. If the keys are set and a call fails, the appointment stays booked and that meter row is marked failed, with the reason stored for you.
+8. Add `CRON_SECRET` in Vercel. Make it a long random password. Every day at 1 PM UTC, Vercel calls `/api/smt/refresh` and sends that password. The job checks agreements that are waiting or approved, then stores up to a year of monthly kWh and, where Smart Meter Texas returns them, 15-minute readings. If `CRON_SECRET` is empty, that address does nothing for anyone who finds it.
+9. Redeploy after the keys are saved. A customer can then use **Connect your meter** on the booking page. They type the ESI ID from the bill (17 to 22 digits) and the meter number, and they check the box that says they agree to share usage with The Power Genie through Smart Meter Texas. Smart Meter Texas emails them to approve. After they approve, the next daily run fills the chart on that appointment: twelve months, the average, the peak month, and a CSV download.
+
+The agreement request asks for 12 months, which is the longest the third-party guide describes. One field in the older example, the REP certificate number, is left out until Smart Meter Texas says an independent third party has to send it. If they reject a request, the error is saved on that appointment and the call is still booked.
 
 ## 3. Turn off public sign-up
 
@@ -160,7 +211,7 @@ The redirect URI has to match character for character, including `https://`.
 5. Sign in as the Google account on Horace’s phone. If Google says the app is not verified, click **Advanced**, then continue to The Power Genie. Allow calendar access.
 6. You should land back on the dashboard with “Google Calendar is connected.”
 
-Book a test call from [https://thepowergenie.theroyeffect.com/book](https://thepowergenie.theroyeffect.com/book). The open times are weekdays, on the hour, from 9 AM to 7 PM Central, up to 30 days ahead, and nothing that starts in less than an hour. The form asks for last month's light bill. That upload is optional. PDF, JPG, PNG, HEIC, and common phone photos are accepted, up to 10 MB. After you book, the call should appear on Horace’s phone and on the Schedule tab. If you attached a bill, the phone event says the file is on the dashboard. It does not include a link to the file itself. Open the appointment on the Schedule tab and use **View light bill**. A test event he creates on the phone should disappear from the open times within a refresh.
+Book a test call from [https://thepowergenie.theroyeffect.com/book](https://thepowergenie.theroyeffect.com/book). The open times are weekdays, on the hour, from 9 AM to 7 PM Central, up to 30 days ahead, and nothing that starts in less than an hour. The chat box, when the OpenAI key is set, uses those same hours. The form asks for last month's light bill. That upload is optional. PDF, JPG, PNG, HEIC, and common phone photos are accepted, up to 10 MB. **Connect your meter** is also optional. After you book, the call should appear on Horace’s phone and on the Schedule tab. If you attached a bill, the phone event says the file is on the dashboard. It does not include a link to the file itself. Open the appointment on the Schedule tab and use **View light bill**. If the customer connected a meter, that same card shows the Smart Meter Texas status and, once usage has arrived, the 12-month chart. A test event he creates on the phone should disappear from the open times within a refresh.
 
 Do this connection before you send customers to `/book`. Until Google is connected, the site can still save a booking, but Horace’s phone events will not block that time, and the event will not be pushed to his phone.
 
