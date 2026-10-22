@@ -3,8 +3,6 @@ import { Mail, Phone } from 'lucide-react';
 import ScrollWorld from './components/ScrollWorld';
 import BrandPage from './components/BrandPage';
 import Toast from './components/Toast';
-import BookPage from './pages/BookPage';
-import DashboardPage from './pages/DashboardPage';
 import { Config } from './types';
 import { openAssistant } from './lib/openAssistant';
 
@@ -121,16 +119,10 @@ const config: Config = {
   ]
 };
 
-function normalizePath(pathname: string): string {
-  if (pathname.length > 1 && pathname.endsWith('/')) return pathname.replace(/\/+$/, '');
-  return pathname || '/';
-}
-
 // Main application component
 export default function App() {
   const [source, setSource] = useState<string | null>(null);
   const [view, setView] = useState<string>('journey');
-  const [path, setPath] = useState(() => normalizePath(window.location.pathname));
   // The Salesforce form autofocuses a field on load, which scrolls the whole page
   // down to it. Only mount it once most of the form box is already on screen
   // (or the visitor taps a quote button), so the autofocus has nowhere to jump.
@@ -175,7 +167,7 @@ export default function App() {
 
   useEffect(() => {
     if (formReady || view !== 'journey') return;
-    const el = formBoxRef.current; // absent on /book and /dashboard; re-checked when path changes
+    const el = formBoxRef.current;
     if (!el) return;
     if (!('IntersectionObserver' in window)) { setFormReady(true); return; }
     const io = new IntersectionObserver((entries) => {
@@ -183,13 +175,7 @@ export default function App() {
     }, { threshold: [0.75] });
     io.observe(el);
     return () => io.disconnect();
-  }, [formReady, view, path]);
-
-  useEffect(() => {
-    const syncPath = () => setPath(normalizePath(window.location.pathname));
-    window.addEventListener('popstate', syncPath);
-    return () => window.removeEventListener('popstate', syncPath);
-  }, []);
+  }, [formReady, view]);
 
   const triggerToast = (message = "Excellent choice!", submessage = "Opening your custom solar quote form below.") => {
     setToast({ isVisible: true, message, submessage });
@@ -223,14 +209,6 @@ export default function App() {
     }
     window.history.pushState({}, '', url);
   };
-
-  if (path === '/dashboard') {
-    return <DashboardPage />;
-  }
-
-  if (path === '/book') {
-    return <BookPage />;
-  }
 
   if (view !== 'journey') {
     return (

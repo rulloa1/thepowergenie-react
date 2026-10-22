@@ -275,7 +275,7 @@ function GoogleCard({
   } else if (!google) {
     body = <span className="inline-flex items-center gap-2"><Spinner className="h-4 w-4" /> Checking Google Calendar…</span>;
   } else if (!google.configured) {
-    body = <span>Google Calendar isn't configured yet. Add the Google OAuth keys (see SETUP.md) to turn on phone sync.</span>;
+    body = <span>Google Calendar isn't configured yet. Add the Google OAuth secrets on the Supabase project to turn on phone sync.</span>;
   } else if (!google.connected) {
     body = (
       <span>
