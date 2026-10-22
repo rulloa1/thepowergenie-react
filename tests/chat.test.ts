@@ -71,4 +71,8 @@ test('the assistant accepts an sb_secret key or a service_role JWT and refuses a
   assert.equal(supabaseConfig().key, process.env.SUPABASE_SERVICE_ROLE_KEY)
   process.env.SUPABASE_SERVICE_ROLE_KEY = roleJwt('anon')
   assert.throws(() => supabaseConfig(), /Scheduling is not configured/)
+  delete process.env.SUPABASE_URL
+  process.env.VITE_SUPABASE_URL = 'https://vite.example.supabase.co'
+  process.env.SUPABASE_SERVICE_ROLE_KEY = 'sb_secret_test_only'
+  assert.equal(supabaseConfig().url, 'https://vite.example.supabase.co')
 })

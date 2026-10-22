@@ -25,14 +25,32 @@ function isServiceRoleJwt(key: string): boolean {
   }
 }
 
+function keyKind(key: string): string {
+  if (!key) return 'missing'
+  if (key.startsWith('sb_secret_')) return 'sb_secret'
+  if (key.startsWith('sb_publishable_')) return 'publishable'
+  if (isServiceRoleJwt(key)) return 'service_role'
+  const parts = key.split('.')
+  if (parts.length === 3 && parts[1]) {
+    try {
+      const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8')) as { role?: unknown }
+      return `jwt:${typeof payload.role === 'string' ? payload.role : 'unknown'}`
+    } catch {
+      return 'jwt_unreadable'
+    }
+  }
+  return 'other'
+}
+
 export function supabaseConfig(): { url: string; key: string } {
-  const url = (process.env.SUPABASE_URL || '').trim().replace(/\/$/, '')
+  const url = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '').trim().replace(/\/$/, '')
   const key = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim()
   const accepted =
     key.startsWith('sb_secret_') ||
     process.env.ASSISTANT_ALLOW_LEGACY_KEY === '1' ||
     isServiceRoleJwt(key)
   if (!url || !key || !accepted) {
+    console.error('assistant_supabase_unconfigured', url ? 'url' : 'no_url', keyKind(key))
     throw new HttpError(503, 'Scheduling is not configured yet. Please call Horace and we will set this up.')
   }
   return { url, key }
