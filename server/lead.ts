@@ -4,8 +4,7 @@ import { HttpError, honeypotTripped, isRecord } from './http.js'
 import { loadSlotRules } from './slot-rules.js'
 import { chicagoDate, listSlots } from './slots.js'
 import { assertBillBytes } from './files.js'
-import { rangesOverlap } from './hub-busy.js'
-import { insertRow, confirmedAppointmentRanges, downloadObject, moveObject, takenAppointments } from './supabase.js'
+import { insertRow, downloadObject, moveObject, takenAppointments } from './supabase.js'
 import { openReceipt, type UploadReceipt } from './receipt.js'
 
 /**
@@ -278,11 +277,6 @@ export async function saveLead(body: unknown, now = new Date()): Promise<Confirm
   const slotStart = String(prepared.customer.appointment_date)
   const holder = taken.get(slotStart)
   if (holder && holder !== prepared.customer.id) {
-    throw new HttpError(409, 'That time was just taken. Please pick another.')
-  }
-  const start = new Date(slotStart)
-  const calls = await confirmedAppointmentRanges(today, horizon.toISOString())
-  if (rangesOverlap(start, new Date(start.getTime() + rules.durationMinutes * 60 * 1000), calls)) {
     throw new HttpError(409, 'That time was just taken. Please pick another.')
   }
   if (prepared.pendingPath && prepared.finalPath && prepared.file) {

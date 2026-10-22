@@ -10,8 +10,7 @@ import { openReceipt, sealReceipt } from './receipt.js'
 import { enforceRateLimit } from './rate-limit.js'
 import { loadSlotRules } from './slot-rules.js'
 import { chicagoDate, listSlots } from './slots.js'
-import { rangesOverlap } from './hub-busy.js'
-import { confirmedAppointmentRanges, createSignedUpload, deleteObject, downloadObject, takenAppointments } from './supabase.js'
+import { createSignedUpload, deleteObject, downloadObject, takenAppointments } from './supabase.js'
 
 const TEN_MINUTES = 10 * 60 * 1000
 
@@ -86,12 +85,7 @@ export async function handleSlots(request: Request): Promise<Response> {
   } catch (error) {
     if (!(error instanceof HttpError) || error.status !== 503) throw error
   }
-  const calls = await confirmedAppointmentRanges(now.toISOString(), horizon.toISOString())
-  const durationMs = rules.durationMinutes * 60 * 1000
-  const slots = listSlots(rules, now, taken).filter(slot => {
-    const start = new Date(slot.start)
-    return !rangesOverlap(start, new Date(start.getTime() + durationMs), calls)
-  })
+  const slots = listSlots(rules, now, taken)
   return json({ slots, timeZone: rules.timeZone })
 }
 
