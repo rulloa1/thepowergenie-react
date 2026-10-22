@@ -1,4 +1,5 @@
 import React from 'react';
+import { openAssistant } from '../lib/openAssistant';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -157,6 +158,13 @@ export default function BrandPage({ id, onNavigate, getSalesforceUrl, onQuoteCli
                   Explore the brand family
                 </button>
               )}
+              <button
+                type="button"
+                onClick={() => openAssistant('book')}
+                className="inline-flex justify-center items-center border border-white/40 text-sm font-bold px-6 min-h-[48px] rounded-full hover:bg-white/10 transition-all cursor-pointer"
+              >
+                Book a free savings consult
+              </button>
               <button 
                 onClick={() => onNavigate('journey')}
                 className="inline-flex items-center min-h-[44px] text-sm border-b border-[#ffffff55] hover:border-white transition-colors cursor-pointer"

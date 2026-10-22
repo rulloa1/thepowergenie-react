@@ -1,6 +1,7 @@
 import React, { lazy, Suspense } from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App'
+import PowerGenieAssistant from './components/assistant/PowerGenieAssistant'
 import './index.css'
 
 // The Referral Hub pages load on demand so the scroll site's bundle stays small.
@@ -16,5 +17,7 @@ const page =
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <Suspense fallback={null}>{page}</Suspense>
+    <App />
+    <PowerGenieAssistant />
   </React.StrictMode>,
 )
