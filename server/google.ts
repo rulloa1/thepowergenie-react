@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { CustomerDetails } from '../src/lib/bookingForm';
+import { calendarEventDescription } from '../src/lib/lightBill';
 import type { BusyRange } from '../src/lib/slots';
 import { BOOKING_TIME_ZONE } from '../src/lib/slots';
 import type { GoogleEnv, ServerEnv } from './env';
@@ -249,7 +250,7 @@ export async function fetchGoogleBusy(
 export async function createGoogleEvent(
   admin: SupabaseClient,
   env: ServerEnv,
-  input: { customer: CustomerDetails; starts: Date; ends: Date },
+  input: { customer: CustomerDetails; starts: Date; ends: Date; lightBillAttached?: boolean },
 ): Promise<string> {
   const authorized = await authorizedConnection(admin, env);
   if (!authorized) throw new CalendarNotConnected();
@@ -262,14 +263,11 @@ export async function createGoogleEvent(
     },
     body: JSON.stringify({
       summary: `Power Genie call — ${input.customer.name}`.slice(0, 200),
-      description: [
-        `Name: ${input.customer.name}`,
-        `Phone: ${input.customer.phone}`,
-        `Email: ${input.customer.email}`,
-        `Address: ${input.customer.address}`,
-        input.customer.note ? `Note: ${input.customer.note}` : null,
-        'Booked on thepowergenie.theroyeffect.com',
-      ].filter((line): line is string => Boolean(line)).join('\n'),
+      description: calendarEventDescription({
+        customer: input.customer,
+        lightBillAttached: input.lightBillAttached === true,
+        site: env.publicSiteUrl,
+      }),
       start: { dateTime: input.starts.toISOString(), timeZone: BOOKING_TIME_ZONE },
       end: { dateTime: input.ends.toISOString(), timeZone: BOOKING_TIME_ZONE },
     }),
@@ -281,6 +279,33 @@ export async function createGoogleEvent(
     throw new CalendarCheckFailed('Could not add the call to Google Calendar.');
   }
   return json.id;
+}
+
+export async function updateGoogleEventDescription(
+  admin: SupabaseClient,
+  env: ServerEnv,
+  eventId: string,
+  description: string,
+): Promise<void> {
+  const authorized = await authorizedConnection(admin, env);
+  if (!authorized) throw new CalendarNotConnected();
+  const calendarId = encodeURIComponent(authorized.connection.calendarId);
+  const response = await fetch(
+    `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events/${encodeURIComponent(eventId)}`,
+    {
+      method: 'PATCH',
+      headers: {
+        Authorization: `Bearer ${authorized.accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ description }),
+      signal: AbortSignal.timeout(8000),
+    },
+  );
+  if (!response.ok) {
+    console.error('google update event failed', response.status);
+    throw new CalendarCheckFailed('Could not update the Google Calendar event.');
+  }
 }
 
 export async function deleteGoogleEvent(admin: SupabaseClient, env: ServerEnv, eventId: string): Promise<void> {

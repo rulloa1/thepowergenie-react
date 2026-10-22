@@ -1,5 +1,19 @@
+import { randomBytes, randomUUID } from 'node:crypto';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { validateCustomer, type CustomerDetails } from '../src/lib/bookingForm';
+import {
+  LIGHT_BILL_BUCKET,
+  LIGHT_BILL_MAX_BYTES,
+  acceptStoredBillMime,
+  calendarEventDescription,
+  isConfirmToken,
+  isLightBillObjectPath,
+  lightBillStoragePath,
+  normalizeBillMime,
+  validateLightBill,
+  type BillUploadGrant,
+  type LightBillMeta,
+} from '../src/lib/lightBill';
 import {
   HORIZON_DAYS,
   SLOT_DURATION_MS,
@@ -13,6 +27,7 @@ import {
   createGoogleEvent,
   deleteGoogleEvent,
   fetchGoogleBusy,
+  updateGoogleEventDescription,
 } from './google';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -29,6 +44,7 @@ export type BookSuccess = {
   startsAt: string;
   endsAt: string;
   calendarSynced: boolean;
+  upload: BillUploadGrant | null;
 };
 
 export type BookFailure = {
@@ -97,6 +113,7 @@ export async function bookSlot(
   input: {
     slot: string;
     customer: unknown;
+    lightBill?: unknown;
     source: 'public' | 'dashboard';
     createdBy: string | null;
     now?: Date;
@@ -111,6 +128,8 @@ export async function bookSlot(
   if (!customerResult.ok) {
     return { ok: false, status: 400, code: 'invalid_customer', error: customerResult.message };
   }
+  const bill = readRequestedBill(input.source, input.lightBill);
+  if (bill && 'ok' in bill) return bill;
 
   const busy = await collectBusy(admin, env, now);
   const open = generateOpenSlots({ now, busy: busy.ranges });
@@ -166,7 +185,7 @@ export async function bookSlot(
   let calendarSynced = false;
   if (busy.calendarConnected) {
     try {
-      const eventId = await createGoogleEvent(admin, env, { customer, starts, ends });
+      const eventId = await createGoogleEvent(admin, env, { customer, starts, ends, lightBillAttached: false });
       const { error: updateError } = await admin
         .from('appointments')
         .update({ google_event_id: eventId, calendar_sync_error: null })
@@ -183,11 +202,14 @@ export async function bookSlot(
     }
   }
 
+  const upload = bill ? await issueLightBillUpload(admin, id, bill) : null;
+
   return {
     ok: true,
     startsAt: starts.toISOString(),
     endsAt: ends.toISOString(),
     calendarSynced,
+    upload,
   };
 }
 
@@ -249,4 +271,258 @@ export async function cancelAppointment(
     return { ok: false, status: 500, code: 'save_failed', error: 'Could not cancel the appointment.' };
   }
   return { ok: true };
+}
+
+function readRequestedBill(
+  source: 'public' | 'dashboard',
+  lightBill: unknown,
+): LightBillMeta | BookFailure | null {
+  if (source !== 'public' || lightBill == null) return null;
+  const result = validateLightBill(lightBill);
+  if (!result.ok) {
+    return { ok: false, status: 400, code: 'invalid_bill', error: result.message };
+  }
+  return result.value;
+}
+
+async function issueLightBillUpload(
+  admin: SupabaseClient,
+  appointmentId: string,
+  bill: LightBillMeta,
+): Promise<BillUploadGrant | null> {
+  const path = lightBillStoragePath(bill.name, randomUUID());
+  if (!path) return null;
+  const signed = await admin.storage.from(LIGHT_BILL_BUCKET).createSignedUploadUrl(path);
+  if (signed.error || !signed.data?.signedUrl || !signed.data.token) {
+    console.error('light bill upload url failed', signed.error?.statusCode ?? 'error');
+    return null;
+  }
+  const confirmToken = randomBytes(32).toString('hex');
+  const { error } = await admin
+    .from('appointments')
+    .update({
+      light_bill_path: path,
+      light_bill_name: bill.name,
+      light_bill_mime: bill.mime,
+      light_bill_size: bill.size,
+      light_bill_upload_token: confirmToken,
+      light_bill_uploaded_at: null,
+    })
+    .eq('id', appointmentId);
+  if (error) {
+    console.error('store light bill upload failed', error.code);
+    return null;
+  }
+  return { signedUrl: signed.data.signedUrl, confirmToken };
+}
+
+type BillRow = {
+  id: string;
+  status: string;
+  light_bill_path: string;
+  light_bill_name: string;
+  light_bill_mime: string | null;
+  google_event_id: string | null;
+  customer_name: string;
+  customer_phone: string;
+  customer_email: string;
+  customer_address: string;
+  note: string | null;
+};
+
+function readBillRow(value: unknown): BillRow | null {
+  if (!value || typeof value !== 'object') return null;
+  const row = value as Record<string, unknown>;
+  if (typeof row.id !== 'string' || typeof row.status !== 'string') return null;
+  if (typeof row.light_bill_path !== 'string' || typeof row.light_bill_name !== 'string') return null;
+  if (typeof row.customer_name !== 'string' || typeof row.customer_phone !== 'string') return null;
+  if (typeof row.customer_email !== 'string' || typeof row.customer_address !== 'string') return null;
+  return {
+    id: row.id,
+    status: row.status,
+    light_bill_path: row.light_bill_path,
+    light_bill_name: row.light_bill_name,
+    light_bill_mime: typeof row.light_bill_mime === 'string' ? row.light_bill_mime : null,
+    google_event_id: typeof row.google_event_id === 'string' ? row.google_event_id : null,
+    customer_name: row.customer_name,
+    customer_phone: row.customer_phone,
+    customer_email: row.customer_email,
+    customer_address: row.customer_address,
+    note: typeof row.note === 'string' ? row.note : null,
+  };
+}
+
+function readByteSize(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string' && /^\d+$/.test(value)) {
+    const parsed = Number(value);
+    return Number.isSafeInteger(parsed) ? parsed : null;
+  }
+  return null;
+}
+
+function preferredBillMime(contentType: string | null, declared: string | null): string | null {
+  if (!contentType) return declared;
+  const mime = normalizeBillMime(contentType);
+  if (!mime || mime === 'application/octet-stream' || mime === 'binary/octet-stream') return declared;
+  return mime;
+}
+
+async function clearPendingBill(admin: SupabaseClient, appointmentId: string, path: string) {
+  if (isLightBillObjectPath(path)) {
+    const removed = await admin.storage.from(LIGHT_BILL_BUCKET).remove([path]);
+    if (removed.error) console.error('remove rejected light bill failed', removed.error.statusCode ?? 'error');
+  }
+  const { error } = await admin
+    .from('appointments')
+    .update({
+      light_bill_path: null,
+      light_bill_name: null,
+      light_bill_mime: null,
+      light_bill_size: null,
+      light_bill_upload_token: null,
+      light_bill_uploaded_at: null,
+    })
+    .eq('id', appointmentId);
+  if (error) console.error('clear light bill failed', error.code);
+}
+
+export async function confirmLightBill(
+  admin: SupabaseClient,
+  env: ServerEnv,
+  confirmToken: string,
+): Promise<{ ok: true } | BookFailure> {
+  if (!isConfirmToken(confirmToken)) {
+    return { ok: false, status: 400, code: 'invalid_token', error: 'That light bill upload was not found.' };
+  }
+  const { data, error } = await admin
+    .from('appointments')
+    .select('id, status, light_bill_path, light_bill_name, light_bill_mime, google_event_id, customer_name, customer_phone, customer_email, customer_address, note')
+    .eq('light_bill_upload_token', confirmToken)
+    .maybeSingle();
+  if (error) {
+    console.error('load light bill failed', error.code);
+    throw new BookingDataError();
+  }
+  const row = readBillRow(data);
+  if (!row || !isLightBillObjectPath(row.light_bill_path)) {
+    return { ok: false, status: 404, code: 'bill_not_found', error: 'That light bill upload was not found.' };
+  }
+  if (row.status !== 'confirmed') {
+    return { ok: false, status: 409, code: 'bill_closed', error: 'That appointment is no longer booked, so the bill was not saved.' };
+  }
+
+  const info = await admin.storage.from(LIGHT_BILL_BUCKET).info(row.light_bill_path);
+  if (info.error || !info.data) {
+    return {
+      ok: false,
+      status: 409,
+      code: 'bill_missing',
+      error: 'The light bill has not arrived yet. Try the upload again.',
+    };
+  }
+  const infoRecord = info.data as {
+    size?: unknown;
+    contentType?: unknown;
+    content_type?: unknown;
+    metadata?: { size?: unknown };
+  };
+  const size = readByteSize(infoRecord.size) ?? readByteSize(infoRecord.metadata?.size);
+  const contentType = typeof infoRecord.contentType === 'string'
+    ? infoRecord.contentType
+    : typeof infoRecord.content_type === 'string'
+      ? infoRecord.content_type
+      : null;
+  if (size == null || size <= 0) {
+    return {
+      ok: false,
+      status: 409,
+      code: 'bill_missing',
+      error: 'The light bill has not arrived yet. Try the upload again.',
+    };
+  }
+  if (size > LIGHT_BILL_MAX_BYTES || !acceptStoredBillMime(contentType)) {
+    await clearPendingBill(admin, row.id, row.light_bill_path);
+    return {
+      ok: false,
+      status: 400,
+      code: 'bill_rejected',
+      error: 'That file cannot be used as a light bill. The call is still booked.',
+    };
+  }
+
+  const uploadedAt = new Date().toISOString();
+  const { data: saved, error: saveError } = await admin
+    .from('appointments')
+    .update({
+      light_bill_size: size,
+      light_bill_uploaded_at: uploadedAt,
+      light_bill_upload_token: null,
+      light_bill_mime: preferredBillMime(contentType, row.light_bill_mime),
+    })
+    .eq('id', row.id)
+    .eq('light_bill_upload_token', confirmToken)
+    .select('id')
+    .maybeSingle();
+  if (saveError) {
+    console.error('save light bill failed', saveError.code);
+    return { ok: false, status: 500, code: 'save_failed', error: 'The light bill could not be saved. The call is still booked.' };
+  }
+  if (!saved) return { ok: true };
+
+  if (row.google_event_id) {
+    const customerResult = validateCustomer({
+      name: row.customer_name,
+      phone: row.customer_phone,
+      email: row.customer_email,
+      address: row.customer_address,
+      note: row.note ?? '',
+    });
+    if (customerResult.ok) {
+      try {
+        await updateGoogleEventDescription(
+          admin,
+          env,
+          row.google_event_id,
+          calendarEventDescription({
+            customer: customerResult.value,
+            lightBillAttached: true,
+            site: env.publicSiteUrl,
+          }),
+        );
+      } catch (calendarError) {
+        console.error('light bill calendar note failed', calendarError instanceof Error ? calendarError.name : 'error');
+      }
+    }
+  }
+  return { ok: true };
+}
+
+export async function signedLightBillDownload(
+  admin: SupabaseClient,
+  appointmentId: string,
+): Promise<{ ok: true; url: string } | BookFailure> {
+  if (!UUID_RE.test(appointmentId)) {
+    return { ok: false, status: 404, code: 'not_found', error: 'That light bill was not found.' };
+  }
+  const { data, error } = await admin
+    .from('appointments')
+    .select('light_bill_path, light_bill_uploaded_at')
+    .eq('id', appointmentId)
+    .maybeSingle();
+  if (error) {
+    console.error('load light bill download failed', error.code);
+    throw new BookingDataError();
+  }
+  const row = data as { light_bill_path?: unknown; light_bill_name?: unknown; light_bill_uploaded_at?: unknown } | null;
+  const path = row && typeof row.light_bill_path === 'string' ? row.light_bill_path : '';
+  if (!row || typeof row.light_bill_uploaded_at !== 'string' || !isLightBillObjectPath(path)) {
+    return { ok: false, status: 404, code: 'not_found', error: 'That light bill was not found.' };
+  }
+  const signed = await admin.storage.from(LIGHT_BILL_BUCKET).createSignedUrl(path, 120);
+  if (signed.error || !signed.data?.signedUrl) {
+    console.error('light bill download url failed', signed.error?.statusCode ?? 'error');
+    return { ok: false, status: 500, code: 'save_failed', error: 'The light bill could not be opened. Try again.' };
+  }
+  return { ok: true, url: signed.data.signedUrl };
 }

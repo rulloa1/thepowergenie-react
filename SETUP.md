@@ -50,6 +50,18 @@ Check **Storage** in the left sidebar. `dashboard-files` should say **Private**,
 
 The Google refresh token is stored in `google_calendar_connections`. The browser is not allowed to read that table. Only the server functions can.
 
+### Light bills
+
+Customers can attach last month's electric bill while they book. That file lives in a second private bucket. Run this script too, even if you already ran the one above.
+
+1. Open `supabase/migrations/20261022140000_light_bills.sql`.
+2. In **SQL Editor** → **New query**, paste the whole script and click **Run**.
+3. You should see **Success**. Running it again is safe.
+4. Open **Storage**. A bucket named `light-bills` should say **Private**, not Public.
+5. Do not add a Storage policy on `light-bills`, and do not turn the bucket public. Customers upload through the booking page only. They cannot see anyone else's file. Horace and Rory open a bill from that appointment on the **Schedule** tab. The link lasts about two minutes.
+
+If the Schedule tab later says it could not load appointments, wait a minute and refresh so Supabase notices the new columns.
+
 ## 3. Turn off public sign-up
 
 People should not be able to create their own dashboard login.
@@ -148,7 +160,7 @@ The redirect URI has to match character for character, including `https://`.
 5. Sign in as the Google account on Horace’s phone. If Google says the app is not verified, click **Advanced**, then continue to The Power Genie. Allow calendar access.
 6. You should land back on the dashboard with “Google Calendar is connected.”
 
-Book a test call from [https://thepowergenie.theroyeffect.com/book](https://thepowergenie.theroyeffect.com/book). The open times are weekdays, on the hour, from 9 AM to 7 PM Central, up to 30 days ahead, and nothing that starts in less than an hour. After you book, the call should appear on Horace’s phone and on the Schedule tab. A test event he creates on the phone should disappear from the open times within a refresh.
+Book a test call from [https://thepowergenie.theroyeffect.com/book](https://thepowergenie.theroyeffect.com/book). The open times are weekdays, on the hour, from 9 AM to 7 PM Central, up to 30 days ahead, and nothing that starts in less than an hour. The form asks for last month's light bill. That upload is optional. PDF, JPG, PNG, HEIC, and common phone photos are accepted, up to 10 MB. After you book, the call should appear on Horace’s phone and on the Schedule tab. If you attached a bill, the phone event says the file is on the dashboard. It does not include a link to the file itself. Open the appointment on the Schedule tab and use **View light bill**. A test event he creates on the phone should disappear from the open times within a refresh.
 
 Do this connection before you send customers to `/book`. Until Google is connected, the site can still save a booking, but Horace’s phone events will not block that time, and the event will not be pushed to his phone.
 

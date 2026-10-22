@@ -2,7 +2,9 @@ import { useEffect, useMemo, useState } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { apiFetch, readMessage, readSlots } from '../../lib/api';
 import { validateCustomer } from '../../lib/bookingForm';
-import type { DashboardProfile } from '../../lib/dashboard';
+import { formatBytes, type DashboardProfile } from '../../lib/dashboard';
+import { isBillDownloadUrl } from '../../lib/lightBill';
+import { supabaseUrl } from '../../lib/supabaseClient';
 import {
   calendarWeekday,
   chicagoDayRange,
@@ -40,6 +42,9 @@ type Appointment = {
   google_event_id: string | null;
   calendar_sync_error: string | null;
   source: 'public' | 'dashboard';
+  light_bill_name: string | null;
+  light_bill_size: number | null;
+  light_bill_uploaded_at: string | null;
 };
 
 const weekdayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -62,7 +67,40 @@ function parseAppointment(value: unknown): Appointment | null {
     google_event_id: typeof row.google_event_id === 'string' ? row.google_event_id : null,
     calendar_sync_error: typeof row.calendar_sync_error === 'string' ? row.calendar_sync_error : null,
     source: row.source === 'dashboard' ? 'dashboard' : 'public',
+    light_bill_name: typeof row.light_bill_uploaded_at === 'string' && typeof row.light_bill_name === 'string'
+      ? row.light_bill_name
+      : null,
+    light_bill_size: readSize(row.light_bill_size),
+    light_bill_uploaded_at: typeof row.light_bill_uploaded_at === 'string' ? row.light_bill_uploaded_at : null,
   };
+}
+
+function readSize(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string' && value.trim() && Number.isFinite(Number(value))) return Number(value);
+  return null;
+}
+
+function devPreviewAppointments(): Appointment[] {
+  const slot = generateOpenSlots({ now: new Date(), busy: [] })[0];
+  const start = slot ?? new Date(Date.now() + 2 * 60 * 60 * 1000);
+  return [{
+    id: '00000000-0000-4000-8000-000000000001',
+    starts_at: start.toISOString(),
+    ends_at: new Date(start.getTime() + 60 * 60 * 1000).toISOString(),
+    status: 'confirmed',
+    customer_name: 'Jamie Lee',
+    customer_phone: '(713) 555-0100',
+    customer_email: 'jamie@example.com',
+    customer_address: '1200 Smith St, Houston, TX',
+    note: 'Gate code is on the call.',
+    google_event_id: 'preview-event',
+    calendar_sync_error: null,
+    source: 'public',
+    light_bill_name: 'october-light-bill.pdf',
+    light_bill_size: 248320,
+    light_bill_uploaded_at: new Date().toISOString(),
+  }];
 }
 
 function readBusy(json: unknown): BusyRange[] {
@@ -100,15 +138,21 @@ export default function SchedulePanel({
   preview?: boolean;
 }) {
   const today = chicagoParts(new Date());
-  const [cursor, setCursor] = useState({ year: today.year, month: today.month });
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const previewRows = import.meta.env.DEV && preview ? devPreviewAppointments() : [];
+  const previewStart = previewRows[0] ? chicagoParts(new Date(previewRows[0].starts_at)) : null;
+  const [cursor, setCursor] = useState(
+    previewStart ? { year: previewStart.year, month: previewStart.month } : { year: today.year, month: today.month },
+  );
+  const [appointments, setAppointments] = useState<Appointment[]>(previewRows);
   const [googleBusy, setGoogleBusy] = useState<BusyRange[]>([]);
   const [connected, setConnected] = useState(false);
   const [googleEmail, setGoogleEmail] = useState<string | null>(null);
   const [openSlots, setOpenSlots] = useState<Date[]>(() => (
     preview ? generateOpenSlots({ now: new Date(), busy: [] }) : []
   ));
-  const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  const [selectedDay, setSelectedDay] = useState<string | null>(
+    previewRows[0] ? dayKey(new Date(previewRows[0].starts_at)) : null,
+  );
   const [slot, setSlot] = useState<Date | null>(null);
   const [customer, setCustomer] = useState<CustomerFormValues>(emptyCustomer);
   const [notice, setNotice] = useState<string | null>(null);
@@ -135,7 +179,7 @@ export default function SchedulePanel({
       const [rows, status, busy, slots] = await Promise.all([
         client
           .from('appointments')
-          .select('id, starts_at, ends_at, status, customer_name, customer_phone, customer_email, customer_address, note, google_event_id, calendar_sync_error, source')
+          .select('id, starts_at, ends_at, status, customer_name, customer_phone, customer_email, customer_address, note, google_event_id, calendar_sync_error, source, light_bill_name, light_bill_size, light_bill_uploaded_at')
           .gte('starts_at', monthStart.toISOString())
           .lt('starts_at', monthEnd.toISOString())
           .order('starts_at', { ascending: true }),
@@ -189,6 +233,22 @@ export default function SchedulePanel({
     const window = chicagoDayRange(year, month, day);
     return rangesOverlap(range.start, range.end, window.start, window.end);
   });
+
+  async function openBill(appointment: Appointment) {
+    if (!appointment.light_bill_name) return;
+    if (preview || !client || !supabaseUrl) {
+      setNotice('Preview only. Horace opens the bill from this appointment after a customer uploads it.');
+      return;
+    }
+    setError(null);
+    const result = await apiFetch(client, `/api/light-bill?appointmentId=${encodeURIComponent(appointment.id)}`);
+    const url = result.json && typeof result.json === 'object' ? (result.json as { url?: unknown }).url : null;
+    if (!result.ok || typeof url !== 'string' || !isBillDownloadUrl(url, supabaseUrl)) {
+      setError(readMessage(result.json, 'The light bill could not be opened.'));
+      return;
+    }
+    window.open(url, '_blank', 'noopener,noreferrer');
+  }
 
   async function connect() {
     if (preview || !client) {
@@ -323,7 +383,7 @@ export default function SchedulePanel({
           ) : (
             <ul className="mt-3 grid gap-3 p-0">
               {visibleAppointments.map((appointment) => (
-                <li key={appointment.id} className="rounded-2xl border border-[#E6EAF2] p-3">
+                <li key={appointment.id} id={`appointment-${appointment.id}`} className="rounded-2xl border border-[#E6EAF2] p-3">
                   <p className="m-0 font-bold">
                     {formatChicagoDay(new Date(appointment.starts_at))} · {formatChicagoTime(new Date(appointment.starts_at))}
                     {appointment.status === 'cancelled' ? ' · Cancelled' : ''}
@@ -332,6 +392,18 @@ export default function SchedulePanel({
                   <p className="m-0 text-sm text-[#4A5568]">{appointment.customer_phone} · {appointment.customer_email}</p>
                   <p className="m-0 text-sm text-[#4A5568]">{appointment.customer_address}</p>
                   {appointment.note ? <p className="m-0 mt-1 text-sm">{appointment.note}</p> : null}
+                  {appointment.light_bill_name ? (
+                    <div className="mt-2 rounded-xl bg-[#F4F7FB] px-3 py-2">
+                      <p className="m-0 text-sm font-semibold">Last month's light bill</p>
+                      <p className="m-0 text-sm text-[#4A5568]">
+                        {appointment.light_bill_name}
+                        {appointment.light_bill_size != null ? ` · ${formatBytes(appointment.light_bill_size)}` : ''}
+                      </p>
+                      <button type="button" className={`${secondaryButtonClass} mt-2`} onClick={() => void openBill(appointment)}>
+                        View light bill
+                      </button>
+                    </div>
+                  ) : null}
                   {appointment.status === 'confirmed' && !appointment.google_event_id ? (
                     <p className="m-0 mt-1 text-sm text-[#8A4B08]">{appointment.calendar_sync_error || 'Not on Google Calendar yet.'}</p>
                   ) : null}

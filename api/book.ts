@@ -1,3 +1,4 @@
+import { toPublicBookBody } from '../src/lib/lightBill';
 import { bookSlot, BookingDataError } from '../server/booking';
 import { readServerEnv } from '../server/env';
 import { assertMethod, notConfigured, readJson, sendJson, withErrors } from '../server/http';
@@ -22,6 +23,7 @@ export default withErrors(async (req, res) => {
     const result = await bookSlot(createAdmin(env), env, {
       slot,
       customer: record,
+      lightBill: record.lightBill,
       source: 'public',
       createdBy: null,
     });
@@ -29,7 +31,7 @@ export default withErrors(async (req, res) => {
       sendJson(res, result.status, { error: result.code, message: result.error });
       return;
     }
-    sendJson(res, 200, { ok: true, startsAt: result.startsAt, endsAt: result.endsAt });
+    sendJson(res, 200, toPublicBookBody(result));
   } catch (error) {
     if (error instanceof CalendarCheckFailed) {
       sendJson(res, 503, {

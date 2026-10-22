@@ -1,6 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ChangeEvent } from 'react';
 import { isNotConfiguredResult, publicFetch, readMessage, readSlots } from '../lib/api';
 import { validateCustomer } from '../lib/bookingForm';
+import { readBillUpload, validateLightBill } from '../lib/lightBill';
+import { putLightBill } from '../lib/putLightBill';
+import { supabaseUrl } from '../lib/supabaseClient';
 import {
   formatChicagoDay,
   formatChicagoTime,
@@ -14,18 +17,21 @@ import {
   SiteShell,
   TopBar,
   emptyCustomer,
+  fieldClass,
   primaryButtonClass,
   secondaryButtonClass,
   usePageTitle,
   type CustomerFormValues,
 } from '../components/dashboard/ui';
 
+type BillRetry = { file: File; signedUrl: string; confirmToken: string };
+
 type Phase =
   | { name: 'loading' }
   | { name: 'not_configured' }
   | { name: 'error'; message: string }
   | { name: 'ready' }
-  | { name: 'done'; startsAt: string; endsAt: string };
+  | { name: 'done'; startsAt: string; endsAt: string; bill: 'skipped' | 'attached' | 'failed'; retry: BillRetry | null };
 
 export default function BookPage() {
   if (import.meta.env.DEV) {
@@ -45,6 +51,12 @@ export default function BookPage() {
   );
 }
 
+function billCode(json: unknown): string | null {
+  if (!json || typeof json !== 'object') return null;
+  const code = (json as { error?: unknown }).error;
+  return typeof code === 'string' ? code : null;
+}
+
 function BookExperience({ preview = false }: { preview?: boolean }) {
   usePageTitle('Book a call with Horace — The Power Genie');
   const [phase, setPhase] = useState<Phase>(preview ? { name: 'ready' } : { name: 'loading' });
@@ -52,8 +64,11 @@ function BookExperience({ preview = false }: { preview?: boolean }) {
   const [dayKey, setDayKey] = useState<string | null>(null);
   const [selected, setSelected] = useState<Date | null>(null);
   const [customer, setCustomer] = useState<CustomerFormValues>(emptyCustomer);
+  const [bill, setBill] = useState<File | null>(null);
+  const [billError, setBillError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [pendingLabel, setPendingLabel] = useState('Booking…');
 
   useEffect(() => {
     if (preview) return undefined;
@@ -88,6 +103,48 @@ function BookExperience({ preview = false }: { preview?: boolean }) {
   const active = groups.find((group) => group.key === activeKey) ?? null;
   const selectedSlot = selected && active?.slots.some((slot) => slot.getTime() === selected.getTime()) ? selected : null;
 
+  function onBill(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0] ?? null;
+    if (!file) {
+      setBill(null);
+      setBillError(null);
+      return;
+    }
+    const result = validateLightBill({ name: file.name, type: file.type, size: file.size });
+    if (!result.ok) {
+      setBill(null);
+      setBillError(result.message);
+      event.target.value = '';
+      return;
+    }
+    setBill(file);
+    setBillError(null);
+  }
+
+  async function attachBill(file: File, signedUrl: string, confirmToken: string): Promise<'attached' | 'retry' | 'stopped'> {
+    const uploaded = await putLightBill(file, signedUrl);
+    if (!uploaded) return 'retry';
+    const confirm = await publicFetch('/api/book-bill', {
+      method: 'POST',
+      body: JSON.stringify({ confirmToken }),
+    });
+    if (confirm.ok) return 'attached';
+    const code = billCode(confirm.json);
+    if (code === 'bill_rejected' || code === 'bill_closed') return 'stopped';
+    if (code === 'bill_missing') {
+      const retryUpload = await putLightBill(file, signedUrl);
+      if (!retryUpload) return 'retry';
+      const second = await publicFetch('/api/book-bill', {
+        method: 'POST',
+        body: JSON.stringify({ confirmToken }),
+      });
+      if (second.ok) return 'attached';
+      const secondCode = billCode(second.json);
+      if (secondCode === 'bill_rejected' || secondCode === 'bill_closed') return 'stopped';
+    }
+    return 'retry';
+  }
+
   async function submit() {
     if (!selectedSlot) {
       setFormError('Pick an open time.');
@@ -98,22 +155,32 @@ function BookExperience({ preview = false }: { preview?: boolean }) {
       setFormError(customerResult.message);
       return;
     }
+    if (billError) {
+      setFormError(billError);
+      return;
+    }
     if (preview) {
       setFormError('Preview only. Booking runs on the server once it is configured.');
       return;
     }
     setSubmitting(true);
+    setPendingLabel('Booking…');
     setFormError(null);
     const result = await publicFetch('/api/book', {
       method: 'POST',
-      body: JSON.stringify({ slot: selectedSlot.toISOString(), ...customer }),
+      body: JSON.stringify({
+        slot: selectedSlot.toISOString(),
+        ...customer,
+        lightBill: bill ? { name: bill.name, type: bill.type, size: bill.size } : null,
+      }),
     });
-    setSubmitting(false);
     if (isNotConfiguredResult(result)) {
+      setSubmitting(false);
       setPhase({ name: 'not_configured' });
       return;
     }
     if (!result.ok || !result.json || typeof result.json !== 'object') {
+      setSubmitting(false);
       setFormError(readMessage(result.json, 'That time could not be booked. Pick another open slot.'));
       if (result.status === 409) {
         const refresh = await publicFetch('/api/availability');
@@ -124,10 +191,38 @@ function BookExperience({ preview = false }: { preview?: boolean }) {
     }
     const record = result.json as { startsAt?: unknown; endsAt?: unknown };
     if (typeof record.startsAt !== 'string' || typeof record.endsAt !== 'string') {
+      setSubmitting(false);
       setFormError('That time could not be booked. Please try again.');
       return;
     }
-    setPhase({ name: 'done', startsAt: record.startsAt, endsAt: record.endsAt });
+    const upload = bill ? readBillUpload(result.json, supabaseUrl) : null;
+    let outcome: 'skipped' | 'attached' | 'retry' | 'stopped' = 'skipped';
+    if (bill) {
+      setPendingLabel('Uploading light bill…');
+      outcome = upload ? await attachBill(bill, upload.signedUrl, upload.confirmToken) : 'stopped';
+    }
+    setSubmitting(false);
+    setPhase({
+      name: 'done',
+      startsAt: record.startsAt,
+      endsAt: record.endsAt,
+      bill: outcome === 'attached' ? 'attached' : outcome === 'skipped' ? 'skipped' : 'failed',
+      retry: outcome === 'retry' && bill && upload ? { file: bill, ...upload } : null,
+    });
+  }
+
+  async function retryBill(retry: BillRetry, startsAt: string, endsAt: string) {
+    setSubmitting(true);
+    setPendingLabel('Uploading light bill…');
+    const outcome = await attachBill(retry.file, retry.signedUrl, retry.confirmToken);
+    setSubmitting(false);
+    setPhase({
+      name: 'done',
+      startsAt,
+      endsAt,
+      bill: outcome === 'attached' ? 'attached' : 'failed',
+      retry: outcome === 'retry' ? retry : null,
+    });
   }
 
   return (
@@ -169,6 +264,22 @@ function BookExperience({ preview = false }: { preview?: boolean }) {
               {formatChicagoDay(new Date(phase.startsAt))} at {formatChicagoTime(new Date(phase.startsAt))} Central.
             </p>
             <p className="text-[#4A5568]">He'll have your name, phone, email, and address for the call.</p>
+            {phase.bill === 'attached' ? (
+              <p className="text-[#4A5568]">Your light bill was saved with this booking. Horace can open it from the dashboard.</p>
+            ) : null}
+            {phase.bill === 'failed' ? (
+              <p className="text-[#4A5568]">The call is booked. The light bill did not finish uploading. Try again below, or email the bill to Horace.</p>
+            ) : null}
+            {phase.retry ? (
+              <button
+                type="button"
+                className={`${secondaryButtonClass} mt-2`}
+                disabled={submitting}
+                onClick={() => void retryBill(phase.retry as BillRetry, phase.startsAt, phase.endsAt)}
+              >
+                {submitting ? pendingLabel : 'Try the light bill upload again'}
+              </button>
+            ) : null}
             <a className={`${primaryButtonClass} mt-4`} href="/">Back to the site</a>
           </section>
         ) : null}
@@ -226,8 +337,26 @@ function BookExperience({ preview = false }: { preview?: boolean }) {
             ) : null}
             {formError ? <Notice tone="error">{formError}</Notice> : null}
             <CustomerFields idPrefix="book" values={customer} onChange={setCustomer} yourDetails />
+            <div id="light-bill" className="grid gap-2 rounded-2xl bg-[#FFF6E8] px-4 py-4">
+              <label className="grid gap-1 text-sm font-semibold" htmlFor="book-light-bill">
+                Upload last month's light bill
+                <span id="book-light-bill-help" className="font-normal leading-relaxed text-[#4A5568]">
+                  Optional, but it helps Horace prepare for the call. PDF, JPG, PNG, HEIC, or another phone photo. 10 MB maximum.
+                </span>
+                <input
+                  id="book-light-bill"
+                  className={`${fieldClass} file:mr-3 file:rounded-full file:border-0 file:bg-[#0B2233] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white`}
+                  type="file"
+                  accept=".pdf,.jpg,.jpeg,.jfif,.png,.heic,.heif,.webp,.gif,.bmp,.tif,.tiff,application/pdf,image/jpeg,image/png,image/heic,image/heif,image/webp,image/gif,image/bmp,image/tiff"
+                  aria-describedby="book-light-bill-help"
+                  onChange={onBill}
+                />
+              </label>
+              {bill ? <p className="m-0 text-sm">Selected: {bill.name}</p> : null}
+              {billError ? <Notice tone="error">{billError}</Notice> : null}
+            </div>
             <button type="submit" className={primaryButtonClass} disabled={submitting || groups.length === 0}>
-              {submitting ? 'Booking…' : 'Book this time'}
+              {submitting ? pendingLabel : 'Book this time'}
             </button>
           </form>
         ) : null}
