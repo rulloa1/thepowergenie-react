@@ -1,16 +1,17 @@
 import { randomUUID } from 'node:crypto'
 import type { UIMessage } from 'ai'
-import { EMPTY_BILL, type BillFields } from '../shared/types'
-import { streamAssistant, streamTextResponse } from './chat'
-import { extractBill } from './extract'
-import { assertAllowedUpload, assertBillBytes, safeFileName } from './files'
-import { assertSameOrigin, clientIp, honeypotTripped, HttpError, isRecord, json, readJson } from './http'
-import { saveLead } from './lead'
-import { openReceipt, sealReceipt } from './receipt'
-import { enforceRateLimit } from './rate-limit'
-import { loadSlotRules } from './slot-rules'
-import { chicagoDate, listSlots } from './slots'
-import { createSignedUpload, deleteObject, downloadObject, takenAppointments } from './supabase'
+import { EMPTY_BILL, type BillFields } from '../shared/types.js'
+import { streamAssistant, streamTextResponse } from './chat.js'
+import { extractBill } from './extract.js'
+import { assertAllowedUpload, assertBillBytes, safeFileName } from './files.js'
+import { assertSameOrigin, clientIp, honeypotTripped, HttpError, isRecord, json, readWebJson } from './http.js'
+import { saveLead } from './lead.js'
+import { openReceipt, sealReceipt } from './receipt.js'
+import { enforceRateLimit } from './rate-limit.js'
+import { loadSlotRules } from './slot-rules.js'
+import { chicagoDate, listSlots } from './slots.js'
+import { rangesOverlap } from './hub-busy.js'
+import { confirmedAppointmentRanges, createSignedUpload, deleteObject, downloadObject, takenAppointments } from './supabase.js'
 
 const TEN_MINUTES = 10 * 60 * 1000
 
@@ -21,7 +22,7 @@ function guard(request: Request, bucket: string, limit: number, windowMs: number
 
 export async function handleChat(request: Request): Promise<Response> {
   guard(request, 'chat', 30, TEN_MINUTES)
-  const body = await readJson(request, 80_000)
+  const body = await readWebJson(request, 80_000)
   if (!isRecord(body) || !Array.isArray(body.messages)) throw new HttpError(400, 'Invalid request.')
   if (honeypotTripped(body.pg_leave_blank)) {
     return streamTextResponse('Use the buttons below to upload your electric bill or book a free savings consult.')
@@ -31,7 +32,7 @@ export async function handleChat(request: Request): Promise<Response> {
 
 export async function handleUploads(request: Request): Promise<Response> {
   guard(request, 'upload', 10, TEN_MINUTES)
-  const body = await readJson(request, 8_000)
+  const body = await readWebJson(request, 8_000)
   if (!isRecord(body)) throw new HttpError(400, 'Invalid request.')
   if (honeypotTripped(body.pg_leave_blank)) throw new HttpError(400, 'Please try that upload again.')
   const fileName = typeof body.fileName === 'string' ? body.fileName : 'light-bill'
@@ -54,7 +55,7 @@ export async function handleUploads(request: Request): Promise<Response> {
 
 export async function handleBill(request: Request): Promise<Response> {
   guard(request, 'bill', 8, TEN_MINUTES)
-  const body = await readJson(request, 16_000)
+  const body = await readWebJson(request, 16_000)
   if (!isRecord(body)) throw new HttpError(400, 'Invalid request.')
   if (honeypotTripped(body.pg_leave_blank)) return json({ fields: EMPTY_BILL, warning: null })
   if (typeof body.receipt !== 'string' || !body.receipt) throw new HttpError(400, 'Please attach the bill again.')
@@ -85,12 +86,18 @@ export async function handleSlots(request: Request): Promise<Response> {
   } catch (error) {
     if (!(error instanceof HttpError) || error.status !== 503) throw error
   }
-  return json({ slots: listSlots(rules, now, taken), timeZone: rules.timeZone })
+  const calls = await confirmedAppointmentRanges(now.toISOString(), horizon.toISOString())
+  const durationMs = rules.durationMinutes * 60 * 1000
+  const slots = listSlots(rules, now, taken).filter(slot => {
+    const start = new Date(slot.start)
+    return !rangesOverlap(start, new Date(start.getTime() + durationMs), calls)
+  })
+  return json({ slots, timeZone: rules.timeZone })
 }
 
 export async function handleLead(request: Request): Promise<Response> {
   guard(request, 'lead', 5, 30 * 60 * 1000)
-  const body = await readJson(request, 32_000)
+  const body = await readWebJson(request, 32_000)
   const confirmation = await saveLead(body)
   if (confirmation === 'honeypot') {
     return json({
@@ -116,6 +123,19 @@ function requestUrl(request: Request): URL {
   }
 }
 
+const ASSISTANT_ROUTES = new Set(['chat', 'uploads', 'bill', 'lead', 'slots'])
+
+/** One function serves every assistant route. The widget calls /api/assistant?route=. */
+function assistantRoute(url: URL): string {
+  if (url.pathname === '/api/assistant') {
+    const route = url.searchParams.get('route') || ''
+    if (ASSISTANT_ROUTES.has(route)) return `/api/${route}`
+  }
+  const nested = url.pathname.match(/^\/api\/assistant\/(chat|uploads|bill|lead|slots)$/)
+  if (nested) return `/api/${nested[1]}`
+  return url.pathname
+}
+
 function isBlankBill(fields: BillFields): boolean {
   return Object.values(fields).every(value => value == null)
 }
@@ -123,11 +143,12 @@ function isBlankBill(fields: BillFields): boolean {
 export async function handleApi(request: Request): Promise<Response> {
   const url = requestUrl(request)
   try {
-    if (url.pathname === '/api/chat' && request.method === 'POST') return await handleChat(request)
-    if (url.pathname === '/api/uploads' && request.method === 'POST') return await handleUploads(request)
-    if (url.pathname === '/api/bill' && request.method === 'POST') return await handleBill(request)
-    if (url.pathname === '/api/lead' && request.method === 'POST') return await handleLead(request)
-    if (url.pathname === '/api/slots' && request.method === 'GET') return await handleSlots(request)
+    const pathname = assistantRoute(url)
+    if (pathname === '/api/chat' && request.method === 'POST') return await handleChat(request)
+    if (pathname === '/api/uploads' && request.method === 'POST') return await handleUploads(request)
+    if (pathname === '/api/bill' && request.method === 'POST') return await handleBill(request)
+    if (pathname === '/api/lead' && request.method === 'POST') return await handleLead(request)
+    if (pathname === '/api/slots' && request.method === 'GET') return await handleSlots(request)
     return json({ error: 'Not found.' }, 404)
   } catch (error) {
     if (error instanceof HttpError) return json({ error: error.message }, error.status)

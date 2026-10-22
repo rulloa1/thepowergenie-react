@@ -6,7 +6,7 @@ import {
   toUIMessageStream,
   type UIMessage,
 } from 'ai'
-import { ASSISTANT_INSTRUCTIONS, assistantModel, mockAiEnabled } from './prompt'
+import { ASSISTANT_INSTRUCTIONS, assistantModel, mockAiEnabled } from './prompt.js'
 
 const FALLBACK =
   'I cannot reach the assistant right now. Horace Lawrence still runs the real numbers from your electric bill. Use the buttons here to upload the bill or book a free savings consult, and he will follow up.'

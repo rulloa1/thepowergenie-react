@@ -1,7 +1,7 @@
-import { readServerEnv, googleReady, siteOrigin } from '../../server/env';
-import { queryValue, withErrors } from '../../server/http';
-import { consumeOauthState, exchangeCode, saveRefreshToken, CalendarCheckFailed } from '../../server/google';
-import { createAdmin } from '../../server/supabase';
+import { readServerEnv, googleReady, siteOrigin } from '../../server/env.js';
+import { queryValue, withErrors } from '../../server/http.js';
+import { consumeOauthState, exchangeCode, saveRefreshToken, CalendarCheckFailed } from '../../server/google.js';
+import { createAdmin } from '../../server/supabase.js';
 import type { VercelResponse } from '@vercel/node';
 
 function redirectDashboard(res: VercelResponse, origin: string, query: string) {

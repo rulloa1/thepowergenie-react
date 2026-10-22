@@ -14,7 +14,7 @@ Rules:
 - You cannot see files in this conversation. Tell them to use the upload button for a bill and the booking button for a time.
 - You are not Horace. Do not pretend a consult is confirmed. The booking form on this page is what saves the appointment.`
 
-export const DEFAULT_MODEL = 'google/gemini-3.8-flash'
+export const DEFAULT_MODEL = 'google/gemini-2.5-flash-lite'
 
 export function assistantModel(): string {
   const configured = process.env.AI_GATEWAY_MODEL?.trim()

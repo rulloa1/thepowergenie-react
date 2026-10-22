@@ -1,8 +1,8 @@
-import { readServerEnv } from '../../server/env';
-import { assertMethod, bearerToken, notConfigured, queryValue, sendJson, withErrors } from '../../server/http';
-import { fetchGoogleBusy, CalendarCheckFailed } from '../../server/google';
-import { HORIZON_DAYS } from '../../src/lib/slots';
-import { createAdmin, requireDashboardUser } from '../../server/supabase';
+import { readServerEnv } from '../../server/env.js';
+import { assertMethod, bearerToken, notConfigured, queryValue, sendJson, withErrors } from '../../server/http.js';
+import { fetchGoogleBusy, CalendarCheckFailed } from '../../server/google.js';
+import { HORIZON_DAYS } from '../../src/lib/slots.js';
+import { createAdmin, requireDashboardUser } from '../../server/supabase.js';
 
 const MAX_WINDOW_MS = 62 * 24 * 60 * 60 * 1000;
 

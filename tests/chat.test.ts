@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { afterEach, test } from 'node:test'
 import { handleApi } from '../server/routes'
 import { ASSISTANT_INSTRUCTIONS, mockAiEnabled } from '../server/prompt'
+import { supabaseConfig } from '../server/supabase'
 import { resetRateLimits } from '../server/rate-limit'
 
 const original = { ...process.env }
@@ -54,4 +55,24 @@ test('a filled honeypot does not call the model path for a normal question strea
   const text = await response.text()
   assert.doesNotMatch(text, /\$\d/)
   assert.match(text, /upload your electric bill|book a free savings consult/i)
+})
+
+function roleJwt(role: string): string {
+  const header = Buffer.from(JSON.stringify({ alg: 'none', typ: 'JWT' })).toString('base64url')
+  const payload = Buffer.from(JSON.stringify({ role })).toString('base64url')
+  return `${header}.${payload}.sig`
+}
+
+test('the assistant accepts an sb_secret key or a service_role JWT and refuses an anon JWT', () => {
+  process.env.SUPABASE_URL = 'https://example.supabase.co/'
+  process.env.SUPABASE_SERVICE_ROLE_KEY = '  sb_secret_test_only  '
+  assert.deepEqual(supabaseConfig(), { url: 'https://example.supabase.co', key: 'sb_secret_test_only' })
+  process.env.SUPABASE_SERVICE_ROLE_KEY = roleJwt('service_role')
+  assert.equal(supabaseConfig().key, process.env.SUPABASE_SERVICE_ROLE_KEY)
+  process.env.SUPABASE_SERVICE_ROLE_KEY = roleJwt('anon')
+  assert.throws(() => supabaseConfig(), /Scheduling is not configured/)
+  delete process.env.SUPABASE_URL
+  process.env.VITE_SUPABASE_URL = 'https://vite.example.supabase.co'
+  process.env.SUPABASE_SERVICE_ROLE_KEY = 'sb_secret_test_only'
+  assert.equal(supabaseConfig().url, 'https://vite.example.supabase.co')
 })

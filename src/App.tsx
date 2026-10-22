@@ -334,7 +334,7 @@ export default function App() {
           </div>
         </div>
         <p className="mt-8 max-w-[1280px] text-[0.98rem] leading-relaxed text-[#4A5568]">
-          <a href="/book" className="font-semibold text-[#0066CC] no-underline hover:underline focus-visible:underline">Book a call with Horace</a>
+          <a href="/book" className="font-semibold text-[#0066CC] no-underline hover:underline focus-visible:underline">Book a one-hour call on Horace’s calendar</a>
         </p>
       </section>
     </div>

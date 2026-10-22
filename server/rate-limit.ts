@@ -2,7 +2,7 @@
  * Best-effort per-instance limiter. Serverless isolates do not share memory,
  * so this slows a noisy client on one instance. It is not a global quota.
  */
-import { HttpError } from './http'
+import { HttpError } from './http.js'
 
 type Bucket = { reset: number; count: number }
 
