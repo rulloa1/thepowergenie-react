@@ -54,6 +54,10 @@ begin
     on conflict (id) do update set role = excluded.role, full_name = coalesce(public.hub_profiles.full_name, excluded.full_name);
   end if;
   return new;
+exception when others then
+  -- Never block an auth.users insert (this project is shared with the Hearth portal).
+  raise warning 'hub_handle_new_user skipped for %: %', new.id, sqlerrm;
+  return new;
 end;
 $$;
 
@@ -97,7 +101,11 @@ create policy "members read profiles" on public.hub_profiles
 
 -- ---------------------------------------------------------------------------
 -- Appointments
+-- btree_gist supports the GiST exclusion constraint below. Creating the
+-- extension does not change existing tables.
 -- ---------------------------------------------------------------------------
+
+create extension if not exists btree_gist with schema extensions;
 
 create table if not exists public.hub_appointments (
   id                uuid primary key default gen_random_uuid(),
@@ -251,3 +259,22 @@ drop policy if exists "hub members read light bills" on storage.objects;
 create policy "hub members read light bills" on storage.objects
   for select to authenticated
   using (bucket_id = 'hub-light-bills' and public.is_hub_member());
+
+-- ---------------------------------------------------------------------------
+-- Explicit grants. This project's default privileges do NOT grant table or
+-- function access to anon/authenticated/service_role, so grant exactly what the
+-- Edge Functions (service_role) and the dashboard (authenticated + RLS) need.
+-- anon gets nothing.
+-- ---------------------------------------------------------------------------
+
+grant select, insert, update, delete on
+  public.hub_allowlist, public.hub_profiles, public.hub_appointments,
+  public.hub_appointment_files, public.hub_google_credentials, public.hub_chat_messages
+  to service_role;
+
+grant select on public.hub_profiles, public.hub_appointments, public.hub_appointment_files
+  to authenticated;
+grant select, insert, delete on public.hub_chat_messages to authenticated;
+
+grant execute on function public.is_hub_member(), public.is_hub_owner() to authenticated, service_role;
+revoke execute on function public.is_hub_member(), public.is_hub_owner() from public, anon;
