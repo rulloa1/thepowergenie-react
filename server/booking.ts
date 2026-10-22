@@ -1,6 +1,6 @@
 import { randomBytes, randomUUID } from 'node:crypto';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { validateCustomer, type CustomerDetails } from '../src/lib/bookingForm';
+import { validateCustomer, type CustomerDetails } from '../src/lib/bookingForm.js';
 import {
   LIGHT_BILL_BUCKET,
   LIGHT_BILL_MAX_BYTES,
@@ -13,16 +13,16 @@ import {
   validateLightBill,
   type BillUploadGrant,
   type LightBillMeta,
-} from '../src/lib/lightBill';
+} from '../src/lib/lightBill.js';
 import {
   HORIZON_DAYS,
   SLOT_DURATION_MS,
   generateOpenSlots,
   type BusyRange,
-} from '../src/lib/slots';
-import type { ServerEnv } from './env';
-import { hubConsultRanges } from './hub-busy';
-import { loadSlotRules } from './slot-rules';
+} from '../src/lib/slots.js';
+import type { ServerEnv } from './env.js';
+import { hubConsultRanges } from './hub-busy.js';
+import { loadSlotRules } from './slot-rules.js';
 import {
   CalendarCheckFailed,
   CalendarNotConnected,
@@ -30,7 +30,7 @@ import {
   deleteGoogleEvent,
   fetchGoogleBusy,
   updateGoogleEventDescription,
-} from './google';
+} from './google.js';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 

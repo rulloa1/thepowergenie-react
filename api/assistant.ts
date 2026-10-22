@@ -1,4 +1,4 @@
-import { handleApi } from '../../server/routes'
+import { handleApi } from '../server/routes.js'
 
 export const maxDuration = 60
 

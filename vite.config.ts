@@ -8,7 +8,11 @@ function powerGenieApi() {
     configureServer(server) {
       server.middlewares.use(async (req, res, next) => {
         const path = req.url?.split('?')[0] ?? ''
-        if (!/^\/api\/(?:assistant\/)?(chat|uploads|bill|lead|slots)$/.test(path)) return next()
+        const route = new URL(req.url || '/', 'http://127.0.0.1').searchParams.get('route') || ''
+        const assistant =
+          (path === '/api/assistant' && /^(chat|uploads|bill|lead|slots)$/.test(route)) ||
+          /^\/api\/(chat|uploads|bill|lead|slots)$/.test(path)
+        if (!assistant) return next()
         try {
           const mod = await server.ssrLoadModule('/server/node-handler.ts')
           await mod.handleNodeRequest(req, res)

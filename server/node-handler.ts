@@ -1,4 +1,4 @@
-import { handleApi } from './routes'
+import { handleApi } from './routes.js'
 
 type NodeRequest = {
   url?: string

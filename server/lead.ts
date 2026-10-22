@@ -1,12 +1,12 @@
 import { randomUUID } from 'node:crypto'
-import { TCPA_VERSION, type BillFields, type Confirmation, type LeadPayload, type Slot } from '../shared/types'
-import { HttpError, honeypotTripped, isRecord } from './http'
-import { loadSlotRules } from './slot-rules'
-import { chicagoDate, listSlots } from './slots'
-import { assertBillBytes } from './files'
-import { rangesOverlap } from './hub-busy'
-import { insertRow, confirmedAppointmentRanges, downloadObject, moveObject, takenAppointments } from './supabase'
-import { openReceipt, type UploadReceipt } from './receipt'
+import { TCPA_VERSION, type BillFields, type Confirmation, type LeadPayload, type Slot } from '../shared/types.js'
+import { HttpError, honeypotTripped, isRecord } from './http.js'
+import { loadSlotRules } from './slot-rules.js'
+import { chicagoDate, listSlots } from './slots.js'
+import { assertBillBytes } from './files.js'
+import { rangesOverlap } from './hub-busy.js'
+import { insertRow, confirmedAppointmentRanges, downloadObject, moveObject, takenAppointments } from './supabase.js'
+import { openReceipt, type UploadReceipt } from './receipt.js'
 
 /**
  * Hub assumptions (schema in powergenie-hub-schema.sql):

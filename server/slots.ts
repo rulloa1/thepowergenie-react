@@ -1,5 +1,5 @@
-import { loadSlotRules, type SlotRules } from './slot-rules'
-import type { Slot } from '../shared/types'
+import { loadSlotRules, type SlotRules } from './slot-rules.js'
+import type { Slot } from '../shared/types.js'
 
 export type ZonedParts = {
   year: number

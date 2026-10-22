@@ -1,9 +1,9 @@
-import { toPublicBookBody } from '../src/lib/lightBill';
-import { bookSlot, BookingDataError } from '../server/booking';
-import { readServerEnv } from '../server/env';
-import { assertMethod, notConfigured, readJson, sendJson, withErrors } from '../server/http';
-import { CalendarCheckFailed } from '../server/google';
-import { createAdmin } from '../server/supabase';
+import { toPublicBookBody } from '../src/lib/lightBill.js';
+import { bookSlot, BookingDataError } from '../server/booking.js';
+import { readServerEnv } from '../server/env.js';
+import { assertMethod, notConfigured, readJson, sendJson, withErrors } from '../server/http.js';
+import { CalendarCheckFailed } from '../server/google.js';
+import { createAdmin } from '../server/supabase.js';
 
 export default withErrors(async (req, res) => {
   if (!assertMethod(req, res, 'POST')) return;

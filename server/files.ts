@@ -1,5 +1,5 @@
-import { MAX_BILL_BYTES } from '../shared/types'
-import { HttpError } from './http'
+import { MAX_BILL_BYTES } from '../shared/types.js'
+import { HttpError } from './http.js'
 
 const ALLOWED = new Set(['image/jpeg', 'image/png', 'image/webp', 'application/pdf'])
 

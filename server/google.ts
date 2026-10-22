@@ -1,11 +1,11 @@
 import { randomBytes } from 'node:crypto';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { CustomerDetails } from '../src/lib/bookingForm';
-import { calendarEventDescription } from '../src/lib/lightBill';
-import type { BusyRange } from '../src/lib/slots';
-import { BOOKING_TIME_ZONE } from '../src/lib/slots';
-import type { GoogleEnv, ServerEnv } from './env';
-import { googleReady } from './env';
+import type { CustomerDetails } from '../src/lib/bookingForm.js';
+import { calendarEventDescription } from '../src/lib/lightBill.js';
+import type { BusyRange } from '../src/lib/slots.js';
+import { BOOKING_TIME_ZONE } from '../src/lib/slots.js';
+import type { GoogleEnv, ServerEnv } from './env.js';
+import { googleReady } from './env.js';
 
 const TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth';

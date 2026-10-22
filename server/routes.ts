@@ -1,17 +1,17 @@
 import { randomUUID } from 'node:crypto'
 import type { UIMessage } from 'ai'
-import { EMPTY_BILL, type BillFields } from '../shared/types'
-import { streamAssistant, streamTextResponse } from './chat'
-import { extractBill } from './extract'
-import { assertAllowedUpload, assertBillBytes, safeFileName } from './files'
-import { assertSameOrigin, clientIp, honeypotTripped, HttpError, isRecord, json, readWebJson } from './http'
-import { saveLead } from './lead'
-import { openReceipt, sealReceipt } from './receipt'
-import { enforceRateLimit } from './rate-limit'
-import { loadSlotRules } from './slot-rules'
-import { chicagoDate, listSlots } from './slots'
-import { rangesOverlap } from './hub-busy'
-import { confirmedAppointmentRanges, createSignedUpload, deleteObject, downloadObject, takenAppointments } from './supabase'
+import { EMPTY_BILL, type BillFields } from '../shared/types.js'
+import { streamAssistant, streamTextResponse } from './chat.js'
+import { extractBill } from './extract.js'
+import { assertAllowedUpload, assertBillBytes, safeFileName } from './files.js'
+import { assertSameOrigin, clientIp, honeypotTripped, HttpError, isRecord, json, readWebJson } from './http.js'
+import { saveLead } from './lead.js'
+import { openReceipt, sealReceipt } from './receipt.js'
+import { enforceRateLimit } from './rate-limit.js'
+import { loadSlotRules } from './slot-rules.js'
+import { chicagoDate, listSlots } from './slots.js'
+import { rangesOverlap } from './hub-busy.js'
+import { confirmedAppointmentRanges, createSignedUpload, deleteObject, downloadObject, takenAppointments } from './supabase.js'
 
 const TEN_MINUTES = 10 * 60 * 1000
 
@@ -123,11 +123,17 @@ function requestUrl(request: Request): URL {
   }
 }
 
-/** The five assistant routes share one function so the Hobby plan stays under its function cap. */
-function assistantRoute(pathname: string): string {
-  const nested = pathname.match(/^\/api\/assistant\/(chat|uploads|bill|lead|slots)$/)
+const ASSISTANT_ROUTES = new Set(['chat', 'uploads', 'bill', 'lead', 'slots'])
+
+/** One function serves every assistant route. The widget calls /api/assistant?route=. */
+function assistantRoute(url: URL): string {
+  if (url.pathname === '/api/assistant') {
+    const route = url.searchParams.get('route') || ''
+    if (ASSISTANT_ROUTES.has(route)) return `/api/${route}`
+  }
+  const nested = url.pathname.match(/^\/api\/assistant\/(chat|uploads|bill|lead|slots)$/)
   if (nested) return `/api/${nested[1]}`
-  return pathname
+  return url.pathname
 }
 
 function isBlankBill(fields: BillFields): boolean {
@@ -137,7 +143,7 @@ function isBlankBill(fields: BillFields): boolean {
 export async function handleApi(request: Request): Promise<Response> {
   const url = requestUrl(request)
   try {
-    const pathname = assistantRoute(url.pathname)
+    const pathname = assistantRoute(url)
     if (pathname === '/api/chat' && request.method === 'POST') return await handleChat(request)
     if (pathname === '/api/uploads' && request.method === 'POST') return await handleUploads(request)
     if (pathname === '/api/bill' && request.method === 'POST') return await handleBill(request)

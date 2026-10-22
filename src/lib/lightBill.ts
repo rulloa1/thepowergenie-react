@@ -1,4 +1,4 @@
-import type { CustomerDetails } from './bookingForm';
+import type { CustomerDetails } from './bookingForm.js';
 
 export const LIGHT_BILL_BUCKET = 'light-bills';
 export const LIGHT_BILL_MAX_BYTES = 10 * 1024 * 1024;

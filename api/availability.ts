@@ -1,8 +1,8 @@
-import { listOpenSlots, BookingDataError } from '../server/booking';
-import { readServerEnv } from '../server/env';
-import { notConfigured, sendJson, assertMethod, withErrors } from '../server/http';
-import { CalendarCheckFailed } from '../server/google';
-import { createAdmin } from '../server/supabase';
+import { listOpenSlots, BookingDataError } from '../server/booking.js';
+import { readServerEnv } from '../server/env.js';
+import { notConfigured, sendJson, assertMethod, withErrors } from '../server/http.js';
+import { CalendarCheckFailed } from '../server/google.js';
+import { createAdmin } from '../server/supabase.js';
 
 export default withErrors(async (req, res) => {
   if (!assertMethod(req, res, 'GET')) return;

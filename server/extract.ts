@@ -1,7 +1,7 @@
 import { generateText, Output } from 'ai'
 import { z } from 'zod'
-import { EMPTY_BILL, type BillFields } from '../shared/types'
-import { assistantModel, mockAiEnabled } from './prompt'
+import { EMPTY_BILL, type BillFields } from '../shared/types.js'
+import { assistantModel, mockAiEnabled } from './prompt.js'
 
 const billSchema = z.object({
   customerName: z.string().nullable(),

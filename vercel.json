@@ -1,10 +1,19 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
   "rewrites": [
-    { "source": "/api/chat", "destination": "/api/assistant/chat" },
-    { "source": "/api/uploads", "destination": "/api/assistant/uploads" },
-    { "source": "/api/bill", "destination": "/api/assistant/bill" },
-    { "source": "/api/lead", "destination": "/api/assistant/lead" },
-    { "source": "/api/slots", "destination": "/api/assistant/slots" },
-    { "source": "/(.*)", "destination": "/index.html" }
+    {
+      "source": "/api/(chat|uploads|bill|lead|slots)",
+      "destination": "/api/assistant?route=$1"
+    },
+    {
+      "source": "/((?!api/).*)",
+      "destination": "/index.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/dashboard",
+      "headers": [{ "key": "X-Robots-Tag", "value": "noindex, nofollow" }]
+    }
   ]
 }

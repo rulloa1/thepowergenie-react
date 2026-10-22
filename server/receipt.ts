@@ -1,5 +1,5 @@
 import { createHmac, timingSafeEqual } from 'node:crypto'
-import { HttpError } from './http'
+import { HttpError } from './http.js'
 
 export type UploadReceipt = {
   uploadId: string
