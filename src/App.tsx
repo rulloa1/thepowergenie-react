@@ -4,6 +4,7 @@ import ScrollWorld from './components/ScrollWorld';
 import BrandPage from './components/BrandPage';
 import Toast from './components/Toast';
 import { Config } from './types';
+import { openAssistant } from './lib/openAssistant';
 
 const config: Config = {
   brand: { name: 'The Power Genie', href: '#top', logo: 'assets/brand/power-genie-lockup.webp' },
@@ -27,7 +28,10 @@ const config: Config = {
       title: 'A brighter way to power home.',
       body: 'Every second, the sun releases more energy than humanity has used in all of history. The Power Genie brings that power home to Houston.',
       tags: ['Solar Energy', 'Battery Storage'],
-      cta: { primary: { label: 'Explore Your Solar Options', href: '#quote' } }
+      cta: {
+        primary: { label: 'Explore Your Solar Options', href: '#quote' },
+        secondary: { label: 'Book a free savings consult', href: '#consult' },
+      }
     },
     {
       id: 'roof',
@@ -93,7 +97,10 @@ const config: Config = {
       title: 'Go Solar Today',
       body: 'Lower your bills, protect your home, and power the future. Get your free custom solar quote in minutes.',
       tags: ['Zero Down', 'Immediate Savings', 'Clean Energy'],
-      cta: { primary: { label: 'Get My Free Quote', href: '#quote' } }
+      cta: {
+        primary: { label: 'Get My Free Quote', href: '#quote' },
+        secondary: { label: 'Book a free savings consult', href: '#consult' },
+      }
     }
   ],
   connectors: [
@@ -232,7 +239,17 @@ export default function App() {
 
       <section className="quote-panel relative z-45 min-h-screen bg-[#F6F7FB] text-[#1A1A2E] p-[calc(clamp(84px,10vw,112px)+env(safe-area-inset-top))_clamp(16px,5vw,64px)_calc(40px+env(safe-area-inset-bottom))]" id="quote" aria-labelledby="quote-title" tabIndex={-1}>
         <p className="quote-panel__eyebrow m-0 mb-2 text-[0.74rem] font-semibold tracking-[0.14em] uppercase text-[#FF6B00]">Your free quote</p>
-        <h2 id="quote-title" className="m-0 mb-7 text-[#1A1A2E] font-bold text-[clamp(1.7rem,3.6vw,2.6rem)] tracking-tight leading-[1.1]">Let's power your home.</h2>
+        <h2 id="quote-title" className="m-0 mb-4 text-[#1A1A2E] font-bold text-[clamp(1.7rem,3.6vw,2.6rem)] tracking-tight leading-[1.1]">Let's power your home.</h2>
+        <div className="mb-7">
+          <button
+            type="button"
+            data-testid="book-consult"
+            onClick={() => openAssistant('book')}
+            className="inline-flex items-center justify-center min-h-[48px] px-5 rounded-full bg-[#FF6B00] text-white font-bold shadow-[0_8px_20px_rgba(255,107,0,0.28)]"
+          >
+            Book a free savings consult
+          </button>
+        </div>
         <div className="quote-panel__grid grid grid-cols-1 md:grid-cols-[minmax(260px,340px)_1fr] gap-[clamp(20px,3vw,40px)] items-start max-w-[1280px]">
           <aside className="rep-card bg-[#0B2233] text-[#F7FBFF] rounded-[18px] p-[26px_24px] shadow-[0_12px_32px_rgba(10,20,40,0.18)]" aria-label="Your Sunrun solar expert">
             <p className="rep-card__name m-0 text-[1.35rem] font-bold tracking-tight">Horace Lawrence</p>
