@@ -113,6 +113,7 @@ create table if not exists public.hub_appointments (
   note              text check (char_length(note) <= 1000),
   google_event_id   text,
   google_sync_error text,
+  client_ip_hash    text, -- salted hash of the booking IP, for rate limiting only
   created_by        uuid references auth.users (id) on delete set null,
   created_at        timestamptz not null default now(),
   cancelled_at      timestamptz,
@@ -122,6 +123,8 @@ create table if not exists public.hub_appointments (
   constraint hub_appointments_no_overlap exclude using gist (during with &&) where (status = 'booked')
 );
 create index if not exists hub_appointments_starts_at_idx on public.hub_appointments (starts_at);
+create index if not exists hub_appointments_ip_created_idx on public.hub_appointments (client_ip_hash, created_at);
+create index if not exists hub_appointments_email_idx on public.hub_appointments (email);
 alter table public.hub_appointments enable row level security;
 
 drop policy if exists "members read appointments" on public.hub_appointments;

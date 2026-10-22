@@ -83,7 +83,7 @@ async function create(admin: Admin, user: HubUser, body: Record<string, unknown>
       source: 'dashboard',
       customer_name: name,
       phone: str('phone', 40) || null,
-      email: str('email', 254) || null,
+      email: str('email', 254).toLowerCase() || null,
       address: str('address', 300) || null,
       note: str('note', 1000) || null,
       created_by: user.id,
@@ -123,7 +123,15 @@ async function syncToGoogle(admin: Admin, id: string) {
       hasLightBill: (count ?? 0) > 0,
       source: a.source,
     });
-    await admin.from('hub_appointments').update({ google_event_id: eventId, google_sync_error: null }).eq('id', id);
+    const { error: linkError } = await admin
+      .from('hub_appointments')
+      .update({ google_event_id: eventId, google_sync_error: null })
+      .eq('id', id);
+    if (linkError) {
+      // Without the stored id, "Sync now" would create a second event — undo this one.
+      await deleteEvent(conn, eventId).catch(() => {});
+      throw new GoogleError(`could not save Google event id: ${linkError.message}`);
+    }
     return null;
   } catch (e) {
     const msg = e instanceof GoogleError ? e.message : 'Google Calendar sync failed';
@@ -145,14 +153,17 @@ async function cancel(admin: Admin, user: HubUser, id: string) {
   if (error) return fail(500, 'save_failed', 'Could not cancel the appointment.');
 
   let warning: string | null = null;
-  if (a.google_event_id && googleConfigured()) {
-    const conn = await loadConnection(admin);
-    if (conn) {
+  if (a.google_event_id) {
+    const manual = 'Cancelled here, but the Google Calendar event could not be removed. Delete it on your phone.';
+    const conn = googleConfigured() ? await loadConnection(admin) : null;
+    if (!conn) {
+      warning = manual; // Google was disconnected after this event was created
+    } else {
       try {
         await deleteEvent(conn, a.google_event_id);
       } catch (e) {
         console.error('[schedule:cancel:google]', e);
-        warning = 'Cancelled here, but the Google Calendar event could not be removed. Delete it on your phone.';
+        warning = manual;
       }
     }
   }

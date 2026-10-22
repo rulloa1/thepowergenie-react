@@ -7,9 +7,10 @@
 // The Postgres exclusion constraint is the final backstop against double booking.
 
 import { adminClient, bookedIntervals, type Admin } from '../_shared/db.ts';
-import { fail, json, notConfigured, preflight } from '../_shared/http.ts';
+import { fail, json, notConfigured, preflight, serviceKey } from '../_shared/http.ts';
 import {
   createEvent,
+  deleteEvent,
   freeBusy,
   GoogleError,
   googleConfigured,
@@ -21,6 +22,42 @@ import { bookingWindow, DEFAULT_RULES, generateSlots, isBookableSlot, SLOT_TIME_
 const MAX_BILL_BYTES = 10 * 1024 * 1024;
 const BILL_BUCKET = 'hub-light-bills';
 const REQUIRE_LIGHT_BILL = false; // flip to true to make the upload mandatory
+
+// Abuse limits, enforced on the server before anything is saved or uploaded.
+const MAX_BOOKINGS_PER_IP_PER_DAY = 3;
+const MAX_PUBLIC_BOOKINGS_PER_DAY = 25; // site-wide backstop against slot flooding
+
+/** Salted SHA-256 of the caller's IP — enough to rate limit without storing the IP itself. */
+async function ipHash(req: Request) {
+  const ip =
+    req.headers.get('cf-connecting-ip') ||
+    (req.headers.get('x-forwarded-for') || '').split(',')[0].trim() ||
+    req.headers.get('x-real-ip') ||
+    'unknown';
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`${serviceKey()}|${ip}`));
+  return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+/** Returns an error response if this request should be refused, otherwise null. */
+async function abuseCheck(admin: Admin, ipKey: string, email: string) {
+  const since = new Date(Date.now() - 24 * 3600_000).toISOString();
+  const [perIp, siteWide, existing] = await Promise.all([
+    admin.from('hub_appointments').select('id', { count: 'exact', head: true })
+      .eq('source', 'public').eq('client_ip_hash', ipKey).gte('created_at', since),
+    admin.from('hub_appointments').select('id', { count: 'exact', head: true })
+      .eq('source', 'public').gte('created_at', since),
+    admin.from('hub_appointments').select('id', { count: 'exact', head: true })
+      .eq('status', 'booked').eq('email', email).gt('starts_at', new Date().toISOString()),
+  ]);
+  if (perIp.error || siteWide.error || existing.error) throw perIp.error || siteWide.error || existing.error;
+  if ((existing.count ?? 0) > 0) {
+    return fail(409, 'already_booked', 'You already have an upcoming consultation. Call 510-241-7007 to change it.');
+  }
+  if ((perIp.count ?? 0) >= MAX_BOOKINGS_PER_IP_PER_DAY || (siteWide.count ?? 0) >= MAX_PUBLIC_BOOKINGS_PER_DAY) {
+    return fail(429, 'rate_limited', 'Too many bookings right now. Please call 510-241-7007 and we will get you scheduled.');
+  }
+  return null;
+}
 
 /** All busy time in the booking window: booked appointments + Google busy. */
 async function busyTime(admin: Admin, conn: Connection | null, now: Date) {
@@ -107,6 +144,15 @@ async function book(admin: Admin, req: Request) {
   const startDate = new Date(start);
   if (!start || Number.isNaN(startDate.getTime())) return fail(400, 'invalid', 'Please choose a time.');
 
+  const ipKey = await ipHash(req);
+  try {
+    const refused = await abuseCheck(admin, ipKey, email);
+    if (refused) return refused;
+  } catch (e) {
+    console.error('[booking:abuse-check]', e);
+    return fail(503, 'unavailable', "We couldn't take bookings right now. Please try again in a minute.");
+  }
+
   let bill: { kind: BillKind; bytes: Uint8Array; name: string } | null = null;
   const file = form.get('bill');
   if (file instanceof File && file.size > 0) {
@@ -158,6 +204,7 @@ async function book(admin: Admin, req: Request) {
       email,
       address,
       note: note || null,
+      client_ip_hash: ipKey,
     })
     .select('id')
     .single();
@@ -201,7 +248,12 @@ async function book(admin: Admin, req: Request) {
         hasLightBill: !!bill,
         source: 'public',
       });
-      await admin.from('hub_appointments').update({ google_event_id: eventId }).eq('id', appt.id);
+      const { error: linkError } = await admin.from('hub_appointments').update({ google_event_id: eventId }).eq('id', appt.id);
+      if (linkError) {
+        // Without the stored id a later "Sync now" would create a duplicate, so undo the event.
+        await deleteEvent(conn, eventId).catch(() => {});
+        throw new GoogleError(`could not save Google event id: ${linkError.message}`);
+      }
     } catch (e) {
       console.error('[booking:google]', e);
       await admin

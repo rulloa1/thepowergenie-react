@@ -6,6 +6,8 @@ import { Notice, Spinner, cn } from './ui';
 import { centralDateKey, formatBytes, formatDay, formatTime } from './time';
 
 const BUCKET = 'hub-chat';
+const LINK_SECONDS = 60 * 60;
+const RESIGN_EVERY_MS = 50 * 60 * 1000; // renew before the links expire
 const MAX_ATTACHMENT = 25 * 1024 * 1024;
 
 interface Message {
@@ -36,7 +38,7 @@ export default function ChatTab({ profile }: { profile: Profile }) {
   const sign = useCallback(async (list: Message[]) => {
     const paths = list.map((m) => m.attachment_path).filter((p): p is string => !!p);
     if (!paths.length) return;
-    const { data } = await supabase!.storage.from(BUCKET).createSignedUrls(paths, 60 * 60);
+    const { data } = await supabase!.storage.from(BUCKET).createSignedUrls(paths, LINK_SECONDS);
     if (!data) return;
     setUrls((prev) => {
       const next = { ...prev };
@@ -78,6 +80,14 @@ export default function ChatTab({ profile }: { profile: Profile }) {
       alive = false;
       supabase!.removeChannel(channel);
     };
+  }, [sign]);
+
+  // Signed links expire after an hour; keep them fresh while the tab stays open.
+  const messagesRef = useRef<Message[]>([]);
+  messagesRef.current = messages;
+  useEffect(() => {
+    const timer = window.setInterval(() => sign(messagesRef.current), RESIGN_EVERY_MS);
+    return () => window.clearInterval(timer);
   }, [sign]);
 
   useLayoutEffect(() => {
