@@ -361,7 +361,7 @@ function BookExperience({ preview = false }: { preview?: boolean }) {
           <p className="m-0 text-xs font-bold uppercase tracking-[0.14em] text-[#FF6B00]">Book a call</p>
           <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">Book a call with Horace</h1>
           <p className="mt-3 max-w-2xl text-lg leading-relaxed text-[#4A5568]">
-            One hour, weekdays, 9 AM to 8 PM Central. You only see times that are still open. The last call of the day starts at 7 PM, and a slot has to start at least one hour from now.
+            One hour, weekdays, 9 AM to 8 PM Central. You only see times that are still open. The last call of the day starts at 7 PM, and a slot has to start at least one hour from now. To send a bill for a savings consult, use Talk to the Power Genie on the home page. That request is kept with Horace’s referral queue, and it will not offer a time already booked here.
           </p>
         </div>
 

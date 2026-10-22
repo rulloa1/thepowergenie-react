@@ -1,7 +1,7 @@
-import { readServerEnv, googleReady } from '../../server/env';
-import { bearerToken, notConfigured, sendJson, assertMethod, withErrors } from '../../server/http';
-import { buildGoogleAuthUrl, createOauthState, CalendarCheckFailed } from '../../server/google';
-import { createAdmin, requireDashboardUser } from '../../server/supabase';
+import { readServerEnv, googleReady } from '../../server/env.js';
+import { bearerToken, notConfigured, sendJson, assertMethod, withErrors } from '../../server/http.js';
+import { buildGoogleAuthUrl, createOauthState, CalendarCheckFailed } from '../../server/google.js';
+import { createAdmin, requireDashboardUser } from '../../server/supabase.js';
 
 export default withErrors(async (req, res) => {
   if (!assertMethod(req, res, 'GET')) return;

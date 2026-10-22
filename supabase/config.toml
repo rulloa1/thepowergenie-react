@@ -1,0 +1,21 @@
+project_id = "ogwiopxnjpwwzleqwobq"
+
+[auth]
+# Invite-only dashboard: nobody can sign themselves up.
+enable_signup = false
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["http://localhost:3000/dashboard"]
+
+[auth.email]
+enable_signup = false
+
+# These functions authenticate callers themselves (or are public on purpose),
+# so the gateway JWT check is off.
+[functions.booking]
+verify_jwt = false
+
+[functions.schedule]
+verify_jwt = false
+
+[functions.google-oauth]
+verify_jwt = false

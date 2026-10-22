@@ -1,5 +1,6 @@
 import React, { useEffect, useLayoutEffect, useRef, useState, useCallback } from 'react';
 import { Config, Section, Segment } from '../types';
+import { openAssistant } from '../lib/openAssistant';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -505,6 +506,9 @@ export default function ScrollWorld({ config, onQuoteClick }: ScrollWorldProps) 
       event.preventDefault();
       onQuoteClick?.();
       document.getElementById('quote')?.scrollIntoView({ behavior: 'smooth' });
+    } else if (id === 'consult') {
+      event.preventDefault();
+      openAssistant('book');
     }
   }, [config.sections, jumpTo, onQuoteClick]);
 
@@ -846,7 +850,7 @@ export default function ScrollWorld({ config, onQuoteClick }: ScrollWorldProps) 
             className={cn(
               "sw-route__dot relative border-0 bg-transparent cursor-pointer w-3.5 h-3.5 md:w-3.5 md:h-3.5 flex items-center justify-center group",
               activeIndex === i && "is-active",
-              "coarse:w-7 coarse:h-7"
+              "pointer-coarse:w-7 pointer-coarse:h-7"
             )}
             aria-label={`Step ${i + 1}: ${s.label || s.title}`}
             aria-current={activeIndex === i ? 'step' : undefined}
@@ -874,7 +878,7 @@ export default function ScrollWorld({ config, onQuoteClick }: ScrollWorldProps) 
       {/* Hint */}
       <div ref={hintRef} className="sw-hint fixed left-1/2 bottom-[26px] z-30 -translate-x-1/2 flex flex-col items-center gap-2.5 text-[0.76rem] tracking-[0.14em] uppercase text-[var(--sw-ink-soft)] transition-opacity duration-300 max-md:bottom-[calc(20px+env(safe-area-inset-bottom))]">
         <span className="hint-text">{config.hint || 'scroll'}</span>
-        <i className="w-[22px] h-[34px] rounded-[12px] border-2 border-[color-mix(in_srgb,var(--sw-ink)_28%,transparent)] relative after:content-[''] after:absolute after:left-1/2 after:top-[7px] after:w-1 after:height-[7px] after:rounded-[2px] after:bg-[var(--sw-accent)] after:-translate-x-1/2 after:animate-[sw-wheel_1.7s_ease-in-out_infinite]" />
+        <i className="w-[22px] h-[34px] rounded-[12px] border-2 border-[color-mix(in_srgb,var(--sw-ink)_28%,transparent)] relative after:content-[''] after:absolute after:left-1/2 after:top-[7px] after:w-1 after:h-[7px] after:rounded-[2px] after:bg-[var(--sw-accent)] after:-translate-x-1/2 after:animate-[sw-wheel_1.7s_ease-in-out_infinite]" />
       </div>
 
       {/* Scroll Track */}

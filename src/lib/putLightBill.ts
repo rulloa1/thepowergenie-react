@@ -1,5 +1,5 @@
-import { isSignedUploadUrl } from './lightBill';
-import { supabaseAnonKey, supabaseUrl } from './supabaseClient';
+import { isSignedUploadUrl } from './lightBill.js';
+import { supabaseAnonKey, supabaseUrl } from './supabaseClient.js';
 
 export function canPutLightBill(signedUrl: string): boolean {
   if (!supabaseUrl) return false;

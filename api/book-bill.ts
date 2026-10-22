@@ -1,7 +1,7 @@
-import { confirmLightBill, startLightBillFromClaim, BookingDataError } from '../server/booking';
-import { readServerEnv } from '../server/env';
-import { assertMethod, notConfigured, readJson, sendJson, withErrors } from '../server/http';
-import { createAdmin } from '../server/supabase';
+import { confirmLightBill, startLightBillFromClaim, BookingDataError } from '../server/booking.js';
+import { readServerEnv } from '../server/env.js';
+import { assertMethod, notConfigured, readJson, sendJson, withErrors } from '../server/http.js';
+import { createAdmin } from '../server/supabase.js';
 
 export default withErrors(async (req, res) => {
   if (!assertMethod(req, res, 'POST')) return;

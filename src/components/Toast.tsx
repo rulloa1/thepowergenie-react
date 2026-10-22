@@ -28,13 +28,17 @@ export default function Toast({ message, submessage, isVisible, onClose, duratio
   return (
     <div
       className={cn(
-        "fixed left-1/2 -translate-x-1/2 z-[100] transition-all duration-500 ease-out pointer-events-none",
+        "fixed left-1/2 -translate-x-1/2 z-[75] transition-all duration-500 ease-out",
         isVisible 
-          ? "bottom-24 sm:bottom-12 opacity-100 scale-100 translate-y-0" 
-          : "bottom-12 opacity-0 scale-95 translate-y-4"
+          ? "bottom-24 sm:bottom-12 opacity-100 scale-100 translate-y-0 pointer-events-none" 
+          : "bottom-12 opacity-0 scale-95 translate-y-4 pointer-events-none"
       )}
+      aria-hidden={isVisible ? undefined : true}
     >
-      <div className="bg-white/95 backdrop-blur-md border border-[var(--sw-ink)/10] rounded-2xl shadow-2xl p-4 sm:p-5 flex items-start gap-4 min-w-[300px] max-w-[90vw] pointer-events-auto">
+      <div className={cn(
+        "bg-white/95 backdrop-blur-md border border-[var(--sw-ink)/10] rounded-2xl shadow-2xl p-4 sm:p-5 flex items-start gap-4 min-w-[300px] max-w-[90vw]",
+        isVisible ? "pointer-events-auto" : "pointer-events-none"
+      )}>
         <div className="flex-none w-10 h-10 rounded-full bg-green-50 flex items-center justify-center">
           <CheckCircle2 className="w-6 h-6 text-green-600" />
         </div>

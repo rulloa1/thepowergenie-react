@@ -66,7 +66,7 @@ export default function BookingAssistant({
     if (preview) return undefined;
     let cancelled = false;
     const load = async () => {
-      const result = await publicFetch('/api/assistant');
+      const result = await publicFetch('/api/book-assistant');
       if (cancelled) return;
       const record = result.json;
       const on = Boolean(
@@ -107,7 +107,7 @@ export default function BookingAssistant({
       return;
     }
     setSending(true);
-    const result = await publicFetch('/api/assistant', {
+    const result = await publicFetch('/api/book-assistant', {
       method: 'POST',
       body: JSON.stringify({ messages: next }),
     });

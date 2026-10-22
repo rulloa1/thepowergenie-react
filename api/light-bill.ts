@@ -1,7 +1,7 @@
-import { signedLightBillDownload, BookingDataError } from '../server/booking';
-import { readServerEnv } from '../server/env';
-import { assertMethod, bearerToken, notConfigured, queryValue, sendJson, withErrors } from '../server/http';
-import { createAdmin, requireDashboardUser } from '../server/supabase';
+import { signedLightBillDownload, BookingDataError } from '../server/booking.js';
+import { readServerEnv } from '../server/env.js';
+import { assertMethod, bearerToken, notConfigured, queryValue, sendJson, withErrors } from '../server/http.js';
+import { createAdmin, requireDashboardUser } from '../server/supabase.js';
 
 export default withErrors(async (req, res) => {
   if (!assertMethod(req, res, 'GET')) return;

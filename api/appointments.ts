@@ -1,8 +1,8 @@
-import { bookSlot, cancelAppointment, BookingDataError } from '../server/booking';
-import { readServerEnv } from '../server/env';
-import { bearerToken, notConfigured, readJson, sendJson, withErrors } from '../server/http';
-import { CalendarCheckFailed } from '../server/google';
-import { createAdmin, requireDashboardUser } from '../server/supabase';
+import { bookSlot, cancelAppointment, BookingDataError } from '../server/booking.js';
+import { readServerEnv } from '../server/env.js';
+import { bearerToken, notConfigured, readJson, sendJson, withErrors } from '../server/http.js';
+import { CalendarCheckFailed } from '../server/google.js';
+import { createAdmin, requireDashboardUser } from '../server/supabase.js';
 
 async function authorized(req: Parameters<typeof bearerToken>[0], res: Parameters<typeof sendJson>[0]) {
   const env = readServerEnv();

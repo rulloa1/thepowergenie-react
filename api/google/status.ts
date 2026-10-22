@@ -1,7 +1,7 @@
-import { readServerEnv } from '../../server/env';
-import { assertMethod, bearerToken, notConfigured, sendJson, withErrors } from '../../server/http';
-import { connectionStatus, CalendarCheckFailed } from '../../server/google';
-import { createAdmin, requireDashboardUser } from '../../server/supabase';
+import { readServerEnv } from '../../server/env.js';
+import { assertMethod, bearerToken, notConfigured, sendJson, withErrors } from '../../server/http.js';
+import { connectionStatus, CalendarCheckFailed } from '../../server/google.js';
+import { createAdmin, requireDashboardUser } from '../../server/supabase.js';
 
 export default withErrors(async (req, res) => {
   if (!assertMethod(req, res, 'GET')) return;
