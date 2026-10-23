@@ -60,6 +60,8 @@ type AuthRow = {
   esi_id: string;
   smt_agreement_number: string | null;
   interval_cursor: string | null;
+  meter_number: string | null;
+  customer_email: string | null;
 };
 
 export async function refreshSmtAuthorizations(admin: SupabaseClient): Promise<{ checked: number }> {
@@ -67,8 +69,8 @@ export async function refreshSmtAuthorizations(admin: SupabaseClient): Promise<{
   if (!config) return { checked: 0 };
   const { data, error } = await admin
     .from('smt_authorizations')
-    .select('id, status, esi_id, smt_agreement_number, interval_cursor')
-    .in('status', ['requested', 'approved'])
+    .select('id, status, esi_id, smt_agreement_number, interval_cursor, meter_number, customer_email')
+    .in('status', ['pending_setup', 'requested', 'approved'])
     .order('last_checked_at', { ascending: true, nullsFirst: true })
     .limit(3);
   if (error) {
@@ -89,7 +91,28 @@ async function refreshOne(admin: SupabaseClient, config: NonNullable<ReturnType<
   let status = row.status === 'approved' ? 'approved' : 'requested';
   let note: string | null = null;
   try {
-    if (row.smt_agreement_number) {
+    if (row.status === 'pending_setup' || (!row.smt_agreement_number && status !== 'approved')) {
+      if (!row.meter_number || !row.customer_email) {
+        note = 'Missing meter number or email for agreement request.';
+      } else {
+        const meter: MeterRequest = {
+          esiId: row.esi_id,
+          meterNumber: row.meter_number,
+          email: row.customer_email,
+          consent: true,
+        };
+        const created = await requestNewAgreement(config, meter);
+        const { error: agreeError } = await admin.from('smt_authorizations').update({
+          status: created.status,
+          smt_agreement_number: created.agreementNumber,
+          smt_trans_id: created.transId,
+        }).eq('id', row.id);
+        if (agreeError) console.error('save agreement failed', agreeError.code);
+        status = created.status;
+        if (created.error) note = created.error;
+      }
+    }
+    if (row.smt_agreement_number && status !== 'pending_setup') {
       const lookedUp = await requestAgreementStatus(config, row.smt_agreement_number);
       status = lookedUp.status;
       if (lookedUp.error) note = lookedUp.error;
@@ -161,5 +184,7 @@ function readAuthRow(value: unknown): AuthRow | null {
     esi_id: row.esi_id,
     smt_agreement_number: typeof row.smt_agreement_number === 'string' ? row.smt_agreement_number : null,
     interval_cursor: typeof row.interval_cursor === 'string' ? row.interval_cursor : null,
+    meter_number: typeof row.meter_number === 'string' ? row.meter_number : null,
+    customer_email: typeof row.customer_email === 'string' ? row.customer_email : null,
   };
 }
