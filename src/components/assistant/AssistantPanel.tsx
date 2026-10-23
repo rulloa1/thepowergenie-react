@@ -347,6 +347,14 @@ export default function AssistantPanel({ frameClass, mode, nonce, onClose }: Pan
             <BillField label="Service address" value={bill.serviceAddress} onChange={value => setBill({ ...bill, serviceAddress: value })} />
             <BillField label="Utility" value={bill.utility} onChange={value => setBill({ ...bill, utility: value })} />
             <BillField label="Account number" value={bill.accountNumber} onChange={value => setBill({ ...bill, accountNumber: value })} />
+            <BillField
+              label="ESI ID"
+              hint="Digits only, usually 17–22."
+              value={bill.esiid}
+              onChange={value => setBill({ ...bill, esiid: value ? value.replace(/\D/g, '').slice(0, 22) : null })}
+              inputMode="numeric"
+            />
+            <BillField label="Meter number" value={bill.meterNumber} onChange={value => setBill({ ...bill, meterNumber: value })} />
             <BillField label="Bill date" value={bill.billDate} onChange={value => setBill({ ...bill, billDate: value })} />
             <BillField label="Rate plan" value={bill.ratePlan} onChange={value => setBill({ ...bill, ratePlan: value })} />
             <BillField label="kWh this period" value={numToText(bill.kwhThisPeriod)} onChange={value => setBill({ ...bill, kwhThisPeriod: textToNum(value) })} inputMode="decimal" />
@@ -554,11 +562,13 @@ function Bubble({ from, children }: { from: 'user' | 'assistant'; children: Reac
 
 function BillField({
   label,
+  hint,
   value,
   onChange,
   inputMode,
 }: {
   label: string
+  hint?: string
   value: string | null
   onChange: (value: string | null) => void
   inputMode?: React.HTMLAttributes<HTMLInputElement>['inputMode']
@@ -572,6 +582,7 @@ function BillField({
         inputMode={inputMode}
         onChange={event => onChange(event.target.value.trim() ? event.target.value : null)}
       />
+      {hint ? <span className="mt-1 block text-xs font-normal text-[#4A5568]">{hint}</span> : null}
     </label>
   )
 }

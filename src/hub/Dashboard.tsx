@@ -1,11 +1,13 @@
 import React, { lazy, Suspense, useEffect, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
-import { CalendarDays, FolderOpen, LogOut, MessageCircle } from 'lucide-react';
+import { CalendarDays, FolderOpen, Inbox, LogOut, MessageCircle } from 'lucide-react';
+import { useLeadFeed } from './useLeadFeed';
 import { arrivalAuthType, supabase } from '../lib/supabase';
 import { BrandMark, Button, Notice, NotConfigured, Spinner, cn, inputClass, labelClass } from './ui';
 
 const ChatTab = lazy(() => import('./ChatTab'));
 const FilesTab = lazy(() => import('./FilesTab'));
+const LeadsTab = lazy(() => import('./LeadsTab'));
 const ScheduleTab = lazy(() => import('./ScheduleTab'));
 
 export interface Profile {
@@ -15,8 +17,9 @@ export interface Profile {
   role: 'owner' | 'admin';
 }
 
-type Tab = 'chat' | 'files' | 'schedule';
+type Tab = 'chat' | 'files' | 'schedule' | 'leads';
 const TABS: { id: Tab; label: string; icon: typeof MessageCircle }[] = [
+  { id: 'leads', label: 'Leads', icon: Inbox },
   { id: 'chat', label: 'Chat', icon: MessageCircle },
   { id: 'files', label: 'Files', icon: FolderOpen },
   { id: 'schedule', label: 'Schedule', icon: CalendarDays },
@@ -24,7 +27,7 @@ const TABS: { id: Tab; label: string; icon: typeof MessageCircle }[] = [
 
 function initialTab(): Tab {
   const t = new URLSearchParams(window.location.search).get('tab');
-  return t === 'files' || t === 'schedule' ? t : 'chat';
+  return t === 'files' || t === 'schedule' || t === 'leads' ? t : 'chat';
 }
 
 export default function Dashboard() {
@@ -200,11 +203,13 @@ function NotInvited({ email }: { email: string }) {
 
 function HubApp({ profile }: { profile: Profile }) {
   const [tab, setTab] = useState<Tab>(initialTab);
+  const leads = useLeadFeed(profile.id);
 
   const go = (t: Tab) => {
     setTab(t);
     const url = new URL(window.location.href);
     url.searchParams.set('tab', t);
+    if (t !== 'leads') url.searchParams.delete('id');
     window.history.replaceState({}, '', url);
   };
 
@@ -238,11 +243,18 @@ function HubApp({ profile }: { profile: Profile }) {
               onClick={() => go(id)}
               aria-current={tab === id ? 'page' : undefined}
               className={cn(
-                'flex min-h-[44px] flex-1 items-center justify-center gap-2 border-b-2 px-3 text-[0.92rem] font-semibold transition sm:flex-none sm:px-5',
+                'flex min-h-[44px] min-w-0 flex-1 items-center justify-center gap-1.5 border-b-2 px-2 text-[0.86rem] font-semibold transition sm:flex-none sm:gap-2 sm:px-5 sm:text-[0.92rem]',
                 tab === id ? 'border-[#FF6B00] text-[#1A1A2E]' : 'border-transparent text-[#6B7280] hover:text-[#1A1A2E]',
               )}
             >
-              <Icon className="h-4 w-4" /> {label}
+              <Icon className="h-4 w-4 shrink-0" />
+              <span>{label}</span>
+              {id === 'leads' && leads.unseen > 0 && (
+                <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-[#FF6B00] px-1.5 text-[0.68rem] font-bold leading-5 text-white">
+                  {leads.unseen > 99 ? '99+' : leads.unseen}
+                  <span className="sr-only"> new</span>
+                </span>
+              )}
             </button>
           ))}
         </nav>
@@ -250,6 +262,7 @@ function HubApp({ profile }: { profile: Profile }) {
 
       <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col px-4 py-5 sm:px-6">
         <Suspense fallback={<div className="py-10 text-center"><Spinner /></div>}>
+          {tab === 'leads' && <LeadsTab feed={leads} />}
           {tab === 'chat' && <ChatTab profile={profile} />}
           {tab === 'files' && <FilesTab />}
           {tab === 'schedule' && <ScheduleTab profile={profile} />}

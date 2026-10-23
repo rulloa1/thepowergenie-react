@@ -181,6 +181,34 @@ export function isBookableSlot(
   return !overlaps(startMs, startMs + rules.slotMinutes * MINUTE, normalizeBusy(busy));
 }
 
+/**
+ * Website-assistant consults stored as a start time. Each one blocks
+ * `durationMinutes` (the assistant slot length, 120 by default) so a
+ * one-hour /book slot that falls inside that window is hidden.
+ */
+export function leadIntervals(
+  appointmentDates: Array<string | null | undefined>,
+  timeMin: string,
+  timeMax: string,
+  durationMinutes: number,
+): { start: string; end: string }[] {
+  const windowStart = toMs(timeMin)
+  const windowEnd = toMs(timeMax)
+  const duration = durationMinutes * MINUTE
+  const out: { start: string; end: string }[] = []
+  if (!Number.isFinite(windowStart) || !Number.isFinite(windowEnd) || duration <= 0) return out
+  for (const value of appointmentDates) {
+    if (!value) continue
+    const start = toMs(value)
+    if (!Number.isFinite(start)) continue
+    const end = start + duration
+    if (start < windowEnd && end > windowStart) {
+      out.push({ start: new Date(start).toISOString(), end: new Date(end).toISOString() })
+    }
+  }
+  return out
+}
+
 /** The time range the server must check for busy time before listing slots. */
 export function bookingWindow(now: Date | number, rules: SlotRules = DEFAULT_RULES) {
   const nowMs = toMs(now);

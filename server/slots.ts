@@ -83,7 +83,21 @@ function hoursFor(weekday: number, rules: SlotRules): { start: number; end: numb
   return { start: rules.weekdayStartHour, end: rules.weekdayEndHour }
 }
 
-export function listSlots(rules: SlotRules, now: Date, taken: ReadonlySet<string>): Slot[] {
+export type BusyInterval = { start: string; end: string }
+
+/** Half-open overlap: a block that ends exactly when the slot starts does not block it. */
+export function overlapsSlot(startIso: string, durationMinutes: number, busy: ReadonlyArray<BusyInterval>): boolean {
+  const start = Date.parse(startIso)
+  if (!Number.isFinite(start)) return false
+  const end = start + durationMinutes * 60_000
+  return busy.some(interval => {
+    const blockStart = Date.parse(interval.start)
+    const blockEnd = Date.parse(interval.end)
+    return Number.isFinite(blockStart) && Number.isFinite(blockEnd) && blockStart < end && blockEnd > start
+  })
+}
+
+export function listSlots(rules: SlotRules, now: Date, taken: ReadonlySet<string>, busy: ReadonlyArray<BusyInterval> = []): Slot[] {
   const today = zonedParts(now, rules.timeZone)
   const earliest = now.getTime() + rules.minLeadHours * 60 * 60 * 1000
   const slots: Slot[] = []
@@ -99,7 +113,7 @@ export function listSlots(rules: SlotRules, now: Date, taken: ReadonlySet<string
       if (start.getTime() < earliest) continue
       const end = new Date(start.getTime() + rules.durationMinutes * 60 * 1000)
       const startIso = isoWithOffset(start, rules.timeZone)
-      if (taken.has(startIso)) continue
+      if (taken.has(startIso) || overlapsSlot(startIso, rules.durationMinutes, busy)) continue
       const day = new Intl.DateTimeFormat('en-US', {
         timeZone: rules.timeZone,
         weekday: 'short',

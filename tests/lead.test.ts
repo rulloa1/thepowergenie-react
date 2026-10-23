@@ -40,6 +40,15 @@ test('builds an unacknowledged bill_received lead for Horace', () => {
       currentCharges: 168.4,
       totalDue: 168.4,
       pastDue: 0,
+      esiid: '1044-3720-0123-45678',
+      meterNumber: ' mtr-100 ',
+      tdu: '  CenterPoint Energy ',
+      repPuctCertificate: 'PUCT #10094',
+      avgMonthlyKwh: 1050,
+      usageHistory: [
+        { month: '2026-09', kwh: 1100 },
+        { month: '2026-07', kwh: 1550 },
+      ],
     },
     receipt,
     now,
@@ -56,6 +65,17 @@ test('builds an unacknowledged bill_received lead for Horace', () => {
   assert.equal(prepared.customer.logged_on, '2026-10-22')
   assert.equal(prepared.customer.avg_kwh_per_day, 36.7)
   assert.equal(prepared.customer.est_cents_per_kwh, 15.309)
+  assert.equal(prepared.customer.phone, '713-555-0100')
+  assert.equal(prepared.customer.email, 'alex@example.com')
+  assert.equal(prepared.customer.esiid, '10443720012345678')
+  assert.equal(prepared.customer.meter_number, 'mtr-100')
+  assert.equal(prepared.customer.tdu, 'CenterPoint Energy')
+  assert.equal(prepared.customer.rep_puct_certificate, '10094')
+  assert.equal(prepared.customer.avg_monthly_kwh, 1050)
+  assert.deepEqual(prepared.customer.usage_history, [
+    { month: '2026-07', kwh: 1550 },
+    { month: '2026-09', kwh: 1100 },
+  ])
   assert.match(String(prepared.customer.notes), /TCPA consent: yes/)
   assert.match(String(prepared.customer.notes), /713-555-0100/)
   assert.doesNotMatch(String(prepared.customer.notes), /transcript|How much does solar/)
@@ -86,6 +106,8 @@ test('a consult with no bill still uses the first pipeline stage', () => {
   })
   assert.equal(prepared.customer.stage, 'bill_received')
   assert.equal(prepared.file, null)
+  assert.equal(prepared.customer.esiid, null)
+  assert.equal(prepared.customer.usage_history, null)
   assert.match(String(prepared.activity.message), /No bill attached yet/)
   assert.match(String(prepared.customer.notes), /Bill: not attached/)
 })
