@@ -26,7 +26,8 @@ export function readSmtConfig(): SmtConfig | null {
   const portalPassword = blank(process.env.SMT_PASSWORD);
   const requestorId = blank(process.env.SMT_REQUESTOR_ID);
   const duns = blank(process.env.SMT_DUNS);
-  if (!username || !portalPassword || !requestorId || !duns) return null;
+  const token = blank(process.env.SMT_API_TOKEN);
+  if (!username || !portalPassword || !requestorId || !duns || !token) return null;
   if (requestorId.length > 32 || duns.length > 18) return null;
   let base = SMT_PRODUCTION_BASE;
   const configured = blank(process.env.SMT_API_BASE);
@@ -45,7 +46,7 @@ export function readSmtConfig(): SmtConfig | null {
     portalPassword,
     requestorId,
     duns,
-    token: blank(process.env.SMT_API_TOKEN),
+    token,
     cert: pem(blank(process.env.SMT_CLIENT_CERT)),
     key: pem(blank(process.env.SMT_CLIENT_KEY)),
   };
