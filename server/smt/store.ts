@@ -114,8 +114,11 @@ async function refreshOne(admin: SupabaseClient, config: NonNullable<ReturnType<
     }
     if (row.smt_agreement_number && status !== 'pending_setup') {
       const lookedUp = await requestAgreementStatus(config, row.smt_agreement_number);
-      status = lookedUp.status;
-      if (lookedUp.error) note = lookedUp.error;
+      if (lookedUp.error) {
+        note = lookedUp.error;
+      } else {
+        status = lookedUp.status;
+      }
     }
     if (status === 'approved') {
       const end = new Date();
@@ -139,6 +142,7 @@ async function refreshOne(admin: SupabaseClient, config: NonNullable<ReturnType<
       }
       const cursor = row.interval_cursor ? new Date(`${row.interval_cursor}T12:00:00.000Z`) : start;
       const intervalEnd = new Date(Math.min(end.getTime(), cursor.getTime() + 7 * DAY_MS));
+      let advancedCursor: string | null = null;
       if (cursor.getTime() < end.getTime()) {
         const intervals = await requestIntervalUsage(config, row.esi_id, cursor, intervalEnd);
         if (intervals.error) note = intervals.error;
@@ -156,10 +160,13 @@ async function refreshOne(admin: SupabaseClient, config: NonNullable<ReturnType<
             { onConflict: 'authorization_id,interval_start' },
           );
           if (error) console.error('save interval usage failed', error.code);
+          else advancedCursor = intervalEnd.toISOString().slice(0, 10);
         }
-        await admin.from('smt_authorizations').update({
-          interval_cursor: intervalEnd.toISOString().slice(0, 10),
-        }).eq('id', row.id);
+        if (advancedCursor) {
+          await admin.from('smt_authorizations').update({
+            interval_cursor: advancedCursor,
+          }).eq('id', row.id);
+        }
       }
     }
   } catch (error) {
