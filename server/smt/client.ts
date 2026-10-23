@@ -117,7 +117,7 @@ export async function requestAgreementStatus(config: SmtConfig, agreementNumber:
     agreementLookupBody(configCaller(config), agreementNumber, smtTransId()),
   );
   if (response.status >= 400) {
-    return { status: 'failed', raw: null, error: readSmtError(response.json) ?? 'Smart Meter Texas did not return the agreement.' };
+    return { status: 'requested', raw: null, error: readSmtError(response.json) ?? 'Smart Meter Texas did not return the agreement.' };
   }
   const raw = readAgreementStatusRaw(response.json);
   return { status: mapAgreementStatus(raw), raw, error: null };
