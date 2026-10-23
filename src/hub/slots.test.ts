@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   generateSlots,
   isBookableSlot,
+  leadIntervals,
   localParts,
   zonedTimeToUtc,
   SLOT_TIME_ZONE,
@@ -151,5 +152,20 @@ describe('isBookableSlot input checks', () => {
   });
   it('accepts a normal weekday slot', () => {
     expect(isBookableSlot(central(2026, 10, 27, 19).toISOString(), now)).toBe(true);
+  });
+});
+
+describe('website consults block hub slots', () => {
+  it('hides the 9 and 10 o’clock hours inside a two-hour consult and leaves 11 open', () => {
+    const blocks = leadIntervals(
+      ['2026-10-26T09:00:00-05:00'],
+      '2026-10-26T13:00:00.000Z',
+      '2026-10-26T23:00:00.000Z',
+      120,
+    );
+    const hours = onDay(generateSlots(SUNDAY_NIGHT, blocks), 2026, 10, 26).map((slot) => local(slot.start).hour);
+    expect(hours).not.toContain(9);
+    expect(hours).not.toContain(10);
+    expect(hours).toContain(11);
   });
 });

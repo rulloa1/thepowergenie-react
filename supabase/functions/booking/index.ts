@@ -6,8 +6,11 @@
 // Every POST re-checks the slot rules, the database and Google free/busy before saving.
 // The Postgres exclusion constraint is the final backstop against double booking.
 
+import { billAmount, type NormalizedBill } from '../_shared/bill.ts';
 import { adminClient, bookedIntervals, type Admin } from '../_shared/db.ts';
-import { fail, json, notConfigured, preflight, serviceKey } from '../_shared/http.ts';
+import { fail, json, notConfigured, preflight, serviceKey, env } from '../_shared/http.ts';
+import { dashboardLeadUrl, sendLeadAlert, siteOrigin } from '../_shared/notify.ts';
+import { readUploadedBill } from '../_shared/read-bill.ts';
 import {
   createEvent,
   deleteEvent,
@@ -163,7 +166,18 @@ async function book(admin: Admin, req: Request) {
     return fail(400, 'invalid_file', "Please upload last month's light bill.");
   }
 
-  // Re-check the slot against the rules, the database and Google — right now.
+  // Same extractor as the website assistant. A miss here still books the consult.
+  let fields: NormalizedBill | null = null;
+  if (bill) {
+    try {
+      fields = await readUploadedBill(admin, bill.bytes, bill.kind.type);
+    } catch (e) {
+      console.error('[booking:extract]', e instanceof Error ? e.name : 'unknown');
+      fields = null;
+    }
+  }
+
+  // Re-check the slot against the rules, the database (including website consults) and Google — right now.
   const now = new Date();
   let conn: Connection | null = null;
   try {
@@ -205,6 +219,14 @@ async function book(admin: Admin, req: Request) {
       address,
       note: note || null,
       client_ip_hash: ipKey,
+      kwh: fields?.kwhThisPeriod ?? null,
+      bill_amount: billAmount(fields),
+      esiid: fields?.esiid ?? null,
+      meter_number: fields?.meterNumber ?? null,
+      tdu: fields?.tdu ?? null,
+      rep_puct_certificate: fields?.repPuctCertificate ?? null,
+      avg_monthly_kwh: fields?.avgMonthlyKwh ?? null,
+      usage_history: fields?.usageHistory ?? null,
     })
     .select('id')
     .single();
@@ -262,6 +284,37 @@ async function book(admin: Admin, req: Request) {
         .eq('id', appt.id);
     }
   }
+
+  await sendLeadAlert({
+    id: appt.id,
+    source: 'booking',
+    name,
+    address,
+    kwh: fields?.kwhThisPeriod ?? null,
+    amount: billAmount(fields),
+    appointment: new Intl.DateTimeFormat('en-US', {
+      timeZone: SLOT_TIME_ZONE,
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      timeZoneName: 'short',
+    }).format(startDate),
+    billAttached: !!bill,
+    dashboardUrl: dashboardLeadUrl(siteOrigin(env('SITE_URL')), appt.id),
+  }, {
+    resendApiKey: env('RESEND_API_KEY'),
+    notifyFrom: env('NOTIFY_FROM'),
+    notifyEmailTo: env('NOTIFY_EMAIL_TO'),
+    twilioAccountSid: env('TWILIO_ACCOUNT_SID'),
+    twilioAuthToken: env('TWILIO_AUTH_TOKEN'),
+    twilioFrom: env('TWILIO_FROM'),
+    notifySmsTo: env('NOTIFY_SMS_TO'),
+  }, (url, init) => fetch(url, { ...init, signal: AbortSignal.timeout(12_000) }).then((response) => ({
+    ok: response.ok,
+    status: response.status,
+  })));
 
   return json({ ok: true, start: startDate.toISOString(), end: endDate.toISOString(), timeZone: SLOT_TIME_ZONE });
 }

@@ -9,6 +9,12 @@ export const REFERRAL_SOURCES = ['celebrity-solar', 'hip-hop-solar', 'gas-genie'
 
 export type ReferralSource = (typeof REFERRAL_SOURCES)[number]
 
+/** One labeled point from a bill's usage chart. `month` is YYYY-MM. */
+export type UsageMonth = {
+  month: string
+  kwh: number
+}
+
 export type BillFields = {
   customerName: string | null
   serviceAddress: string | null
@@ -22,6 +28,17 @@ export type BillFields = {
   currentCharges: number | null
   totalDue: number | null
   pastDue: number | null
+  /** ESI ID, digits only, 17–22 characters. Null when it isn't printed or doesn't fit. */
+  esiid: string | null
+  meterNumber: string | null
+  /** Transmission and distribution utility, when the bill labels it separately. */
+  tdu: string | null
+  /** Retail provider PUCT certificate number, digits only. */
+  repPuctCertificate: string | null
+  /** Printed average monthly kWh. Not calculated from the chart. */
+  avgMonthlyKwh: number | null
+  /** Oldest month first. Null when the chart isn't printed or its labels can't be read. */
+  usageHistory: UsageMonth[] | null
 }
 
 export const EMPTY_BILL: BillFields = {
@@ -37,6 +54,12 @@ export const EMPTY_BILL: BillFields = {
   currentCharges: null,
   totalDue: null,
   pastDue: null,
+  esiid: null,
+  meterNumber: null,
+  tdu: null,
+  repPuctCertificate: null,
+  avgMonthlyKwh: null,
+  usageHistory: null,
 }
 
 export type Slot = {

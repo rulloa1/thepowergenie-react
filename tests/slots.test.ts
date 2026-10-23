@@ -24,6 +24,14 @@ test('offers weekday and Saturday slots in Chicago and skips Sunday', () => {
   assert.match(monday?.label || '', /CT$/)
 })
 
+test('hides a consult that overlaps a one-hour hub appointment', () => {
+  const now = new Date('2026-10-22T15:00:00.000Z')
+  const busy = [{ start: '2026-10-23T15:00:00.000Z', end: '2026-10-23T16:00:00.000Z' }]
+  const slots = listSlots(rules, now, new Set(), busy)
+  assert.equal(slots.some(slot => slot.start === '2026-10-23T09:00:00-05:00'), false)
+  assert.equal(slots.some(slot => slot.start === '2026-10-23T11:00:00-05:00'), true)
+})
+
 test('hides a slot that is already booked', () => {
   const now = new Date('2026-10-22T15:00:00.000Z')
   const slots = listSlots(rules, now, new Set(['2026-10-23T09:00:00-05:00']))

@@ -1,10 +1,12 @@
 import { randomUUID } from 'node:crypto'
+import { normalizeBill, billAmount } from '../supabase/functions/_shared/bill.js'
 import { TCPA_VERSION, type BillFields, type Confirmation, type LeadPayload, type Slot } from '../shared/types.js'
 import { HttpError, honeypotTripped, isRecord } from './http.js'
+import { notifyNewLead } from './notify.js'
 import { loadSlotRules } from './slot-rules.js'
-import { chicagoDate, listSlots } from './slots.js'
+import { chicagoDate, listSlots, overlapsSlot } from './slots.js'
 import { assertBillBytes } from './files.js'
-import { insertRow, downloadObject, moveObject, takenAppointments } from './supabase.js'
+import { insertRow, downloadObject, moveObject, takenAppointments, hubBusyIntervals } from './supabase.js'
 import { openReceipt, type UploadReceipt } from './receipt.js'
 
 /**
@@ -23,8 +25,8 @@ import { openReceipt, type UploadReceipt } from './receipt.js'
  *   (YYYY-MM-DD). The website delivers the lead straight into Horace's queue.
  * - `created_by`, `actor_id`, and `uploaded_by` are null because the visitor
  *   is not a hub user. `actor_name` is "Website assistant".
- * - Phone, email, TCPA consent, and preferred windows have no columns, so
- *   they go in `notes`. Chat transcripts are not stored.
+ * - Phone and email are stored on the customer row. TCPA consent and preferred
+ *   windows still go in `notes`. Chat transcripts are not stored.
  * - `avg_kwh_per_day` and `est_cents_per_kwh` are derived only when the bill
  *   itself has the inputs. They are not a solar quote.
  * - Files live in the private `powergenie` bucket. The link is a
@@ -32,8 +34,9 @@ import { openReceipt, type UploadReceipt } from './receipt.js'
  *   `customers/{customerId}/light_bill/{fileId}-{fileName}`. No public URL.
  * - Primary keys are text. Website rows use the client request id so a
  *   double-click does not create a second lead.
- * - Slot holds are best-effort reads of `appointment_date`. The schema has
- *   no unique constraint on that column.
+ * - Slot holds read `appointment_date` and booked `hub_appointments`. The
+ *   schema has no unique constraint on `appointment_date`. A hub appointment
+ *   that overlaps this consult's window blocks it.
  */
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
@@ -91,7 +94,7 @@ export function buildLeadRecords(input: {
   now: Date
   timeZone: string
 }): PreparedLead {
-  const bill = input.bill
+  const bill = normalizeBill(input.bill)
   const kwh = quantity(bill.kwhThisPeriod, 100000)
   const daysRaw = quantity(bill.days, 400)
   const days = daysRaw == null ? null : Math.round(daysRaw)
@@ -113,6 +116,8 @@ export function buildLeadRecords(input: {
     input.referralSource ? `Referral source: ${input.referralSource}` : null,
     billName && billName.toLowerCase() !== input.name.toLowerCase() ? `Name on bill: ${billName}` : null,
     billAddress && billAddress.toLowerCase() !== input.serviceAddress.toLowerCase() ? `Address on bill: ${billAddress}` : null,
+    bill.esiid ? `ESI ID: ${bill.esiid}` : null,
+    bill.meterNumber ? `Meter: ${bill.meterNumber}` : null,
     'TCPA consent: yes',
     `Consent version: ${TCPA_VERSION}`,
     `Consent at: ${createdAt}`,
@@ -127,6 +132,8 @@ export function buildLeadRecords(input: {
     logged_on: loggedOn,
     created_by: null,
     customer_name: input.name,
+    phone: input.phone,
+    email: input.email,
     service_address: input.serviceAddress,
     utility: input.utility || 'Not provided',
     account_number: text(bill.accountNumber, 40) || null,
@@ -140,6 +147,12 @@ export function buildLeadRecords(input: {
     total_due: money(bill.totalDue),
     past_due: money(bill.pastDue),
     est_cents_per_kwh: cents,
+    esiid: bill.esiid,
+    meter_number: bill.meterNumber,
+    tdu: bill.tdu,
+    rep_puct_certificate: bill.repPuctCertificate,
+    avg_monthly_kwh: bill.avgMonthlyKwh,
+    usage_history: bill.usageHistory,
     notes,
     date_sent_to_horace: loggedOn,
     stage: 'bill_received',
@@ -273,18 +286,39 @@ export async function saveLead(body: unknown, now = new Date()): Promise<Confirm
   }
   const today = chicagoDate(now, rules.timeZone)
   const horizon = new Date(now.getTime() + (rules.horizonDays + 2) * 24 * 60 * 60 * 1000)
-  const taken = await takenAppointments(today, chicagoDate(horizon, rules.timeZone))
+  const to = chicagoDate(horizon, rules.timeZone)
+  const taken = await takenAppointments(today, to)
   const slotStart = String(prepared.customer.appointment_date)
   const holder = taken.get(slotStart)
   if (holder && holder !== prepared.customer.id) {
     throw new HttpError(409, 'That time was just taken. Please pick another.')
   }
+  const hubBusy = await hubBusyIntervals(now.toISOString(), horizon.toISOString())
+  if (overlapsSlot(slotStart, rules.durationMinutes, hubBusy)) {
+    throw new HttpError(409, 'That time was just taken. Please pick another.')
+  }
   if (prepared.pendingPath && prepared.finalPath && prepared.file) {
     prepared.file.size_bytes = await placeBill(prepared.pendingPath, prepared.finalPath, String(prepared.file.mime_type))
   }
-  await insertRow('powergenie_customers', prepared.customer)
+  const customerWrite = await insertRow('powergenie_customers', prepared.customer)
   if (prepared.file) await insertRow('powergenie_files', prepared.file)
   await insertRow('powergenie_activity', prepared.activity)
+  if (customerWrite === 'created') {
+    const kwh = prepared.customer.kwh_this_period
+    await notifyNewLead({
+      id: prepared.confirmation.id,
+      source: 'assistant',
+      name: prepared.confirmation.name,
+      address: String(prepared.customer.service_address || ''),
+      kwh: typeof kwh === 'number' ? kwh : null,
+      amount: billAmount({
+        totalDue: typeof prepared.customer.total_due === 'number' ? prepared.customer.total_due : null,
+        currentCharges: typeof prepared.customer.current_charges === 'number' ? prepared.customer.current_charges : null,
+      }),
+      appointment: prepared.confirmation.slotLabel,
+      billAttached: prepared.confirmation.billAttached,
+    })
+  }
   return prepared.confirmation
 }
 

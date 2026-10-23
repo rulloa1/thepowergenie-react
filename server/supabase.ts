@@ -1,3 +1,4 @@
+import { timingSafeEqual } from 'node:crypto'
 import { HttpError } from './http.js'
 
 /**
@@ -90,6 +91,43 @@ export async function takenAppointments(fromDate: string, toDate: string): Promi
     }
   }
   return taken
+}
+
+export type BusyInterval = { start: string; end: string }
+
+/** Booked Referral Hub appointments that overlap [fromIso, toIso). Throws when the read fails. */
+export async function hubBusyIntervals(fromIso: string, toIso: string): Promise<BusyInterval[]> {
+  const params = new URLSearchParams()
+  params.set('select', 'starts_at,ends_at')
+  params.set('status', 'eq.booked')
+  params.set('starts_at', `lt.${toIso}`)
+  params.set('ends_at', `gt.${fromIso}`)
+  params.set('limit', '500')
+  const response = await supabaseFetch(`/rest/v1/hub_appointments?${params.toString()}`)
+  if (!response.ok) {
+    console.error('supabase_hub_slots_failed', response.status)
+    throw new HttpError(503, 'Scheduling is not available right now. Please try again.')
+  }
+  const rows = (await response.json()) as Array<{ starts_at?: string; ends_at?: string }>
+  const busy: BusyInterval[] = []
+  for (const row of rows) {
+    if (typeof row.starts_at === 'string' && typeof row.ends_at === 'string') {
+      busy.push({ start: row.starts_at, end: row.ends_at })
+    }
+  }
+  return busy
+}
+
+/** True when Authorization is the website's service-role key. Used by the booking function's bill read. */
+export function serviceBearerAuthorized(request: Request): boolean {
+  const expected = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim()
+  const header = request.headers.get('authorization') || ''
+  const token = header.replace(/^Bearer\s+/i, '').trim()
+  if (!expected || !token) return false
+  const left = Buffer.from(token)
+  const right = Buffer.from(expected)
+  if (left.length !== right.length) return false
+  return timingSafeEqual(left, right)
 }
 
 type SignedUpload = { url: string; token?: string }

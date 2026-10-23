@@ -15,6 +15,7 @@ export type MockSupabase = {
   customers: Row[]
   files: Row[]
   activity: Row[]
+  hubBusy: Row[]
   close: () => Promise<void>
 }
 
@@ -66,6 +67,7 @@ export async function startMockSupabase(): Promise<MockSupabase> {
   const customers: Row[] = []
   const files: Row[] = []
   const activity: Row[] = []
+  const hubBusy: Row[] = []
   const calls: MockCall[] = []
 
   const server = createServer(async (req, res) => {
@@ -154,6 +156,10 @@ export async function startMockSupabase(): Promise<MockSupabase> {
       send(res, 201, [row])
       return
     }
+    if (table === 'hub_appointments' && req.method === 'GET') {
+      send(res, 200, hubBusy)
+      return
+    }
     if (table === 'powergenie_customers' && req.method === 'GET') {
       const filters = url.searchParams.getAll('appointment_date')
       const gte = filters.find(item => item.startsWith('gte.'))?.slice(4)
@@ -181,6 +187,7 @@ export async function startMockSupabase(): Promise<MockSupabase> {
     customers,
     files,
     activity,
+    hubBusy,
     close: () => new Promise(resolve => server.close(() => resolve())),
   }
 }
