@@ -158,7 +158,7 @@ do $$
 declare
   target text;
 begin
-  foreach target in array[
+  foreach target in array array[
     'powergenie_customers',
     'powergenie_files',
     'powergenie_activity',
