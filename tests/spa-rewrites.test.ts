@@ -24,7 +24,7 @@ test('the Vercel SPA rewrite serves /privacy and /terms', () => {
     assert.equal(rule?.destination, '/index.html', source)
   }
 
-  const spa = vercel.rewrites.find(rule => rule.destination === '/index.html' && rule.source.includes('(?!api/)'))
+  const spa = vercel.rewrites.find(rule => rule.destination === '/index.html' && rule.source.includes('(?!api/'))
   assert.ok(spa, 'expected a catch-all rewrite to /index.html that skips /api')
   const explicitFirst = vercel.rewrites.findIndex(rule => rule.source === '/privacy')
   const catchAll = vercel.rewrites.findIndex(rule => rule.source === spa.source)
@@ -36,6 +36,11 @@ test('the Vercel SPA rewrite serves /privacy and /terms', () => {
   assert.equal(pattern.test('/book'), true)
   assert.equal(pattern.test('/api/book'), false)
   assert.equal(pattern.test('/api/google/callback'), false)
+  assert.equal(pattern.test('/brand-lockups/celebrity-solar-lockup.webp'), false)
+  assert.equal(pattern.test('/brand-lockups/hip-hop-solar-lockup.webp'), false)
+  assert.equal(pattern.test('/brand-lockups/gas-genie-icon.png'), false)
+  assert.equal(pattern.test('/brand-lockups'), false)
+  assert.equal(pattern.test('/assets/brand/power-genie-lockup.webp'), true)
 
   const main = readFileSync('src/main.tsx', 'utf8')
   assert.match(main, /sitePage\(path\) === 'privacy'/)
