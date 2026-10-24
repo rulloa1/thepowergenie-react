@@ -1,6 +1,8 @@
 import React, { useEffect, useLayoutEffect, useRef, useState, useCallback } from 'react';
 import { Config, Section, Segment } from '../types';
 import { openAssistant } from '../lib/openAssistant';
+import { lockPageScroll } from '../lib/scrollLock';
+import { preservedScrollTop } from '../lib/scrollPosition';
 import { shouldHandleClientNavigation } from '../lib/siteRoutes';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -124,6 +126,7 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
   const scrollbarFillRef = useRef<HTMLSpanElement>(null);
   const particlesRef = useRef<HTMLDivElement>(null);
   const hintRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDetailsElement>(null);
   
   const [activeIndex, setActiveIndex] = useState(0);
   const [readingMode, setReadingMode] = useState(false);
@@ -439,7 +442,6 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
     }
     const prevVh = stateRef.current.vh || vh;
     const prevTotal = stateRef.current.totalW;
-    const progress = prevTotal > 0 ? clamp(window.scrollY / (prevTotal * prevVh)) : 0;
 
     stateRef.current.vh = vh;
     stateRef.current.laidOutW = window.innerWidth;
@@ -463,7 +465,7 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
     }
     
     if (preservePosition && prevTotal > 0) {
-      const nextTop = progress * off * vh;
+      const nextTop = preservedScrollTop(window.scrollY, prevTotal * prevVh, off * vh);
       // scrollTo during a fling cancels momentum and can leave a pale frame
       // with the fixed bar away from the visual top. Skip no-ops.
       if (Math.abs(nextTop - window.scrollY) > 1) {
@@ -476,6 +478,32 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
 
   const layoutRef = useRef(layout);
   layoutRef.current = layout;
+  const consultFromHash = useRef(false);
+
+  // Headlines live in a fixed layer, so a native hash jump cannot find their
+  // place in the scrub track. #quote is below that track and only has a real
+  // document position after layout().
+  const applyLocationHash = useCallback(() => {
+    const hash = window.location.hash.replace(/^#/, '');
+    if (!hash) return;
+    if (hash === 'consult') {
+      if (consultFromHash.current) return;
+      consultFromHash.current = true;
+      openAssistant('book');
+      return;
+    }
+    consultFromHash.current = false;
+    if (hash === 'quote') {
+      document.getElementById('quote')?.scrollIntoView({ behavior: 'instant' as ScrollBehavior, block: 'start' });
+      return;
+    }
+    const index = hash === 'top' ? 0 : config.sections.findIndex((section) => section.id === hash);
+    if (index < 0) return;
+    const seg = segmentsRef.current.find((s) => s.kind === 'dive' && s.si === index);
+    if (!seg || seg.start == null || seg.end == null) return;
+    const top = index === 0 ? 0 : seg.start + (seg.end - seg.start) * 0.5;
+    window.scrollTo({ top, behavior: 'instant' as ScrollBehavior });
+  }, [config.sections]);
 
   const jumpTo = useCallback((i: number) => {
     if (readingMode) {
@@ -569,7 +597,30 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
     setSegments(newSegments);
     segmentsRef.current = newSegments;
     layoutRef.current();
+    // The track is empty on the first paint, so the browser's own hash scroll
+    // either misses #quote or lands on a fixed headline instead of its scene.
+    // Apply it once the track height exists. Instant, so it doesn't fight a
+    // wheel the visitor starts during a long smooth glide.
+    let userMoved = false;
+    const noteUser = () => { userMoved = true; };
+    const applyIfIdle = () => { if (!userMoved) applyLocationHash(); };
+    applyIfIdle();
+    const hashFrame = requestAnimationFrame(applyIfIdle);
+    // A late native hash scroll can run after images load and pull a fixed
+    // headline back to the top. Re-apply unless the visitor already scrolled.
+    const hashTimer = window.setTimeout(applyIfIdle, 350);
+    const onHashChange = () => applyLocationHash();
+    window.addEventListener('hashchange', onHashChange);
+    window.addEventListener('wheel', noteUser, { passive: true, once: true });
+    window.addEventListener('touchstart', noteUser, { passive: true, once: true });
+    window.addEventListener('keydown', noteUser, { once: true });
     return () => {
+      cancelAnimationFrame(hashFrame);
+      window.clearTimeout(hashTimer);
+      window.removeEventListener('hashchange', onHashChange);
+      window.removeEventListener('wheel', noteUser);
+      window.removeEventListener('touchstart', noteUser);
+      window.removeEventListener('keydown', noteUser);
       newSegments.forEach((s) => {
         s.video?.remove();
         s.video = null;
@@ -644,6 +695,22 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
     };
   }, [requestRead, layout, primeVideo]);
 
+  // Own effect so a later layout update cannot drop the unlock.
+  useEffect(() => {
+    const menu = menuRef.current;
+    if (!menu) return;
+    let unlock = () => {};
+    const onToggle = () => {
+      unlock();
+      unlock = menu.open ? lockPageScroll() : () => {};
+    };
+    menu.addEventListener('toggle', onToggle);
+    return () => {
+      menu.removeEventListener('toggle', onToggle);
+      unlock();
+    };
+  }, []);
+
   const activeAccent = config.sections[activeIndex]?.accent;
 
   return (
@@ -703,7 +770,7 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
               </nav>
 
               {/* Mobile Menu */}
-              <details className="sw-mobile-menu xl:hidden group">
+              <details ref={menuRef} className="sw-mobile-menu xl:hidden group">
                 <summary className="list-none cursor-pointer flex items-center justify-center w-11 h-11 bg-[color-mix(in_srgb,#fff_55%,transparent)] backdrop-blur-[10px] border border-[color-mix(in_srgb,var(--sw-accent)_16%,transparent)] rounded-full focus:outline-none" aria-label="Open navigation menu">
                   <div className="relative w-5 h-4">
                     <span className="absolute top-0 left-0 w-full h-0.5 bg-[var(--sw-ink)] rounded-full group-open:rotate-45 group-open:top-2 transition-all duration-300"></span>
@@ -901,7 +968,7 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
       </nav>
 
       {/* Hint */}
-      <div ref={hintRef} className="sw-hint fixed left-1/2 bottom-[26px] z-30 -translate-x-1/2 flex flex-col items-center gap-2.5 text-[0.76rem] tracking-[0.14em] uppercase text-[var(--sw-ink-soft)] transition-opacity duration-300 max-md:bottom-[calc(20px+env(safe-area-inset-bottom))]">
+      <div ref={hintRef} className="sw-hint fixed left-1/2 bottom-[26px] z-30 -translate-x-1/2 flex flex-col items-center gap-2.5 text-[0.76rem] tracking-[0.14em] uppercase text-[var(--sw-ink-soft)] transition-opacity duration-300 max-md:bottom-[calc(84px+env(safe-area-inset-bottom))]">
         <span className="hint-text">{config.hint || 'scroll'}</span>
         <i className="w-[22px] h-[34px] rounded-[12px] border-2 border-[color-mix(in_srgb,var(--sw-ink)_28%,transparent)] relative after:content-[''] after:absolute after:left-1/2 after:top-[7px] after:w-1 after:h-[7px] after:rounded-[2px] after:bg-[var(--sw-accent)] after:-translate-x-1/2 after:animate-[sw-wheel_1.7s_ease-in-out_infinite]" />
       </div>

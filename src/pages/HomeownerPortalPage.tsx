@@ -26,6 +26,7 @@ import {
   CheckCircle
 } from 'lucide-react';
 import { BrandMark } from '../hub/ui';
+import { lockPageScroll } from '../lib/scrollLock';
 
 interface ReferralRecord {
   id: string;
@@ -152,6 +153,11 @@ export default function HomeownerPortalPage() {
       // Ignore
     }
   }, [referrals]);
+
+  useEffect(() => {
+    if (!showQrModal) return;
+    return lockPageScroll();
+  }, [showQrModal]);
 
   // Handle URL hash routing
   useEffect(() => {
