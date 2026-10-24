@@ -100,6 +100,8 @@ export function overlapsSlot(startIso: string, durationMinutes: number, busy: Re
 export function listSlots(rules: SlotRules, now: Date, taken: ReadonlySet<string>, busy: ReadonlyArray<BusyInterval> = []): Slot[] {
   const today = zonedParts(now, rules.timeZone)
   const earliest = now.getTime() + rules.minLeadHours * 60 * 60 * 1000
+  // Same cutoff as /book: a start later than horizonDays from now is closed.
+  const latest = now.getTime() + rules.horizonDays * 24 * 60 * 60 * 1000
   const slots: Slot[] = []
   for (let offset = 0; offset <= rules.horizonDays; offset += 1) {
     const date = addCalendarDays(today.year, today.month, today.day, offset)
@@ -110,7 +112,7 @@ export function listSlots(rules: SlotRules, now: Date, taken: ReadonlySet<string
     const endMin = hours.end * 60
     for (let minute = startMin; minute + rules.durationMinutes <= endMin; minute += rules.durationMinutes) {
       const start = zonedToUtc(date.year, date.month, date.day, Math.floor(minute / 60), minute % 60, rules.timeZone)
-      if (start.getTime() < earliest) continue
+      if (start.getTime() < earliest || start.getTime() > latest) continue
       const end = new Date(start.getTime() + rules.durationMinutes * 60 * 1000)
       const startIso = isoWithOffset(start, rules.timeZone)
       if (taken.has(startIso) || overlapsSlot(startIso, rules.durationMinutes, busy)) continue

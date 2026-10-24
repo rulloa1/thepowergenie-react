@@ -209,7 +209,7 @@ async function resyncCustomer(admin: Admin, id: string) {
     .maybeSingle();
   if (error || !data?.appointment_date) return 'Appointment not found.';
   const raw = Number(env('SLOT_DURATION_MINUTES'));
-  const durationMinutes = Number.isInteger(raw) && raw >= 30 && raw <= 240 ? raw : 120;
+  const durationMinutes = Number.isInteger(raw) && raw >= 30 && raw <= 240 ? raw : 60;
   return syncCustomerConsult(admin, { ...data, durationMinutes });
 }
 

@@ -33,10 +33,10 @@ export async function hubUser(admin: Admin, req: Request): Promise<HubUser | nul
   return (profile as HubUser) ?? null;
 }
 
-/** Website consults block this many minutes on /book. Matches SLOT_DURATION_MINUTES. */
+/** Website consults block this many minutes on /book. Default 60, matching SLOT_DURATION_MINUTES and /book. */
 function assistantSlotMinutes() {
   const raw = Number(env('SLOT_DURATION_MINUTES'));
-  if (!Number.isInteger(raw) || raw < 30 || raw > 240) return 120;
+  if (!Number.isInteger(raw) || raw < 30 || raw > 240) return 60;
   return raw;
 }
 
