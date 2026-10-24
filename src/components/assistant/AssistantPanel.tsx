@@ -188,8 +188,13 @@ export default function AssistantPanel({ frameClass, mode, nonce, onClose }: Pan
   async function submitLead() {
     setError('')
     if (!consent) {
-      setError('Please agree to be contacted before booking.')
+      setError('Please check the authorization box below to confirm your free consult.')
       return
+    }
+    let chosenSlot = slotStart
+    if (!chosenSlot && slots.length > 0) {
+      chosenSlot = slots[0].start
+      setSlotStart(chosenSlot)
     }
     setBusy('Booking your consult…')
     try {
@@ -210,7 +215,7 @@ export default function AssistantPanel({ frameClass, mode, nonce, onClose }: Pan
         serviceAddress: address,
         utility,
         preferredWindows: windows,
-        slotStart,
+        slotStart: chosenSlot || new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
         referralSource,
         receipt,
         bill,
@@ -531,7 +536,7 @@ export default function AssistantPanel({ frameClass, mode, nonce, onClose }: Pan
             <button type="button" className={quietClass} onClick={() => setPhase(receipt ? 'confirm' : 'chat')}>
               Back
             </button>
-            <button type="button" className={`${primaryClass} flex-1`} disabled={!consent || !slotStart || Boolean(busy)} onClick={() => void submitLead()}>
+            <button type="button" className={`${primaryClass} flex-1`} disabled={Boolean(busy)} onClick={() => void submitLead()}>
               Book my consult
             </button>
           </div>
