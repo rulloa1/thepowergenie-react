@@ -1,0 +1,33 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "redirects": [
+    { "source": "/node/book", "destination": "/book", "permanent": true },
+    { "source": "/node/book/", "destination": "/book", "permanent": true },
+    { "source": "/node/dashboard", "destination": "/dashboard", "permanent": true },
+    { "source": "/node/dashboard/", "destination": "/dashboard", "permanent": true }
+  ],
+  "rewrites": [
+    {
+      "source": "/api/(chat|uploads|bill|lead|slots)",
+      "destination": "/api/assistant?route=$1"
+    },
+    {
+      "source": "/privacy",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/terms",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/((?!api/|brand-lockups(?:/|$)).*)",
+      "destination": "/index.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/dashboard",
+      "headers": [{ "key": "X-Robots-Tag", "value": "noindex, nofollow" }]
+    }
+  ]
+}

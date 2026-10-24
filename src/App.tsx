@@ -4,6 +4,15 @@ import ScrollWorld from './components/ScrollWorld';
 import BrandPage from './components/BrandPage';
 import Toast from './components/Toast';
 import { Config } from './types';
+import LegalFooter from './components/LegalFooter';
+import { openAssistant } from './lib/openAssistant';
+import {
+  isBrandPage,
+  referralBrandFromLocation,
+  marketingViewFromLocation,
+  marketingViewHref,
+  type MarketingView,
+} from './lib/siteRoutes';
 
 const config: Config = {
   brand: { name: 'The Power Genie', href: '#top', logo: 'assets/brand/power-genie-lockup.webp' },
@@ -27,7 +36,10 @@ const config: Config = {
       title: 'A brighter way to power home.',
       body: 'Every second, the sun releases more energy than humanity has used in all of history. The Power Genie brings that power home to Houston.',
       tags: ['Solar Energy', 'Battery Storage'],
-      cta: { primary: { label: 'Explore Your Solar Options', href: '#quote' } }
+      cta: {
+        primary: { label: 'Explore Your Solar Options', href: '#quote' },
+        secondary: { label: 'Book a free savings consult', href: '#consult' },
+      }
     },
     {
       id: 'roof',
@@ -50,10 +62,10 @@ const config: Config = {
       clip: 'assets/vid/encoded/03-battery-dive.mp4',
       clipMobile: 'assets/vid/mobile/03-battery-dive.mp4',
       accent: '#4CAF50',
-      eyebrow: 'Store & Protect',
-      title: 'Battery Backup',
-      body: 'Store excess energy for peak hours, storm season and grid emergencies. Keep your lights — and your AC — on when the grid goes dark.',
-      tags: ['Backup Power', 'Peak Savings', 'Grid Independence']
+      eyebrow: 'Tesla Powerwall',
+      title: 'Battery Backup, by Tesla',
+      body: 'Your panels charge a Tesla Powerwall all day. When the grid goes dark — storm season, peak hours, outages — it keeps your lights and your AC running.',
+      tags: ['Tesla Powerwall', 'Outage Protection', 'Peak Savings']
     },
     {
       id: 'home',
@@ -93,14 +105,17 @@ const config: Config = {
       title: 'Go Solar Today',
       body: 'Lower your bills, protect your home, and power the future. Get your free custom solar quote in minutes.',
       tags: ['Zero Down', 'Immediate Savings', 'Clean Energy'],
-      cta: { primary: { label: 'Get My Free Quote', href: '#quote' } }
+      cta: {
+        primary: { label: 'Get My Free Quote', href: '#quote' },
+        secondary: { label: 'Book a free savings consult', href: '#consult' },
+      }
     }
   ],
   connectors: [
     'assets/vid/encoded/c01-sun-roof.mp4',
     'assets/vid/encoded/c02-roof-battery.mp4',
     'assets/vid/encoded/c03-battery-home.mp4',
-    null, // Missing c04 in encoded
+    'assets/vid/encoded/c04-home-community.mp4',
     'assets/vid/encoded/c05-community-cta.mp4'
   ],
   connectorsMobile: [
@@ -112,9 +127,19 @@ const config: Config = {
   ]
 };
 
+// Main application component
 export default function App() {
   const [source, setSource] = useState<string | null>(null);
-  const [view, setView] = useState<string>('journey');
+  const [view, setView] = useState<MarketingView>(() =>
+    marketingViewFromLocation(window.location.pathname, window.location.search),
+  );
+  // The Salesforce form autofocuses a field on load, which scrolls the whole page
+  // down to it. Only mount it once most of the form box is already on screen
+  // (or the visitor taps a quote button), so the autofocus has nowhere to jump.
+  const formBoxRef = useRef<HTMLDivElement>(null);
+  const quoteRef = useRef<HTMLElement>(null);
+  const [formReady, setFormReady] = useState(false);
+  const [quoteInView, setQuoteInView] = useState(false);
   const [toast, setToast] = useState<{ isVisible: boolean; message: string; submessage?: string }>({
     isVisible: false,
     message: '',
@@ -125,11 +150,9 @@ export default function App() {
     const allowed = new Set(['celebrity-solar', 'hip-hop-solar', 'gas-genie']);
     const params = new URLSearchParams(window.location.search);
     const incoming = params.get('source');
-    
-    // Also check if the URL path implies a brand (for legacy support if needed)
-    const pageBrand = window.location.pathname.split('/').pop()?.replace('.html', '') || '';
-    
-    let currentSource = allowed.has(incoming || '') ? incoming : allowed.has(pageBrand) ? pageBrand : null;
+    const pageBrand = referralBrandFromLocation(window.location.pathname);
+
+    let currentSource = allowed.has(incoming || '') ? incoming : pageBrand;
     
     try {
       if (currentSource) {
@@ -144,16 +167,58 @@ export default function App() {
     if (currentSource && allowed.has(currentSource)) {
       setSource(currentSource);
     }
-
-    // Simple routing based on hash or search param
-    const viewParam = params.get('view');
-    if (viewParam && ['brands', 'celebrity-solar', 'hip-hop-solar', 'gas-genie'].includes(viewParam)) {
-      setView(viewParam);
-    }
   }, []);
+
+  useEffect(() => {
+    const syncView = () => {
+      setView(marketingViewFromLocation(window.location.pathname, window.location.search));
+    };
+    window.addEventListener('popstate', syncView);
+    return () => window.removeEventListener('popstate', syncView);
+  }, []);
+
+  useEffect(() => {
+    const href = marketingViewHref(view, new URL(window.location.href));
+    const current = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+    const legacyQuery = new URLSearchParams(window.location.search).has('view');
+    if ((view !== 'journey' || legacyQuery) && current !== href) {
+      window.history.replaceState({}, '', href);
+    }
+  }, [view]);
+
+  useEffect(() => {
+    const el = quoteRef.current;
+    if (!el || view !== 'journey') {
+      setQuoteInView(false);
+      return;
+    }
+    const io = new IntersectionObserver((entries) => {
+      setQuoteInView(entries.some((entry) => entry.isIntersecting && entry.intersectionRatio >= 0.12));
+    }, { threshold: [0, 0.12, 0.4] });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [view]);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('quote-in-view', quoteInView);
+    return () => document.documentElement.classList.remove('quote-in-view');
+  }, [quoteInView]);
+
+  useEffect(() => {
+    if (formReady || view !== 'journey') return;
+    const el = formBoxRef.current;
+    if (!el) return;
+    if (!('IntersectionObserver' in window)) { setFormReady(true); return; }
+    const io = new IntersectionObserver((entries) => {
+      if (entries.some((e) => e.intersectionRatio >= 0.75)) { setFormReady(true); io.disconnect(); }
+    }, { threshold: [0.75] });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [formReady, view]);
 
   const triggerToast = (message = "Excellent choice!", submessage = "Opening your custom solar quote form below.") => {
     setToast({ isVisible: true, message, submessage });
+    setFormReady(true);
   };
 
   const getSalesforceUrl = (baseUrl: string) => {
@@ -171,43 +236,40 @@ export default function App() {
   };
 
   const handleNavigate = (newView: string) => {
-    setView(newView);
+    const next: MarketingView = newView === 'journey' || isBrandPage(newView) ? newView : 'journey';
+    const href = marketingViewHref(next, new URL(window.location.href));
+    const current = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+    setView(next);
     window.scrollTo(0, 0);
-    
-    // Update URL without reload
-    const url = new URL(window.location.href);
-    if (newView === 'journey') {
-      url.searchParams.delete('view');
-    } else {
-      url.searchParams.set('view', newView);
-    }
-    window.history.pushState({}, '', url);
+    if (current !== href) window.history.pushState({}, '', href);
   };
 
   if (view !== 'journey') {
     return (
-      <BrandPage 
-        id={view as any} 
-        onNavigate={handleNavigate} 
-        getSalesforceUrl={getSalesforceUrl} 
-        onQuoteClick={triggerToast}
-      />
+      <>
+        <BrandPage
+          id={view}
+          onNavigate={handleNavigate} 
+          getSalesforceUrl={getSalesforceUrl} 
+          onQuoteClick={triggerToast}
+        />
+        <LegalFooter />
+      </>
     );
   }
 
   return (
     <div className="relative">
       <main id="world">
-        <ScrollWorld 
-          config={{
-            ...config,
-            onNavigateBrands: () => handleNavigate('brands')
-          } as any} 
+        <ScrollWorld
+          config={config}
           onQuoteClick={() => triggerToast()}
+          onNavigateBrands={() => handleNavigate('brands')}
         />
       </main>
 
-      {/* Mobile Fixed CTA */}
+      {/* Mobile Fixed CTA. Hidden once the quote is on screen so it does not cover the form. */}
+      {!quoteInView && (
       <div className="sm:hidden fixed z-60 left-4 right-4 bottom-[max(12px,env(safe-area-inset-bottom))] pointer-events-none">
         <a 
           href="#quote" 
@@ -221,6 +283,7 @@ export default function App() {
           Get a Free Quote
         </a>
       </div>
+      )}
 
       <Toast 
         isVisible={toast.isVisible}
@@ -229,9 +292,19 @@ export default function App() {
         submessage={toast.submessage}
       />
 
-      <section className="quote-panel relative z-45 min-h-screen bg-[#F6F7FB] text-[#1A1A2E] p-[calc(clamp(84px,10vw,112px)+env(safe-area-inset-top))_clamp(16px,5vw,64px)_calc(40px+env(safe-area-inset-bottom))]" id="quote" aria-labelledby="quote-title" tabIndex={-1}>
+      <section ref={quoteRef} className="quote-panel relative z-45 min-h-screen bg-[#F6F7FB] text-[#1A1A2E] p-[calc(clamp(84px,10vw,112px)+env(safe-area-inset-top))_clamp(16px,5vw,64px)_calc(40px+env(safe-area-inset-bottom))]" id="quote" aria-labelledby="quote-title" tabIndex={-1}>
         <p className="quote-panel__eyebrow m-0 mb-2 text-[0.74rem] font-semibold tracking-[0.14em] uppercase text-[#FF6B00]">Your free quote</p>
-        <h2 id="quote-title" className="m-0 mb-7 text-[#1A1A2E] font-bold text-[clamp(1.7rem,3.6vw,2.6rem)] tracking-tight leading-[1.1]">Let's power your home.</h2>
+        <h2 id="quote-title" className="m-0 mb-4 text-[#1A1A2E] font-bold text-[clamp(1.7rem,3.6vw,2.6rem)] tracking-tight leading-[1.1]">Let's power your home.</h2>
+        <div className="mb-7">
+          <button
+            type="button"
+            data-testid="book-consult"
+            onClick={() => openAssistant('book')}
+            className="inline-flex items-center justify-center min-h-[48px] px-5 rounded-full bg-[#FF6B00] text-white font-bold shadow-[0_8px_20px_rgba(255,107,0,0.28)]"
+          >
+            Book a free savings consult
+          </button>
+        </div>
         <div className="quote-panel__grid grid grid-cols-1 md:grid-cols-[minmax(260px,340px)_1fr] gap-[clamp(20px,3vw,40px)] items-start max-w-[1280px]">
           <aside className="rep-card bg-[#0B2233] text-[#F7FBFF] rounded-[18px] p-[26px_24px] shadow-[0_12px_32px_rgba(10,20,40,0.18)]" aria-label="Your Sunrun solar expert">
             <p className="rep-card__name m-0 text-[1.35rem] font-bold tracking-tight">Horace Lawrence</p>
@@ -252,23 +325,37 @@ export default function App() {
             </ul>
             <p className="rep-card__intro m-0 mb-[14px] text-[0.95rem] leading-[1.55] text-[#D9E6F2]">Hi, I'm Horace! I'm dedicated to making the process of going solar as easy as possible. Why solar?</p>
             <ul className="rep-card__why grid gap-[10px] m-0 p-0 list-none">
-              <li className="relative pl-[26px] text-[0.92rem] leading-[1.45] text-[#F7FBFF] before:content-[''] before:absolute before:left-0 before:top-[0.32em] before:w-[14px] before:height-[14px] before:rounded-full before:bg-[#FF6B00] before:shadow-[inset_0_0_0_4px_#0B2233]">Lock in a rate to avoid rising utility costs.</li>
-              <li className="relative pl-[26px] text-[0.92rem] leading-[1.45] text-[#F7FBFF] before:content-[''] before:absolute before:left-0 before:top-[0.32em] before:w-[14px] before:height-[14px] before:rounded-full before:bg-[#FF6B00] before:shadow-[inset_0_0_0_4px_#0B2233]">A more reliable source of energy for your home.</li>
-              <li className="relative pl-[26px] text-[0.92rem] leading-[1.45] text-[#F7FBFF] before:content-[''] before:absolute before:left-0 before:top-[0.32em] before:w-[14px] before:height-[14px] before:rounded-full before:bg-[#FF6B00] before:shadow-[inset_0_0_0_4px_#0B2233]">With a battery, protection during blackouts.</li>
+              <li className="relative pl-[26px] text-[0.92rem] leading-[1.45] text-[#F7FBFF] before:content-[''] before:absolute before:left-0 before:top-[0.32em] before:w-[14px] before:h-[14px] before:rounded-full before:bg-[#FF6B00] before:shadow-[inset_0_0_0_4px_#0B2233]">Lock in a rate to avoid rising utility costs.</li>
+              <li className="relative pl-[26px] text-[0.92rem] leading-[1.45] text-[#F7FBFF] before:content-[''] before:absolute before:left-0 before:top-[0.32em] before:w-[14px] before:h-[14px] before:rounded-full before:bg-[#FF6B00] before:shadow-[inset_0_0_0_4px_#0B2233]">A more reliable source of energy for your home.</li>
+              <li className="relative pl-[26px] text-[0.92rem] leading-[1.45] text-[#F7FBFF] before:content-[''] before:absolute before:left-0 before:top-[0.32em] before:w-[14px] before:h-[14px] before:rounded-full before:bg-[#FF6B00] before:shadow-[inset_0_0_0_4px_#0B2233]">With a battery, protection during blackouts.</li>
             </ul>
           </aside>
-          <div className="quote-panel__formwrap bg-white rounded-[18px] overflow-hidden shadow-[0_12px_32px_rgba(10,20,40,0.12)]">
-            <iframe 
-              className="quote-panel__frame block w-full h-[min(900px,82vh)] border-0 bg-white" 
-              title="Sunrun quote request form"
-              src={getSalesforceUrl("https://sunrun.my.salesforce-sites.com/purl/?srep=/powergenie#form-group")}
-              referrerPolicy="strict-origin-when-cross-origin"
-            ></iframe>
+          <div ref={formBoxRef} className="quote-panel__formwrap bg-white rounded-[18px] overflow-hidden shadow-[0_12px_32px_rgba(10,20,40,0.12)]">
+            {formReady ? (
+              <iframe
+                className="quote-panel__frame block w-full h-[min(900px,82vh)] border-0 bg-white"
+                title="Sunrun quote request form"
+                src={getSalesforceUrl("https://sunrun.my.salesforce-sites.com/purl/?srep=/powergenie#form-group")}
+                referrerPolicy="strict-origin-when-cross-origin"
+              ></iframe>
+            ) : (
+              <div className="quote-panel__frame flex w-full h-[min(900px,82vh)] items-center justify-center bg-white text-[0.9rem] text-[#4A5568]">
+                Loading the quote form…
+              </div>
+            )}
             <p className="quote-panel__alt m-0 p-[12px_18px] text-[0.86rem] text-[#4A5568] border-t border-[rgba(26,26,46,0.08)]">
               Form not loading? <a href={getSalesforceUrl("https://sunrun.my.salesforce-sites.com/purl/?srep=/powergenie")} target="_blank" rel="noopener" className="text-[#0066CC] font-semibold">Open it in a new tab</a>.
             </p>
           </div>
         </div>
+        <p className="mt-8 max-w-[1280px] text-[0.98rem] leading-relaxed text-[#4A5568] flex flex-wrap gap-4 items-center">
+          <a href="/book" className="font-semibold text-[#0066CC] no-underline hover:underline focus-visible:underline">Book a one-hour call on Horace’s calendar</a>
+          <span className="text-gray-300">·</span>
+          <a href="/homeowner" className="inline-flex items-center gap-1.5 font-bold text-[#FF6B00] no-underline hover:underline focus-visible:underline">
+            🔋 Homeowner App: Tesla Powerwall Monitor & $1,000 Referral Program →
+          </a>
+        </p>
+        <LegalFooter homeChrome />
       </section>
     </div>
   );

@@ -1,0 +1,26 @@
+project_id = "ogwiopxnjpwwzleqwobq"
+
+[auth]
+# Invite-only dashboard: nobody can sign themselves up.
+enable_signup = false
+# Hosted project ogwiopxnjpwwzleqwobq. Invite and password-reset links land on /dashboard.
+site_url = "https://thepowergenie.theroyeffect.com"
+additional_redirect_urls = [
+  "https://thepowergenie.theroyeffect.com/dashboard",
+  "http://localhost:3000",
+  "http://localhost:3000/dashboard",
+]
+
+[auth.email]
+enable_signup = false
+
+# These functions authenticate callers themselves (or are public on purpose),
+# so the gateway JWT check is off.
+[functions.booking]
+verify_jwt = false
+
+[functions.schedule]
+verify_jwt = false
+
+[functions.google-oauth]
+verify_jwt = false
