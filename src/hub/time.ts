@@ -30,6 +30,15 @@ export function todayCentralKey() {
   return centralDateKey(new Date());
 }
 
+/** "HH:MM" in Central time, rounded to a 15-minute mark for the schedule controls. */
+export function centralTimeValue(iso: string | Date) {
+  const p = localParts(new Date(iso).getTime(), TZ);
+  const rounded = Math.round(p.minute / 15) * 15;
+  const hour = (p.hour + (rounded === 60 ? 1 : 0)) % 24;
+  const minute = rounded === 60 ? 0 : rounded;
+  return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+}
+
 export function formatBytes(n: number | null | undefined) {
   if (!n && n !== 0) return '';
   if (n < 1024) return `${n} B`;

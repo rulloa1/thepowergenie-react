@@ -10,6 +10,7 @@ import { openReceipt, sealReceipt } from './receipt.js'
 import { enforceRateLimit } from './rate-limit.js'
 import { loadSlotRules } from './slot-rules.js'
 import { chicagoDate, listSlots } from './slots.js'
+import { assistantAvailabilityBusy } from './google-calendar.js'
 import { createSignedUpload, deleteObject, downloadObject, hubBusyIntervals, serviceBearerAuthorized, takenAppointments } from './supabase.js'
 
 const TEN_MINUTES = 10 * 60 * 1000
@@ -87,6 +88,9 @@ export async function handleSlots(request: Request): Promise<Response> {
   } catch (error) {
     if (!(error instanceof HttpError) || error.status !== 503) throw error
   }
+  // Horace's calendar (and any member marked required) hides overlapping times.
+  // A failed check stops the list instead of offering a time he may already be busy.
+  busy = [...busy, ...await assistantAvailabilityBusy(now.toISOString(), horizon.toISOString())]
   const slots = listSlots(rules, now, taken, busy)
   return json({ slots, timeZone: rules.timeZone })
 }
