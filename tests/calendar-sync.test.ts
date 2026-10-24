@@ -9,6 +9,7 @@ import {
   type ConsultDetails,
 } from '../supabase/functions/_shared/calendar-sync.js'
 import { assistantAvailabilityBusy, syncAssistantConsult, type AssistantConsult } from '../server/google-calendar.js'
+import { HttpError } from '../server/http.js'
 import { saveLead } from '../server/lead.js'
 import { loadSlotRules } from '../server/slot-rules.js'
 import { listSlots } from '../server/slots.js'
@@ -267,6 +268,111 @@ test('a booking still saves when Google tables are not there yet', async () => {
     assert.equal(mock.customers.length, 1)
     assert.equal(mock.customers[0].appointment_date, slot.start)
   } finally {
+    for (const [key, value] of Object.entries(previous)) {
+      if (value === undefined) delete process.env[key]
+      else process.env[key] = value
+    }
+    await mock.close()
+  }
+})
+
+test('a retry of the same assistant booking does not conflict with its own Google event', async () => {
+  const mock = await startMockSupabase()
+  const previous = {
+    SUPABASE_URL: process.env.SUPABASE_URL,
+    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+    GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
+    GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
+    SITE_URL: process.env.SITE_URL,
+  }
+  const previousFetch = globalThis.fetch
+  const now = new Date('2026-10-22T15:00:00.000Z')
+  const slot = listSlots(loadSlotRules({}), now, new Set()).find(item => item.start === '2026-10-23T09:00:00-05:00')
+  assert.ok(slot)
+  const startMs = Date.parse(slot.start)
+  const ownBusy = [{ start: new Date(startMs).toISOString(), end: new Date(startMs + 60 * 60_000).toISOString() }]
+  let foreignBusy = true
+  let ownEvent = false
+  const clientRequestId = '99999999-9999-4999-8999-999999999999'
+  const lead = {
+    consent: true,
+    name: 'Alex Morgan',
+    phone: '7135550103',
+    email: 'alex4@example.com',
+    serviceAddress: '456 Oak Lane, Houston, TX 77008',
+    utility: 'Entergy Texas',
+    preferredWindows: 'weekday mornings',
+    slotStart: slot.start,
+  }
+  process.env.SUPABASE_URL = mock.url
+  process.env.SUPABASE_SERVICE_ROLE_KEY = 'sb_secret_test_only'
+  process.env.GOOGLE_CLIENT_ID = 'client'
+  process.env.GOOGLE_CLIENT_SECRET = 'secret'
+  process.env.SITE_URL = 'https://thepowergenie.theroyeffect.com'
+  globalThis.fetch = async (input, init) => {
+    const url = String(input)
+    const method = init?.method || 'GET'
+    if (url.includes('/rest/v1/hub_profiles')) {
+      return jsonResponse([{ id: HORACE, role: 'owner', full_name: 'Horace Lawrence' }])
+    }
+    if (url.includes('/rest/v1/hub_google_accounts')) {
+      return jsonResponse([{
+        user_id: HORACE,
+        google_email: 'horace@example.com',
+        calendar_id: 'primary',
+        refresh_token: 'rt-retry',
+        required_for_availability: false,
+      }])
+    }
+    if (url.includes('/rest/v1/hub_google_credentials')) return jsonResponse([])
+    if (url.includes('/rest/v1/hub_calendar_events')) {
+      return jsonResponse(method === 'GET' ? [] : null, method === 'GET' ? 200 : 201)
+    }
+    if (url.includes('oauth2.googleapis.com/token')) {
+      return jsonResponse({ access_token: 'token-rt-retry', expires_in: 3600 })
+    }
+    if (url.includes('/freeBusy')) {
+      const busy = foreignBusy || ownEvent ? ownBusy : []
+      return jsonResponse({ calendars: { primary: { busy } } })
+    }
+    if (url.includes('googleapis.com/calendar')) {
+      if (method === 'POST') {
+        ownEvent = true
+        return jsonResponse({ id: 'evt-own' })
+      }
+      return jsonResponse({ items: [] })
+    }
+    return previousFetch(input, init)
+  }
+  try {
+    await assert.rejects(
+      () => saveLead({ ...lead, clientRequestId }, now),
+      (error: unknown) => error instanceof HttpError && error.status === 409,
+    )
+    assert.equal(mock.customers.length, 0)
+
+    foreignBusy = false
+    const confirmation = await saveLead({ ...lead, clientRequestId }, now)
+    assert.notEqual(confirmation, 'honeypot')
+    if (confirmation === 'honeypot') return
+    assert.equal(confirmation.id, clientRequestId)
+    assert.equal(mock.customers.length, 1)
+    assert.equal(ownEvent, true)
+
+    const again = await saveLead({ ...lead, clientRequestId }, now)
+    assert.notEqual(again, 'honeypot')
+    if (again === 'honeypot') return
+    assert.equal(again.id, clientRequestId)
+    assert.equal(again.slotLabel, confirmation.slotLabel)
+    assert.equal(mock.customers.length, 1)
+
+    await assert.rejects(
+      () => saveLead({ ...lead, clientRequestId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' }, now),
+      (error: unknown) => error instanceof HttpError && error.status === 409,
+    )
+    assert.equal(mock.customers.length, 1)
+  } finally {
+    globalThis.fetch = previousFetch
     for (const [key, value] of Object.entries(previous)) {
       if (value === undefined) delete process.env[key]
       else process.env[key] = value
