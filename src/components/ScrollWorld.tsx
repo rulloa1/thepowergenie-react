@@ -681,44 +681,57 @@ export default function ScrollWorld({ config, onQuoteClick }: ScrollWorldProps) 
                     {s.label}
                   </button>
                 ))}
+                <a
+                  href="/homeowner"
+                  className="sw-nav__item whitespace-nowrap font-inherit text-[0.82rem] no-underline px-3.5 py-1.5 rounded-full transition-colors duration-200 text-[#FF6B00] font-bold hover:bg-[#FF6B00]/10"
+                >
+                  🔋 Homeowner Portal
+                </a>
               </nav>
 
-              {/* Mobile Menu */}
-              <details className="sw-mobile-menu xl:hidden group">
-                <summary className="list-none cursor-pointer flex items-center justify-center w-11 h-11 bg-[color-mix(in_srgb,#fff_55%,transparent)] backdrop-blur-[10px] border border-[color-mix(in_srgb,var(--sw-accent)_16%,transparent)] rounded-full focus:outline-none" aria-label="Open navigation menu">
-                  <div className="relative w-5 h-4">
-                    <span className="absolute top-0 left-0 w-full h-0.5 bg-[var(--sw-ink)] rounded-full group-open:rotate-45 group-open:top-2 transition-all duration-300"></span>
-                    <span className="absolute top-1.5 left-0 w-full h-0.5 bg-[var(--sw-ink)] rounded-full group-open:opacity-0 transition-all duration-300"></span>
-                    <span className="absolute bottom-0 left-0 w-full h-0.5 bg-[var(--sw-ink)] rounded-full group-open:-rotate-45 group-open:bottom-2 transition-all duration-300"></span>
-                  </div>
-                </summary>
-                <nav className="fixed top-[74px] right-4 w-48 py-2 bg-white rounded-2xl shadow-xl border border-[rgba(0,0,0,0.05)] overflow-hidden" aria-label="Mobile navigation">
-                  {config.sections.map((s, i) => (
-                    <button
-                      key={s.id}
-                      onClick={(e) => {
-                        jumpTo(i);
-                        (e.currentTarget.closest('details') as HTMLDetailsElement).open = false;
-                      }}
-                      className={cn(
-                        "block w-full text-left px-5 py-3 text-[0.9rem] font-medium transition-colors",
-                        activeIndex === i ? "text-[var(--sw-accent-ink)] bg-[color-mix(in_srgb,var(--sw-accent-ink)_10%,white)]" : "text-[var(--sw-ink)] active:bg-gray-50"
-                      )}
+                {/* Mobile Menu */}
+                <details className="sw-mobile-menu xl:hidden group">
+                  <summary className="list-none cursor-pointer flex items-center justify-center w-11 h-11 bg-[color-mix(in_srgb,#fff_55%,transparent)] backdrop-blur-[10px] border border-[color-mix(in_srgb,var(--sw-accent)_16%,transparent)] rounded-full focus:outline-none" aria-label="Open navigation menu">
+                    <div className="relative w-5 h-4">
+                      <span className="absolute top-0 left-0 w-full h-0.5 bg-[var(--sw-ink)] rounded-full group-open:rotate-45 group-open:top-2 transition-all duration-300"></span>
+                      <span className="absolute top-1.5 left-0 w-full h-0.5 bg-[var(--sw-ink)] rounded-full group-open:opacity-0 transition-all duration-300"></span>
+                      <span className="absolute bottom-0 left-0 w-full h-0.5 bg-[var(--sw-ink)] rounded-full group-open:-rotate-45 group-open:bottom-2 transition-all duration-300"></span>
+                    </div>
+                  </summary>
+                  <nav className="fixed top-[74px] right-4 w-52 py-2 bg-white rounded-2xl shadow-xl border border-[rgba(0,0,0,0.05)] overflow-hidden" aria-label="Mobile navigation">
+                    {config.sections.map((s, i) => (
+                      <button
+                        key={s.id}
+                        onClick={(e) => {
+                          jumpTo(i);
+                          (e.currentTarget.closest('details') as HTMLDetailsElement).open = false;
+                        }}
+                        className={cn(
+                          "block w-full text-left px-5 py-3 text-[0.9rem] font-medium transition-colors",
+                          activeIndex === i ? "text-[var(--sw-accent-ink)] bg-[color-mix(in_srgb,var(--sw-accent-ink)_10%,white)]" : "text-[var(--sw-ink)] active:bg-gray-50"
+                        )}
+                      >
+                        {s.label}
+                      </button>
+                    ))}
+                    <div className="h-px bg-gray-100 my-1" />
+                    <a
+                      href="/homeowner"
+                      className="block w-full text-left px-5 py-3 text-[0.9rem] font-bold text-[#FF6B00] active:bg-orange-50 no-underline"
                     >
-                      {s.label}
-                    </button>
-                  ))}
-                  <div className="h-px bg-gray-100 my-1" />
-                  <span
-                    role="link"
-                    aria-disabled="true"
-                    className="flex w-full cursor-not-allowed select-none flex-col items-start gap-1.5 px-5 py-3 text-left"
-                  >
-                    <span className="text-[0.9rem] font-medium text-[#5A636E]">Our brands</span>
-                    <ComingSoonPill />
-                  </span>
-                </nav>
-              </details>
+                      🔋 Homeowner & Referrals
+                    </a>
+                    <div className="h-px bg-gray-100 my-1" />
+                    <span
+                      role="link"
+                      aria-disabled="true"
+                      className="flex w-full cursor-not-allowed select-none flex-col items-start gap-1.5 px-5 py-3 text-left"
+                    >
+                      <span className="text-[0.9rem] font-medium text-[#5A636E]">Our brands</span>
+                      <ComingSoonPill />
+                    </span>
+                  </nav>
+                </details>
             </>
           )}
 

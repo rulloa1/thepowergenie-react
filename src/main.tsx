@@ -12,6 +12,7 @@ import './index.css'
 // Old /node/book and /node/dashboard URLs redirect here; they are not separate pages.
 const HubBooking = lazy(() => import('./hub/BookingPage'))
 const HubDashboard = lazy(() => import('./hub/Dashboard'))
+const HomeownerPortal = lazy(() => import('./pages/HomeownerPortalPage'))
 
 const path = normalizePath(window.location.pathname)
 const legacyTarget = legacyNodeRedirect(path)
@@ -24,6 +25,7 @@ if (legacyTarget) {
     sitePage(path) === 'terms' ? <TermsPage /> :
     sitePage(path) === 'book' ? <HubBooking /> :
     sitePage(path) === 'dashboard' ? <HubDashboard /> :
+    sitePage(path) === 'homeowner' ? <HomeownerPortal /> :
     <App />
 
   ReactDOM.createRoot(document.getElementById('root')!).render(

@@ -1,6 +1,6 @@
 /** Client routes for the public site. Old /node booking URLs redirect to the Referral Hub. */
 
-export type SitePage = 'privacy' | 'terms' | 'book' | 'dashboard' | 'marketing';
+export type SitePage = 'privacy' | 'terms' | 'book' | 'dashboard' | 'homeowner' | 'marketing';
 
 export function normalizePath(pathname: string): string {
   return pathname.replace(/\/+$/, '') || '/';
@@ -18,6 +18,7 @@ export function sitePage(path: string): SitePage {
   if (path === '/terms') return 'terms';
   if (path === '/book') return 'book';
   if (path === '/dashboard') return 'dashboard';
+  if (path === '/homeowner' || path === '/portal' || path === '/referrals') return 'homeowner';
   return 'marketing';
 }
 

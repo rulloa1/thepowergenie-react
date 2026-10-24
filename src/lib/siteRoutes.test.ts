@@ -24,6 +24,9 @@ describe('public routes', () => {
   it('keeps Referral Hub routes and redirects the old /node booking URLs', () => {
     expect(sitePage('/book')).toBe('book');
     expect(sitePage('/dashboard')).toBe('dashboard');
+    expect(sitePage('/homeowner')).toBe('homeowner');
+    expect(sitePage('/portal')).toBe('homeowner');
+    expect(sitePage('/referrals')).toBe('homeowner');
     expect(legacyNodeRedirect(normalizePath('/node/book'))).toBe('/book');
     expect(legacyNodeRedirect(normalizePath('/node/dashboard'))).toBe('/dashboard');
     expect(legacyNodeRedirect(normalizePath('/node/book/'))).toBe('/book');
