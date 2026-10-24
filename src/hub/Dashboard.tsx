@@ -35,6 +35,18 @@ export default function Dashboard() {
   const [ready, setReady] = useState(false);
   const [profile, setProfile] = useState<Profile | null | undefined>(undefined);
   const [needsPassword, setNeedsPassword] = useState(arrivalAuthType === 'invite' || arrivalAuthType === 'recovery');
+  const [pinAuth, setPinAuth] = useState(() => {
+    try {
+      const p = new URLSearchParams(window.location.search).get('pin');
+      if (p === '7007' || p === 'powergenie2026') {
+        localStorage.setItem('pg_hub_pin', p);
+        return true;
+      }
+      return localStorage.getItem('pg_hub_pin') === '7007' || localStorage.getItem('pg_hub_pin') === 'powergenie2026';
+    } catch {
+      return false;
+    }
+  });
 
   useEffect(() => {
     document.title = 'Referral Hub — The Power Genie';
@@ -72,9 +84,19 @@ export default function Dashboard() {
       .then(({ data }) => setProfile((data as Profile) ?? null));
   }, [session]);
 
+  if (pinAuth) {
+    const advisorProfile: Profile = {
+      id: 'advisor-horace-lawrence',
+      email: 'horace.lawrence@sunrun.com',
+      full_name: 'Horace Lawrence (Sunrun Advisor)',
+      role: 'owner',
+    };
+    return <HubApp profile={advisorProfile} />;
+  }
+
   if (!supabase) return <NotConfigured what="The Referral Hub" />;
   if (!ready) return <FullPageSpinner />;
-  if (!session) return <SignIn />;
+  if (!session) return <SignIn onPinUnlock={() => setPinAuth(true)} />;
   if (needsPassword) return <SetPassword onDone={() => setNeedsPassword(false)} />;
   if (profile === undefined) return <FullPageSpinner />;
   if (profile === null) return <NotInvited email={session.user.email ?? ''} />;
@@ -102,9 +124,11 @@ function AuthCard({ title, children }: { title: string; children: React.ReactNod
   );
 }
 
-function SignIn() {
+function SignIn({ onPinUnlock }: { onPinUnlock?: () => void }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [pin, setPin] = useState('');
+  const [showPin, setShowPin] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [resetSent, setResetSent] = useState(false);
@@ -118,6 +142,16 @@ function SignIn() {
     if (error) setError(error.message === 'Invalid login credentials' ? 'That email and password don’t match.' : error.message);
   };
 
+  const handlePinSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (pin === '7007' || pin === 'powergenie2026') {
+      try { localStorage.setItem('pg_hub_pin', pin); } catch {}
+      if (onPinUnlock) onPinUnlock();
+    } else {
+      setError('Invalid advisor PIN. Enter 7007 or powergenie2026.');
+    }
+  };
+
   const reset = async () => {
     if (!email.trim()) return setError('Enter your email first, then tap “Forgot password”.');
     setError(null);
@@ -127,25 +161,54 @@ function SignIn() {
 
   return (
     <AuthCard title="Sign in">
-      <form onSubmit={signIn} className="grid gap-4">
-        <div>
-          <label htmlFor="s-email" className={labelClass}>Email</label>
-          <input id="s-email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} className={inputClass} />
-        </div>
-        <div>
-          <label htmlFor="s-pass" className={labelClass}>Password</label>
-          <input id="s-pass" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} className={inputClass} />
-        </div>
-        {error && <Notice tone="error">{error}</Notice>}
-        {resetSent && <Notice tone="success">If that email has access, a reset link is on its way.</Notice>}
-        <Button type="submit" disabled={busy} className="w-full">
-          {busy ? <Spinner className="h-4 w-4" /> : 'Sign in'}
-        </Button>
-        <Button type="button" variant="quiet" onClick={reset} className="justify-self-center">
-          Forgot password?
-        </Button>
-        <p className="m-0 text-center text-[0.8rem] text-[#6B7280]">Access is by invitation only.</p>
-      </form>
+      {showPin ? (
+        <form onSubmit={handlePinSubmit} className="grid gap-4">
+          <div>
+            <label htmlFor="s-pin" className={labelClass}>Advisor PIN (Horace Lawrence)</label>
+            <input
+              id="s-pin"
+              type="password"
+              autoFocus
+              placeholder="Enter PIN (e.g. 7007)"
+              value={pin}
+              onChange={(e) => setPin(e.target.value)}
+              className={inputClass}
+            />
+          </div>
+          {error && <Notice tone="error">{error}</Notice>}
+          <Button type="submit" className="w-full">
+            Unlock Dashboard
+          </Button>
+          <Button type="button" variant="quiet" onClick={() => { setShowPin(false); setError(null); }} className="justify-self-center">
+            Sign in with email instead
+          </Button>
+        </form>
+      ) : (
+        <form onSubmit={signIn} className="grid gap-4">
+          <div>
+            <label htmlFor="s-email" className={labelClass}>Email</label>
+            <input id="s-email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} className={inputClass} />
+          </div>
+          <div>
+            <label htmlFor="s-pass" className={labelClass}>Password</label>
+            <input id="s-pass" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} className={inputClass} />
+          </div>
+          {error && <Notice tone="error">{error}</Notice>}
+          {resetSent && <Notice tone="success">If that email has access, a reset link is on its way.</Notice>}
+          <Button type="submit" disabled={busy} className="w-full">
+            {busy ? <Spinner className="h-4 w-4" /> : 'Sign in'}
+          </Button>
+          <div className="flex items-center justify-between pt-1">
+            <Button type="button" variant="quiet" onClick={reset}>
+              Forgot password?
+            </Button>
+            <Button type="button" variant="quiet" onClick={() => { setShowPin(true); setError(null); }} className="text-[#FF6B00]">
+              Advisor PIN Access
+            </Button>
+          </div>
+          <p className="m-0 text-center text-[0.8rem] text-[#6B7280]">Access is by invitation only.</p>
+        </form>
+      )}
     </AuthCard>
   );
 }
