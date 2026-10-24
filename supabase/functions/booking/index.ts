@@ -6,17 +6,13 @@
 // Every POST re-checks the slot rules, the database and Google free/busy before saving.
 // The Postgres exclusion constraint is the final backstop against double booking.
 
+import { billAmount, type NormalizedBill } from '../_shared/bill.ts';
+import { METER_CONSENT_TEXT, readMeterRequest } from '../_shared/meter.ts';
 import { adminClient, bookedIntervals, type Admin } from '../_shared/db.ts';
-import { fail, json, notConfigured, preflight, serviceKey } from '../_shared/http.ts';
-import {
-  createEvent,
-  deleteEvent,
-  freeBusy,
-  GoogleError,
-  googleConfigured,
-  loadConnection,
-  type Connection,
-} from '../_shared/google.ts';
+import { fail, json, notConfigured, preflight, serviceKey, env } from '../_shared/http.ts';
+import { dashboardLeadUrl, sendLeadAlert, siteOrigin } from '../_shared/notify.ts';
+import { readUploadedBill } from '../_shared/read-bill.ts';
+import { availabilityBusy, googleConfigured, syncHubAppointment } from '../_shared/google.ts';
 import { bookingWindow, DEFAULT_RULES, generateSlots, isBookableSlot, SLOT_TIME_ZONE } from '../_shared/slots.ts';
 
 const MAX_BILL_BYTES = 10 * 1024 * 1024;
@@ -59,11 +55,11 @@ async function abuseCheck(admin: Admin, ipKey: string, email: string) {
   return null;
 }
 
-/** All busy time in the booking window: booked appointments + Google busy. */
-async function busyTime(admin: Admin, conn: Connection | null, now: Date) {
+/** All busy time in the booking window: booked appointments + required Google calendars. */
+async function busyTime(admin: Admin, now: Date) {
   const { timeMin, timeMax } = bookingWindow(now);
   const busy = await bookedIntervals(admin, timeMin, timeMax);
-  if (conn && googleConfigured()) busy.push(...(await freeBusy(conn, timeMin, timeMax)));
+  if (googleConfigured()) busy.push(...(await availabilityBusy(admin, timeMin, timeMax)));
   return busy;
 }
 
@@ -106,14 +102,12 @@ async function checkBill(file: File): Promise<{ kind: BillKind; bytes: Uint8Arra
 
 async function listSlots(admin: Admin) {
   const now = new Date();
-  let conn: Connection | null = null;
   try {
-    conn = googleConfigured() ? await loadConnection(admin) : null;
-    const busy = await busyTime(admin, conn, now);
+    const busy = await busyTime(admin, now);
     return json({ timeZone: SLOT_TIME_ZONE, slotMinutes: DEFAULT_RULES.slotMinutes, slots: generateSlots(now, busy) });
   } catch (e) {
     console.error('[booking:list]', e);
-    // Fail closed: if Google can't confirm Horace is free, don't offer times.
+    // Fail closed: if a required calendar can't confirm it is free, don't offer times.
     return fail(503, 'calendar_unavailable', "Online booking is temporarily unavailable. Please call or try again shortly.");
   }
 }
@@ -141,6 +135,14 @@ async function book(admin: Admin, req: Request) {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return fail(400, 'invalid', 'Please enter a valid email address.');
   if (address.length < 5) return fail(400, 'invalid', 'Please enter the service address.');
 
+  const meterResult = readMeterRequest({
+    esiId: clean(form.get('meterEsiId'), 40),
+    meterNumber: clean(form.get('meterNumber'), 40),
+    email: clean(form.get('meterEmail'), 80),
+    consent: clean(form.get('meterConsent'), 8) === 'yes',
+  }, email);
+  if (!meterResult.ok) return fail(400, 'invalid_meter', meterResult.message);
+
   const startDate = new Date(start);
   if (!start || Number.isNaN(startDate.getTime())) return fail(400, 'invalid', 'Please choose a time.');
 
@@ -163,12 +165,21 @@ async function book(admin: Admin, req: Request) {
     return fail(400, 'invalid_file', "Please upload last month's light bill.");
   }
 
-  // Re-check the slot against the rules, the database and Google — right now.
+  // Same extractor as the website assistant. A miss here still books the consult.
+  let fields: NormalizedBill | null = null;
+  if (bill) {
+    try {
+      fields = await readUploadedBill(admin, bill.bytes, bill.kind.type);
+    } catch (e) {
+      console.error('[booking:extract]', e instanceof Error ? e.name : 'unknown');
+      fields = null;
+    }
+  }
+
+  // Re-check the slot against the rules, the database (including website consults) and Google — right now.
   const now = new Date();
-  let conn: Connection | null = null;
   try {
-    conn = googleConfigured() ? await loadConnection(admin) : null;
-    const busy = await busyTime(admin, conn, now);
+    const busy = await busyTime(admin, now);
     if (!isBookableSlot(startDate, now, busy)) {
       return fail(409, 'slot_unavailable', 'Sorry — that time was just taken or is no longer available. Please pick another.');
     }
@@ -205,6 +216,14 @@ async function book(admin: Admin, req: Request) {
       address,
       note: note || null,
       client_ip_hash: ipKey,
+      kwh: fields?.kwhThisPeriod ?? null,
+      bill_amount: billAmount(fields),
+      esiid: fields?.esiid ?? null,
+      meter_number: fields?.meterNumber ?? null,
+      tdu: fields?.tdu ?? null,
+      rep_puct_certificate: fields?.repPuctCertificate ?? null,
+      avg_monthly_kwh: fields?.avgMonthlyKwh ?? null,
+      usage_history: fields?.usageHistory ?? null,
     })
     .select('id')
     .single();
@@ -217,6 +236,26 @@ async function book(admin: Admin, req: Request) {
     }
     console.error('[booking:insert]', insertError);
     return fail(500, 'save_failed', "We couldn't save your booking. Please try again.");
+  }
+
+  let meterStatus: string | null = null;
+  if (meterResult.value) {
+    const meter = meterResult.value;
+    const { error } = await admin.from('smt_authorizations').insert({
+      appointment_id: appt.id,
+      esi_id: meter.esiId,
+      meter_number: meter.meterNumber,
+      customer_email: meter.email,
+      consent_at: new Date().toISOString(),
+      consent_text: METER_CONSENT_TEXT,
+      status: 'pending_setup',
+    });
+    if (error) {
+      console.error('[booking:meter]', error);
+      meterStatus = 'failed';
+    } else {
+      meterStatus = 'pending_setup';
+    }
   }
 
   if (bill && billPath) {
@@ -232,38 +271,59 @@ async function book(admin: Admin, req: Request) {
     if (error) console.error('[booking:file-row]', error);
   }
 
-  // Put it on Horace's phone. A Google hiccup must not lose the booking — it's saved and
-  // flagged in the dashboard so it can be re-synced.
-  if (conn) {
-    try {
-      const eventId = await createEvent(conn, {
-        appointmentId: appt.id,
-        start: startDate.toISOString(),
-        end: endDate.toISOString(),
-        customerName: name,
-        phone,
-        email,
-        address,
-        note,
-        hasLightBill: !!bill,
-        source: 'public',
-      });
-      const { error: linkError } = await admin.from('hub_appointments').update({ google_event_id: eventId }).eq('id', appt.id);
-      if (linkError) {
-        // Without the stored id a later "Sync now" would create a duplicate, so undo the event.
-        await deleteEvent(conn, eventId).catch(() => {});
-        throw new GoogleError(`could not save Google event id: ${linkError.message}`);
-      }
-    } catch (e) {
-      console.error('[booking:google]', e);
-      await admin
-        .from('hub_appointments')
-        .update({ google_sync_error: e instanceof GoogleError ? e.message : 'Google Calendar sync failed' })
-        .eq('id', appt.id);
-    }
-  }
+  // Put it on every connected member's calendar. A Google hiccup must not lose the
+  // booking — it's saved, and a failed member is flagged for Sync now.
+  await syncHubAppointment(admin, {
+    id: appt.id,
+    starts_at: startDate.toISOString(),
+    ends_at: endDate.toISOString(),
+    source: 'public',
+    customer_name: name,
+    phone,
+    email,
+    address,
+    note: note || null,
+    google_event_id: null,
+  }, { hasLightBill: !!bill });
 
-  return json({ ok: true, start: startDate.toISOString(), end: endDate.toISOString(), timeZone: SLOT_TIME_ZONE });
+  await sendLeadAlert({
+    id: appt.id,
+    source: 'booking',
+    name,
+    address,
+    kwh: fields?.kwhThisPeriod ?? null,
+    amount: billAmount(fields),
+    appointment: new Intl.DateTimeFormat('en-US', {
+      timeZone: SLOT_TIME_ZONE,
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      timeZoneName: 'short',
+    }).format(startDate),
+    billAttached: !!bill,
+    dashboardUrl: dashboardLeadUrl(siteOrigin(env('SITE_URL')), appt.id),
+  }, {
+    resendApiKey: env('RESEND_API_KEY'),
+    notifyFrom: env('NOTIFY_FROM'),
+    notifyEmailTo: env('NOTIFY_EMAIL_TO'),
+    twilioAccountSid: env('TWILIO_ACCOUNT_SID'),
+    twilioAuthToken: env('TWILIO_AUTH_TOKEN'),
+    twilioFrom: env('TWILIO_FROM'),
+    notifySmsTo: env('NOTIFY_SMS_TO'),
+  }, (url, init) => fetch(url, { ...init, signal: AbortSignal.timeout(12_000) }).then((response) => ({
+    ok: response.ok,
+    status: response.status,
+  })));
+
+  return json({
+    ok: true,
+    start: startDate.toISOString(),
+    end: endDate.toISOString(),
+    timeZone: SLOT_TIME_ZONE,
+    meterStatus,
+  });
 }
 
 Deno.serve(async (req) => {

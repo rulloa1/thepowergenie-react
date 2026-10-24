@@ -1,0 +1,943 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Power Genie — Homeowner App & Tesla Energy Firewall</title>
+  <link rel="icon" type="image/png" href="/assets/brand/power-genie-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #07131f;
+      --card-bg: #0c1e32;
+      --card-inner: #081827;
+      --border: #1b324b;
+      --text: #f3f7fa;
+      --text-muted: #8ba4bd;
+      --orange: #ff6b00;
+      --orange-light: #ff8a2b;
+      --green: #4caf50;
+      --blue: #2196f3;
+      --gold: #ffb300;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: inherit; text-decoration: none; }
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(10, 24, 40, 0.95);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid #1e2e42;
+      padding: 12px 20px;
+    }
+    .header-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .brand-link {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 800;
+      font-size: 1.1rem;
+      color: #fff;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+    .badge-green { background: rgba(76, 175, 80, 0.15); color: #81c784; }
+    .badge-orange { background: rgba(255, 107, 0, 0.15); color: #ff8a2b; }
+    .badge-blue { background: rgba(33, 150, 243, 0.15); color: #64b5f6; }
+    .hero-bar {
+      background: linear-gradient(135deg, #0c1e32 0%, #091b2e 50%, #07131f 100%);
+      border-bottom: 1px solid #15273c;
+      padding: 24px 20px;
+    }
+    .hero-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 10px 18px;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 0.88rem;
+      cursor: pointer;
+      border: none;
+      transition: all 0.15s ease;
+    }
+    .btn:active { transform: scale(0.98); }
+    .btn-primary {
+      background: linear-gradient(135deg, #ff6b00 0%, #e65100 100%);
+      color: #fff;
+      box-shadow: 0 4px 14px rgba(255, 107, 0, 0.3);
+    }
+    .btn-primary:hover { filter: brightness(1.1); }
+    .btn-secondary {
+      background: #0e2841;
+      border: 1px solid #244263;
+      color: #a9c8e8;
+    }
+    .btn-secondary:hover { background: #143452; color: #fff; }
+    .btn-green { background: #4caf50; color: #fff; }
+    .btn-green:hover { background: #43a047; }
+    
+    /* Navigation Tabs */
+    .tabs-bar {
+      background: #091a2c;
+      border-bottom: 1px solid #182c44;
+      padding: 4px 20px;
+      overflow-x: auto;
+    }
+    .tabs-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      gap: 8px;
+    }
+    .tab-btn {
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: #7f9eb8;
+      font-weight: 700;
+      font-size: 0.88rem;
+      padding: 12px 16px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+    .tab-btn:hover { color: #fff; }
+    .tab-btn.active {
+      color: #81c784;
+      border-bottom-color: #4caf50;
+    }
+    .tab-btn.active-orange {
+      color: #ff8a2b;
+      border-bottom-color: #ff6b00;
+    }
+    .tab-btn.active-blue {
+      color: #64b5f6;
+      border-bottom-color: #2196f3;
+    }
+    .tab-btn.active-white {
+      color: #fff;
+      border-bottom-color: #e0e0e0;
+    }
+
+    /* Tab content container */
+    main {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 32px 20px;
+    }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* Grid Layouts */
+    .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+    .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 20px; }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 24px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    }
+    .card-inner {
+      background: var(--card-inner);
+      border: 1px solid #28496b;
+      border-radius: 14px;
+      padding: 16px;
+    }
+
+    /* Outage Alert Banner */
+    .alert-banner {
+      background: rgba(255, 107, 0, 0.12);
+      border: 2px solid #ff6b00;
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 24px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+    }
+
+    /* Battery dial */
+    .dial-wrap {
+      width: 180px;
+      height: 180px;
+      border-radius: 50%;
+      border: 5px solid #163556;
+      background: #081726;
+      margin: 20px auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Form styling */
+    .form-group { margin-bottom: 16px; }
+    .form-group label {
+      display: block;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #a5c3df;
+      margin-bottom: 6px;
+    }
+    .form-control {
+      width: 100%;
+      background: var(--card-inner);
+      border: 1px solid #234567;
+      border-radius: 12px;
+      padding: 12px 14px;
+      color: #fff;
+      font-size: 0.92rem;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .form-control:focus { border-color: var(--orange); }
+    .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+
+    /* Pipeline record */
+    .pipeline-item {
+      background: var(--card-inner);
+      border: 1px solid #1e3957;
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 12px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      transition: border-color 0.2s;
+    }
+    .pipeline-item:hover { border-color: #2c537d; }
+
+    /* Toast */
+    #toastMessage {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #143825;
+      border: 2px solid #4caf50;
+      color: #e8f5e9;
+      padding: 14px 22px;
+      border-radius: 14px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      z-index: 100;
+      font-weight: 700;
+      display: none;
+      align-items: center;
+      gap: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Header Navigation -->
+  <header>
+    <div class="header-inner">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <a href="/" class="brand-link">
+          <img src="/assets/brand/power-genie-icon.png" alt="Power Genie" style="width:32px; height:32px; border-radius:8px;">
+          <span>The Power Genie</span>
+        </a>
+        <span class="badge badge-green">🛡️ Verified Tesla & Sunrun Homeowner</span>
+      </div>
+      <div>
+        <a href="tel:+15102417007" class="btn btn-secondary" style="font-size:0.8rem; padding:6px 12px;">
+          📞 Horace Lawrence: 510-241-7007
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero Status Bar -->
+  <div class="hero-bar">
+    <div class="hero-inner">
+      <div>
+        <span class="badge badge-green" id="heroLiveStatus">● Tesla Energy Firewall Online & Resilient</span>
+        <h1 style="font-size:1.8rem; font-weight:900; margin:6px 0 2px;">Homeowner Portal & Energy Firewall</h1>
+        <p style="font-size:0.85rem; color:var(--text-muted);">
+          Dual Tesla Powerwall 3 (27.0 kWh) · 12.8 kW Solar System · Horace Lawrence Estate
+        </p>
+      </div>
+      <div style="display:flex; gap:10px;">
+        <button class="btn btn-primary" onclick="switchTab('referrals')">
+          💰 Refer & Earn $1,000 Cash
+        </button>
+        <button class="btn btn-secondary" onclick="switchTab('powerwall')">
+          🔋 Powerwall Telemetry
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab Buttons -->
+  <div class="tabs-bar">
+    <div class="tabs-inner">
+      <button class="tab-btn active" id="tabBtn-powerwall" onclick="switchTab('powerwall')">
+        🔋 Tesla Powerwall & Energy Firewall
+      </button>
+      <button class="tab-btn" id="tabBtn-referrals" onclick="switchTab('referrals')">
+        🤝 Refer Homeowners ($1,000 Reward)
+      </button>
+      <button class="tab-btn" id="tabBtn-savings" onclick="switchTab('savings')">
+        📊 Bill Savings & Performance
+      </button>
+      <button class="tab-btn" id="tabBtn-concierge" onclick="switchTab('concierge')">
+        🛡️ Sunrun Rep & Warranty
+      </button>
+    </div>
+  </div>
+
+  <!-- Main Content Areas -->
+  <main>
+
+    <!-- ========================================== -->
+    <!-- TAB 1: TESLA POWERWALL & ENERGY FIREWALL -->
+    <!-- ========================================== -->
+    <div id="tab-powerwall" class="tab-content active">
+      <!-- Outage Banner (shown when simulating) -->
+      <div id="outageBanner" class="alert-banner" style="display:none;">
+        <div>
+          <strong style="color:var(--orange-light); font-size:1.1rem; display:block;">
+            ⚡ Microgrid Island Mode Engaged — Grid Power Contactor Open
+          </strong>
+          <span style="font-size:0.85rem; color:#ffd0ad;">
+            The Tesla Backup Gateway has isolated your home from the utility grid in 8 milliseconds. All essential loads are safely powered by Powerwall 3.
+          </span>
+        </div>
+        <button class="btn btn-green" onclick="toggleOutageSim()">✓ Restore Grid Power</button>
+      </div>
+
+      <div class="grid-3" style="margin-bottom:24px;">
+        <!-- Card 1: State of charge -->
+        <div class="card">
+          <div style="display:flex; justify-content:space-between; font-size:0.75rem; text-transform:uppercase; font-weight:700; color:var(--text-muted);">
+            <span>State of Charge</span>
+            <span class="badge badge-green" id="chargeBadge">Optimal Charging</span>
+          </div>
+          <div class="dial-wrap">
+            <span style="font-size:2.8rem; font-weight:900;" id="batteryPctDisplay">88%</span>
+            <span style="font-size:0.8rem; color:var(--text-muted);">23.8 / 27.0 kWh</span>
+          </div>
+          <div style="font-size:0.82rem; color:var(--text-muted); border-top:1px solid rgba(255,255,255,0.1); padding-top:12px;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+              <span>Est. Backup Runtime:</span>
+              <strong style="color:#fff;" id="backupHoursDisplay">18 hrs 42 mins</strong>
+            </div>
+            <div style="display:flex; justify-content:space-between;">
+              <span>Inverter Max Output:</span>
+              <strong style="color:#fff;">11.5 kW Continuous</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 2: Live Energy Flow Nodes -->
+        <div class="card" style="grid-column: span 2;">
+          <div style="display:flex; justify-content:space-between; margin-bottom:16px;">
+            <span style="font-size:0.75rem; text-transform:uppercase; font-weight:700; color:var(--text-muted);">Live Microgrid Energy Flow</span>
+            <span style="font-size:0.75rem; color:var(--green); font-weight:700;">● Real-time (Tesla Gateway 2)</span>
+          </div>
+          <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:12px; text-align:center;">
+            <div class="card-inner">
+              <div style="font-size:1.4rem;">☀️</div>
+              <p style="font-size:0.75rem; color:var(--text-muted);">Solar Roof</p>
+              <p style="font-size:1.2rem; font-weight:800; color:#ffb300;">8.4 kW</p>
+              <span style="font-size:0.7rem; color:var(--green);">Generating</span>
+            </div>
+            <div class="card-inner">
+              <div style="font-size:1.4rem;">🔋</div>
+              <p style="font-size:0.75rem; color:var(--text-muted);">Powerwall 3</p>
+              <p style="font-size:1.2rem; font-weight:800; color:var(--green);" id="flowBatteryKw">+4.6 kW</p>
+              <span style="font-size:0.7rem; color:var(--green);" id="flowBatteryStatus">Charging</span>
+            </div>
+            <div class="card-inner">
+              <div style="font-size:1.4rem;">🏠</div>
+              <p style="font-size:0.75rem; color:var(--text-muted);">Home Load</p>
+              <p style="font-size:1.2rem; font-weight:800; color:#64b5f6;">2.6 kW</p>
+              <span style="font-size:0.7rem; color:var(--text-muted);">AC & Appliances</span>
+            </div>
+            <div class="card-inner" id="gridNodeCard">
+              <div style="font-size:1.4rem;" id="gridIcon">⚡</div>
+              <p style="font-size:0.75rem; color:var(--text-muted);">Utility Grid</p>
+              <p style="font-size:1.2rem; font-weight:800; color:#81c784;" id="gridKwText">+1.2 kW</p>
+              <span style="font-size:0.7rem; color:#81c784;" id="gridStatusText">Exporting Credits</span>
+            </div>
+          </div>
+
+          <!-- Contactor Simulator Button -->
+          <div style="margin-top:20px; background:#081624; border:1px solid #1e3b5c; border-radius:12px; padding:16px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+            <div>
+              <strong style="font-size:0.9rem; display:block;">Tesla Energy Firewall Blackout Simulator</strong>
+              <span style="font-size:0.75rem; color:var(--text-muted);">
+                Test your microgrid contactor to verify island mode resilience without waiting for a storm.
+              </span>
+            </div>
+            <button class="btn btn-primary" id="btnOutageSim" onclick="toggleOutageSim()">
+              ⚡ Simulate Grid Outage
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Reserve Slider & Diagnostics -->
+      <div class="grid-2">
+        <div class="card">
+          <h3 style="font-size:1rem; font-weight:800; margin-bottom:8px;">🌪️ Storm Watch & Backup Reserve</h3>
+          <p style="font-size:0.78rem; color:var(--text-muted); margin-bottom:16px;">
+            Control the minimum battery capacity kept reserved exclusively for blackout protection.
+          </p>
+          <div style="display:flex; justify-content:space-between; font-weight:700; font-size:0.85rem; margin-bottom:6px;">
+            <span>Backup Reserve</span>
+            <span style="color:var(--green);" id="reserveValText">25% (6.8 kWh)</span>
+          </div>
+          <input type="range" min="20" max="100" step="5" value="25" id="reserveRange" oninput="updateReserve(this.value)" style="width:100%; accent-color:var(--green); cursor:pointer;">
+          <div style="display:flex; justify-content:space-between; font-size:0.7rem; color:#5d7a96; margin-top:4px;">
+            <span>20% (Daily Savings)</span>
+            <span>50% (Balanced)</span>
+            <span>100% (Full Storm)</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3 style="font-size:1rem; font-weight:800; margin-bottom:8px;">⚙️ Energy Firewall Diagnostics</h3>
+          <p style="font-size:0.78rem; color:var(--text-muted); margin-bottom:12px;">
+            Continuous hardware health verified by Tesla Gateway 2 controller.
+          </p>
+          <div style="font-size:0.8rem; display:flex; flex-direction:column; gap:8px;">
+            <div style="background:#081827; padding:8px 12px; border-radius:8px; display:flex; justify-content:space-between;">
+              <span style="color:var(--text-muted);">Contactor Islanding:</span>
+              <span style="color:var(--green); font-weight:700;">● Nominal (Sub-10ms Ready)</span>
+            </div>
+            <div style="background:#081827; padding:8px 12px; border-radius:8px; display:flex; justify-content:space-between;">
+              <span style="color:var(--text-muted);">Frequency Sync:</span>
+              <span style="color:#fff; font-weight:700;">60.00 Hz (Locked)</span>
+            </div>
+            <div style="background:#081827; padding:8px 12px; border-radius:8px; display:flex; justify-content:space-between;">
+              <span style="color:var(--text-muted);">Thermal Protection:</span>
+              <span style="color:var(--green); font-weight:700;">Optimal (68°F Liquid Cooled)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- TAB 2: REFERRAL SYSTEM ($1,000 REWARD) -->
+    <!-- ========================================== -->
+    <div id="tab-referrals" class="tab-content">
+      <!-- Hero Reward Banner -->
+      <div class="card" style="border-color:rgba(255,107,0,0.5); background:linear-gradient(135deg, #1a1208 0%, #101f31 50%, #0a1828 100%); margin-bottom:24px;">
+        <span class="badge badge-orange" style="margin-bottom:10px;">⭐ Verified Homeowner Rewards</span>
+        <h2 style="font-size:2rem; font-weight:900; margin-bottom:8px;">
+          Earn <span id="rewardHeroTier">$1,000</span> Cash For Every Neighbor You Refer.
+        </h2>
+        <p style="font-size:0.95rem; color:#d4e2ee; max-width:700px; margin-bottom:20px;">
+          When friends and neighbors go solar with whole-home Tesla Powerwall storage, you get paid directly via Zelle or Direct Deposit as soon as their system installs.
+        </p>
+        <div>
+          <span style="font-size:0.75rem; font-weight:700; text-transform:uppercase; color:#8faec7; display:block; margin-bottom:8px;">
+            Select Reward Pricing Tier:
+          </span>
+          <div style="display:flex; flex-wrap:wrap; gap:8px;">
+            <button class="btn btn-secondary" onclick="setRewardTier(500, this)">Standard Solar ($500)</button>
+            <button class="btn btn-primary" onclick="setRewardTier(1000, this)">Solar + Tesla Powerwall 3 ($1,000)</button>
+            <button class="btn btn-secondary" onclick="setRewardTier(1500, this)">Multi-Battery / Commercial ($1,500)</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dynamic Calculator & Share Links -->
+      <div class="grid-2" style="margin-bottom:24px;">
+        <div class="card">
+          <h3 style="font-size:1rem; font-weight:800; margin-bottom:8px;">💵 Referral Earnings Calculator</h3>
+          <p style="font-size:0.78rem; color:var(--text-muted); margin-bottom:16px;">
+            Adjust the slider to see how referral payouts accumulate.
+          </p>
+          <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:8px;">
+            <span style="font-size:0.85rem; font-weight:700;" id="calcCountLabel">3 Homeowners</span>
+            <span style="font-size:1.8rem; font-weight:900; color:var(--gold);" id="calcTotalReward">$3,000 Cash</span>
+          </div>
+          <input type="range" min="1" max="10" step="1" value="3" id="calcSlider" oninput="updateCalculator(this.value)" style="width:100%; accent-color:var(--orange); cursor:pointer;">
+          <div style="display:flex; justify-content:space-between; font-size:0.7rem; color:#5d7a96; margin-top:4px;">
+            <span>1 Homeowner</span>
+            <span>5 Homeowners</span>
+            <span>10 Homeowners</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3 style="font-size:1rem; font-weight:800; margin-bottom:8px;">🔗 Your Custom Referral Link</h3>
+          <p style="font-size:0.78rem; color:var(--text-muted); margin-bottom:12px;">
+            Share your link with neighbors to automatically attribute referrals to you.
+          </p>
+          <div style="display:flex; gap:8px; margin-bottom:16px;">
+            <input type="text" id="refLinkInput" readonly value="https://thepowergenie.theroyeffect.com/?ref=PG-HORACE-7721&tier=1000" class="form-control" style="font-family:'JetBrains Mono',monospace; font-size:0.78rem;">
+            <button class="btn btn-secondary" onclick="copyRefLink()" id="btnCopyLink">Copy</button>
+          </div>
+          <div style="display:flex; flex-wrap:wrap; gap:8px;">
+            <button class="btn btn-secondary" onclick="shareSms()" style="font-size:0.78rem;">💬 Text (SMS)</button>
+            <button class="btn btn-secondary" onclick="shareWhatsApp()" style="font-size:0.78rem;">🟢 WhatsApp</button>
+            <button class="btn btn-secondary" onclick="shareEmail()" style="font-size:0.78rem;">✉️ Email</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- DIRECT REFERRAL FORM (Explicitly Clickable Button) -->
+      <div class="card" style="border:2px solid rgba(255,107,0,0.6); margin-bottom:24px;">
+        <span class="badge badge-orange" style="margin-bottom:8px;">Instant Referral Form</span>
+        <h3 style="font-size:1.4rem; font-weight:800; margin-bottom:6px;">Refer A Homeowner Directly to Horace Lawrence</h3>
+        <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:20px;">
+          Submit your neighbor's details. Horace will perform a free satellite solar design and reach out respectfully.
+        </p>
+
+        <form id="directReferralForm" onsubmit="handleReferralSubmit(event)">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="refNeighborName">Neighbor's Full Name *</label>
+              <input type="text" id="refNeighborName" required placeholder="e.g. Marcus Vance" class="form-control">
+            </div>
+            <div class="form-group">
+              <label for="refNeighborPhone">Neighbor's Mobile Phone *</label>
+              <input type="tel" id="refNeighborPhone" required placeholder="e.g. 510-555-0199" class="form-control">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="refNeighborEmail">Neighbor's Email (Optional)</label>
+              <input type="email" id="refNeighborEmail" placeholder="e.g. marcus@example.com" class="form-control">
+            </div>
+            <div class="form-group">
+              <label for="refNeighborAddress">Street Address / Neighborhood</label>
+              <input type="text" id="refNeighborAddress" placeholder="e.g. 1422 Oakridge Way, Oakland CA" class="form-control">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="refUtilitySelect">Utility Provider</label>
+              <select id="refUtilitySelect" class="form-control">
+                <option value="Entergy Texas">Entergy Texas</option>
+                <option value="CenterPoint Houston">CenterPoint Houston</option>
+                <option value="Oncor Electric">Oncor Electric</option>
+                <option value="PG&E Northern California">PG&E Northern California</option>
+                <option value="Other">Other / Co-op</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="refBillSelect">Estimated Electric Bill</label>
+              <select id="refBillSelect" class="form-control">
+                <option value="$150 - $250/mo">$150 - $250 / month</option>
+                <option value="$250 - $350/mo" selected>$250 - $350 / month</option>
+                <option value="$350 - $500/mo">$350 - $500 / month</option>
+                <option value="$500+/mo">$500+ / month (High Power)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- SUBMIT BUTTON: Fully Clickable, Never Disabled -->
+          <div style="margin-top:12px;">
+            <button type="submit" id="btnSubmitReferral" class="btn btn-primary" style="width:100%; min-height:52px; font-size:1rem;">
+              💰 Submit Referral & Lock In <span id="btnRewardSpan">$1,000</span> Reward
+            </button>
+            <p style="text-align:center; font-size:0.75rem; color:var(--text-muted); margin-top:8px;">
+              Horace Lawrence will contact your referral within 24 hours. Your cash reward is disbursed upon system installation.
+            </p>
+          </div>
+        </form>
+      </div>
+
+      <!-- Live Referral Pipeline -->
+      <div class="card" id="pipelineCard">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+          <div>
+            <h3 style="font-size:1.1rem; font-weight:800;">🏆 Your Referral Pipeline</h3>
+            <span style="font-size:0.78rem; color:var(--text-muted);">Track real-time progress toward your payouts.</span>
+          </div>
+          <span class="badge badge-blue" id="pipelineCountBadge">3 Referrals</span>
+        </div>
+
+        <div id="pipelineListContainer">
+          <!-- Rendered via JS -->
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- TAB 3: BILL SAVINGS & PERFORMANCE -->
+    <!-- ========================================== -->
+    <div id="tab-savings" class="tab-content">
+      <div class="grid-3" style="margin-bottom:24px;">
+        <div class="card">
+          <span style="font-size:0.75rem; text-transform:uppercase; font-weight:700; color:var(--text-muted);">Monthly Bill Comparison</span>
+          <div style="display:flex; justify-content:space-between; align-items:baseline; margin:16px 0;">
+            <div>
+              <span style="font-size:0.75rem; color:#ef5350;">Before Solar</span>
+              <p style="font-size:1.6rem; font-weight:900;">$385/mo</p>
+            </div>
+            <span style="font-size:1.2rem; color:var(--text-muted);">➔</span>
+            <div>
+              <span style="font-size:0.75rem; color:var(--green);">With Power Genie</span>
+              <p style="font-size:1.6rem; font-weight:900; color:var(--green);">$18/mo</p>
+            </div>
+          </div>
+          <div style="font-size:0.8rem; color:var(--text-muted); border-top:1px solid rgba(255,255,255,0.1); padding-top:10px;">
+            Net Monthly Savings: <strong style="color:#fff;">$367 / month</strong>
+          </div>
+        </div>
+
+        <div class="card">
+          <span style="font-size:0.75rem; text-transform:uppercase; font-weight:700; color:var(--text-muted);">Lifetime Savings</span>
+          <p style="font-size:2.2rem; font-weight:900; color:var(--gold); margin:12px 0 4px;">$4,820</p>
+          <p style="font-size:0.8rem; color:var(--text-muted);">Accumulated over 14 months of clean solar power.</p>
+          <div style="font-size:0.8rem; color:var(--text-muted); border-top:1px solid rgba(255,255,255,0.1); padding-top:10px; margin-top:14px;">
+            25-Year Projected Savings: <strong style="color:#fff;">$74,500+</strong>
+          </div>
+        </div>
+
+        <div class="card">
+          <span style="font-size:0.75rem; text-transform:uppercase; font-weight:700; color:var(--text-muted);">Clean Energy Offset</span>
+          <p style="font-size:2.2rem; font-weight:900; color:#64b5f6; margin:12px 0 4px;">14.2 Tons</p>
+          <p style="font-size:0.8rem; color:var(--text-muted);">CO2 emissions offset from the utility grid.</p>
+          <div style="font-size:0.8rem; color:var(--text-muted); border-top:1px solid rgba(255,255,255,0.1); padding-top:10px; margin-top:14px;">
+            Equivalent to: <strong style="color:#fff;">328 Trees Planted</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- TAB 4: SUNRUN ADVISOR & WARRANTY -->
+    <!-- ========================================== -->
+    <div id="tab-concierge" class="tab-content">
+      <div class="card" style="margin-bottom:24px;">
+        <span class="badge badge-orange" style="margin-bottom:8px;">Sunrun Sales Expert Team Lead</span>
+        <h2 style="font-size:1.8rem; font-weight:900;">Horace Lawrence</h2>
+        <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:16px;">
+          Dedicated energy advisor for your household and referrals.
+        </p>
+        <div style="display:flex; flex-wrap:wrap; gap:16px; font-size:0.9rem; margin-bottom:20px;">
+          <a href="tel:+15102417007" style="display:flex; align-items:center; gap:6px; font-weight:700; color:#fff;">
+            📞 510-241-7007
+          </a>
+          <a href="mailto:horace.lawrence@sunrun.com" style="display:flex; align-items:center; gap:6px; font-weight:700; color:#fff;">
+            ✉️ horace.lawrence@sunrun.com
+          </a>
+        </div>
+        <div>
+          <a href="/book" class="btn btn-primary">📅 Book Consultation on Horace's Calendar</a>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <h3 style="font-size:1rem; font-weight:800; margin-bottom:8px;">🛡️ 25-Year Sunrun Guarantee</h3>
+          <ul style="font-size:0.8rem; color:var(--text-muted); list-style:none; line-height:1.8;">
+            <li>✓ Full panel, inverter, and roof penetration warranty.</li>
+            <li>✓ 24/7 proactive monitoring & free maintenance.</li>
+            <li>✓ Guaranteed annual power generation.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3 style="font-size:1rem; font-weight:800; margin-bottom:8px;">🔋 10-Year Tesla Powerwall Warranty</h3>
+          <ul style="font-size:0.8rem; color:var(--text-muted); list-style:none; line-height:1.8;">
+            <li>✓ 70% energy retention guarantee at 10 years.</li>
+            <li>✓ Full microgrid Gateway 2 contactor protection.</li>
+            <li>✓ Unlimited charge/discharge cycles.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Toast Notification -->
+  <div id="toastMessage">
+    <span>🎉</span>
+    <span id="toastText">Referral successfully submitted!</span>
+  </div>
+
+  <script>
+    // State variables
+    let currentTier = 1000;
+    let isOutageSim = false;
+
+    const initialReferrals = [
+      {
+        id: "REF-1092",
+        name: "Marcus Sterling",
+        location: "Oakland Hills, CA",
+        system: "Solar (9.2 kW) + Tesla Powerwall 3",
+        date: "Oct 12, 2026",
+        status: "paid",
+        statusLabel: "Installed & Verified ($1,000 Paid)",
+        reward: 1000,
+        payoutMethod: "Zelle Payout Sent"
+      },
+      {
+        id: "REF-1093",
+        name: "Elena Rostova",
+        location: "Berkeley, CA",
+        system: "Solar (11.4 kW) + Tesla Powerwall 3",
+        date: "Oct 18, 2026",
+        status: "pending",
+        statusLabel: "Permits Approved (Install Next Week)",
+        reward: 1000,
+        payoutMethod: "ACH Direct Deposit Pending"
+      },
+      {
+        id: "REF-1094",
+        name: "Devon Washington",
+        location: "Richmond, CA",
+        system: "Solar Energy System (8.0 kW)",
+        date: "Oct 21, 2026",
+        status: "review",
+        statusLabel: "Site Energy Audit Completed",
+        reward: 500,
+        payoutMethod: "Pending Contract Execution"
+      }
+    ];
+
+    function getReferrals() {
+      try {
+        const saved = localStorage.getItem('pg_homeowner_referrals');
+        if (saved) return JSON.parse(saved);
+      } catch (e) {}
+      return initialReferrals;
+    }
+
+    function saveReferrals(list) {
+      try {
+        localStorage.setItem('pg_homeowner_referrals', JSON.stringify(list));
+      } catch (e) {}
+    }
+
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.className = 'tab-btn');
+
+      const target = document.getElementById('tab-' + tabId);
+      const btn = document.getElementById('tabBtn-' + tabId);
+      if (target) target.classList.add('active');
+      if (btn) {
+        btn.classList.add('active');
+        if (tabId === 'referrals') btn.classList.add('active-orange');
+        else if (tabId === 'savings') btn.classList.add('active-blue');
+        else if (tabId === 'concierge') btn.classList.add('active-white');
+      }
+    }
+
+    function toggleOutageSim() {
+      isOutageSim = !isOutageSim;
+      const banner = document.getElementById('outageBanner');
+      const heroStatus = document.getElementById('heroLiveStatus');
+      const btnSim = document.getElementById('btnOutageSim');
+      const flowBattKw = document.getElementById('flowBatteryKw');
+      const flowBattStatus = document.getElementById('flowBatteryStatus');
+      const gridCard = document.getElementById('gridNodeCard');
+      const gridKw = document.getElementById('gridKwText');
+      const gridStatus = document.getElementById('gridStatusText');
+      const chargeBadge = document.getElementById('chargeBadge');
+
+      if (isOutageSim) {
+        banner.style.display = 'flex';
+        heroStatus.textContent = '⚡ Microgrid Island Mode Active (Protected)';
+        heroStatus.className = 'badge badge-orange';
+        btnSim.textContent = '✓ Reconnect Grid Power';
+        flowBattKw.textContent = '-2.6 kW';
+        flowBattStatus.textContent = 'Discharging (Powering Home)';
+        gridKw.textContent = '0.0 kW';
+        gridStatus.textContent = 'ISOLATED / DOWN';
+        gridCard.style.borderColor = '#ef5350';
+        chargeBadge.textContent = 'Discharging (Island)';
+        chargeBadge.className = 'badge badge-orange';
+      } else {
+        banner.style.display = 'none';
+        heroStatus.textContent = '● Tesla Energy Firewall Online & Resilient';
+        heroStatus.className = 'badge badge-green';
+        btnSim.textContent = '⚡ Simulate Grid Outage';
+        flowBattKw.textContent = '+4.6 kW';
+        flowBattStatus.textContent = 'Charging';
+        gridKw.textContent = '+1.2 kW';
+        gridStatus.textContent = 'Exporting Credits';
+        gridCard.style.borderColor = '#28496b';
+        chargeBadge.textContent = 'Optimal Charging';
+        chargeBadge.className = 'badge badge-green';
+      }
+    }
+
+    function updateReserve(val) {
+      const kwh = ((27.0 * val) / 100).toFixed(1);
+      document.getElementById('reserveValText').textContent = val + '% (' + kwh + ' kWh)';
+    }
+
+    function setRewardTier(amount, btnEl) {
+      currentTier = amount;
+      document.getElementById('rewardHeroTier').textContent = '$' + amount.toLocaleString();
+      document.getElementById('btnRewardSpan').textContent = '$' + amount.toLocaleString();
+      document.getElementById('refLinkInput').value = 'https://thepowergenie.theroyeffect.com/?ref=PG-HORACE-7721&tier=' + amount;
+      updateCalculator(document.getElementById('calcSlider').value);
+
+      if (btnEl) {
+        const parent = btnEl.parentElement;
+        parent.querySelectorAll('button').forEach(b => b.className = 'btn btn-secondary');
+        btnEl.className = 'btn btn-primary';
+      }
+    }
+
+    function updateCalculator(count) {
+      document.getElementById('calcCountLabel').textContent = count + ' Homeowner' + (count > 1 ? 's' : '');
+      document.getElementById('calcTotalReward').textContent = '$' + (count * currentTier).toLocaleString() + ' Cash';
+    }
+
+    function copyRefLink() {
+      const input = document.getElementById('refLinkInput');
+      input.select();
+      navigator.clipboard.writeText(input.value).then(() => {
+        showToast('Link copied to clipboard!');
+        const btn = document.getElementById('btnCopyLink');
+        btn.textContent = '✓ Copied';
+        setTimeout(() => btn.textContent = 'Copy', 2000);
+      });
+    }
+
+    function shareSms() {
+      const link = document.getElementById('refLinkInput').value;
+      window.location.href = 'sms:?&body=' + encodeURIComponent('Hey! We cut our electric bill with Sunrun solar & Tesla Powerwall. Check out our advisor Horace: ' + link);
+    }
+
+    function shareWhatsApp() {
+      const link = document.getElementById('refLinkInput').value;
+      window.open('https://wa.me/?text=' + encodeURIComponent('Check out Sunrun solar + Tesla Powerwall: ' + link), '_blank');
+    }
+
+    function shareEmail() {
+      const link = document.getElementById('refLinkInput').value;
+      window.location.href = 'mailto:?subject=Sunrun Solar & Tesla Powerwall&body=' + encodeURIComponent('Take a look at solar options for your home: ' + link);
+    }
+
+    function handleReferralSubmit(e) {
+      e.preventDefault();
+      const name = document.getElementById('refNeighborName').value.trim();
+      const phone = document.getElementById('refNeighborPhone').value.trim();
+      const address = document.getElementById('refNeighborAddress').value.trim();
+      const utility = document.getElementById('refUtilitySelect').value;
+      const bill = document.getElementById('refBillSelect').value;
+
+      if (!name || !phone) {
+        alert('Please provide your referral neighbor’s name and phone number.');
+        return;
+      }
+
+      const list = getReferrals();
+      const newRef = {
+        id: 'REF-' + Math.floor(1000 + Math.random() * 9000),
+        name: name,
+        location: address || 'Houston Metro Area, TX',
+        system: 'Solar + Tesla Powerwall 3 (' + utility + ', ' + bill + ')',
+        date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+        status: 'pending',
+        statusLabel: 'Referral Submitted (Horace Lawrence Contacting)',
+        reward: currentTier,
+        payoutMethod: 'Direct Deposit on PTO'
+      };
+
+      list.unshift(newRef);
+      saveReferrals(list);
+      renderPipeline();
+
+      document.getElementById('directReferralForm').reset();
+      showToast('🎉 Referral for ' + name + ' submitted! $' + currentTier.toLocaleString() + ' locked in.');
+
+      setTimeout(() => {
+        document.getElementById('pipelineCard').scrollIntoView({ behavior: 'smooth' });
+      }, 300);
+    }
+
+    function renderPipeline() {
+      const list = getReferrals();
+      const container = document.getElementById('pipelineListContainer');
+      const badge = document.getElementById('pipelineCountBadge');
+      if (badge) badge.textContent = list.length + ' Referrals';
+
+      if (!container) return;
+      container.innerHTML = list.map(r => `
+        <div class="pipeline-item">
+          <div>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <strong style="color:#fff; font-size:1rem;">${r.name}</strong>
+              <span style="font-family:'JetBrains Mono',monospace; font-size:0.7rem; color:#8eaec9; background:#17304a; padding:2px 6px; border-radius:4px;">${r.id}</span>
+            </div>
+            <p style="font-size:0.75rem; color:var(--text-muted); margin:2px 0;">${r.location}</p>
+            <p style="font-size:0.72rem; color:#688fa8; margin:0;">${r.system}</p>
+          </div>
+          <div style="text-align:right;">
+            <span class="badge ${r.status === 'paid' ? 'badge-green' : r.status === 'pending' ? 'badge-orange' : 'badge-blue'}">
+              ${r.status === 'paid' ? '✓' : '●'} ${r.statusLabel}
+            </span>
+            <p style="font-size:1rem; font-weight:800; color:var(--gold); margin:4px 0 0;">$${r.reward.toLocaleString()} (${r.payoutMethod})</p>
+            <span style="font-size:0.7rem; color:#637c94;">Submitted: ${r.date}</span>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function showToast(msg) {
+      const t = document.getElementById('toastMessage');
+      const text = document.getElementById('toastText');
+      text.textContent = msg;
+      t.style.display = 'flex';
+      setTimeout(() => { t.style.display = 'none'; }, 4000);
+    }
+
+    // Init
+    window.addEventListener('DOMContentLoaded', () => {
+      renderPipeline();
+      const hash = window.location.hash.toLowerCase();
+      if (hash.includes('referral')) switchTab('referrals');
+      else if (hash.includes('saving')) switchTab('savings');
+      else if (hash.includes('concierge')) switchTab('concierge');
+    });
+  </script>
+</body>
+</html>

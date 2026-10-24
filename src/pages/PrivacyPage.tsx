@@ -1,4 +1,4 @@
-import { focusRing } from '../components/dashboard/ui';
+import { focusRing } from '../components/legalChrome';
 import {
   ASSISTANT_OPENAI_SENTENCE,
   BOOKING_FIELDS_SENTENCE,

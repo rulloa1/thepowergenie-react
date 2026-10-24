@@ -3,11 +3,16 @@ import { Mail, Phone } from 'lucide-react';
 import ScrollWorld from './components/ScrollWorld';
 import BrandPage from './components/BrandPage';
 import Toast from './components/Toast';
-import BookPage from './pages/BookPage';
-import DashboardPage from './pages/DashboardPage';
 import { Config } from './types';
 import LegalFooter from './components/LegalFooter';
 import { openAssistant } from './lib/openAssistant';
+import {
+  isBrandPage,
+  referralBrandFromLocation,
+  marketingViewFromLocation,
+  marketingViewHref,
+  type MarketingView,
+} from './lib/siteRoutes';
 
 const config: Config = {
   brand: { name: 'The Power Genie', href: '#top', logo: 'assets/brand/power-genie-lockup.webp' },
@@ -122,21 +127,19 @@ const config: Config = {
   ]
 };
 
-function normalizePath(pathname: string): string {
-  if (pathname.length > 1 && pathname.endsWith('/')) return pathname.replace(/\/+$/, '');
-  return pathname || '/';
-}
-
 // Main application component
 export default function App() {
   const [source, setSource] = useState<string | null>(null);
-  const [view, setView] = useState<string>('journey');
-  const [path, setPath] = useState(() => normalizePath(window.location.pathname));
+  const [view, setView] = useState<MarketingView>(() =>
+    marketingViewFromLocation(window.location.pathname, window.location.search),
+  );
   // The Salesforce form autofocuses a field on load, which scrolls the whole page
   // down to it. Only mount it once most of the form box is already on screen
   // (or the visitor taps a quote button), so the autofocus has nowhere to jump.
   const formBoxRef = useRef<HTMLDivElement>(null);
+  const quoteRef = useRef<HTMLElement>(null);
   const [formReady, setFormReady] = useState(false);
+  const [quoteInView, setQuoteInView] = useState(false);
   const [toast, setToast] = useState<{ isVisible: boolean; message: string; submessage?: string }>({
     isVisible: false,
     message: '',
@@ -147,11 +150,9 @@ export default function App() {
     const allowed = new Set(['celebrity-solar', 'hip-hop-solar', 'gas-genie']);
     const params = new URLSearchParams(window.location.search);
     const incoming = params.get('source');
-    
-    // Also check if the URL path implies a brand (for legacy support if needed)
-    const pageBrand = window.location.pathname.split('/').pop()?.replace('.html', '') || '';
-    
-    let currentSource = allowed.has(incoming || '') ? incoming : allowed.has(pageBrand) ? pageBrand : null;
+    const pageBrand = referralBrandFromLocation(window.location.pathname);
+
+    let currentSource = allowed.has(incoming || '') ? incoming : pageBrand;
     
     try {
       if (currentSource) {
@@ -166,17 +167,46 @@ export default function App() {
     if (currentSource && allowed.has(currentSource)) {
       setSource(currentSource);
     }
-
-    // Simple routing based on hash or search param
-    const viewParam = params.get('view');
-    if (viewParam && ['brands', 'celebrity-solar', 'hip-hop-solar', 'gas-genie'].includes(viewParam)) {
-      setView(viewParam);
-    }
   }, []);
 
   useEffect(() => {
+    const syncView = () => {
+      setView(marketingViewFromLocation(window.location.pathname, window.location.search));
+    };
+    window.addEventListener('popstate', syncView);
+    return () => window.removeEventListener('popstate', syncView);
+  }, []);
+
+  useEffect(() => {
+    const href = marketingViewHref(view, new URL(window.location.href));
+    const current = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+    const legacyQuery = new URLSearchParams(window.location.search).has('view');
+    if ((view !== 'journey' || legacyQuery) && current !== href) {
+      window.history.replaceState({}, '', href);
+    }
+  }, [view]);
+
+  useEffect(() => {
+    const el = quoteRef.current;
+    if (!el || view !== 'journey') {
+      setQuoteInView(false);
+      return;
+    }
+    const io = new IntersectionObserver((entries) => {
+      setQuoteInView(entries.some((entry) => entry.isIntersecting && entry.intersectionRatio >= 0.12));
+    }, { threshold: [0, 0.12, 0.4] });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [view]);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('quote-in-view', quoteInView);
+    return () => document.documentElement.classList.remove('quote-in-view');
+  }, [quoteInView]);
+
+  useEffect(() => {
     if (formReady || view !== 'journey') return;
-    const el = formBoxRef.current; // absent on /book and /dashboard; re-checked when path changes
+    const el = formBoxRef.current;
     if (!el) return;
     if (!('IntersectionObserver' in window)) { setFormReady(true); return; }
     const io = new IntersectionObserver((entries) => {
@@ -184,13 +214,7 @@ export default function App() {
     }, { threshold: [0.75] });
     io.observe(el);
     return () => io.disconnect();
-  }, [formReady, view, path]);
-
-  useEffect(() => {
-    const syncPath = () => setPath(normalizePath(window.location.pathname));
-    window.addEventListener('popstate', syncPath);
-    return () => window.removeEventListener('popstate', syncPath);
-  }, []);
+  }, [formReady, view]);
 
   const triggerToast = (message = "Excellent choice!", submessage = "Opening your custom solar quote form below.") => {
     setToast({ isVisible: true, message, submessage });
@@ -212,34 +236,21 @@ export default function App() {
   };
 
   const handleNavigate = (newView: string) => {
-    setView(newView);
+    const next: MarketingView = newView === 'journey' || isBrandPage(newView) ? newView : 'journey';
+    const href = marketingViewHref(next, new URL(window.location.href));
+    const current = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+    setView(next);
     window.scrollTo(0, 0);
-    
-    // Update URL without reload
-    const url = new URL(window.location.href);
-    if (newView === 'journey') {
-      url.searchParams.delete('view');
-    } else {
-      url.searchParams.set('view', newView);
-    }
-    window.history.pushState({}, '', url);
+    if (current !== href) window.history.pushState({}, '', href);
   };
-
-  if (path === '/dashboard') {
-    return <DashboardPage />;
-  }
-
-  if (path === '/book') {
-    return <BookPage />;
-  }
 
   if (view !== 'journey') {
     return (
       <>
         <BrandPage
-          id={view as any}
-          onNavigate={handleNavigate}
-          getSalesforceUrl={getSalesforceUrl}
+          id={view}
+          onNavigate={handleNavigate} 
+          getSalesforceUrl={getSalesforceUrl} 
           onQuoteClick={triggerToast}
         />
         <LegalFooter />
@@ -250,16 +261,15 @@ export default function App() {
   return (
     <div className="relative">
       <main id="world">
-        <ScrollWorld 
-          config={{
-            ...config,
-            onNavigateBrands: () => handleNavigate('brands')
-          } as any} 
+        <ScrollWorld
+          config={config}
           onQuoteClick={() => triggerToast()}
+          onNavigateBrands={() => handleNavigate('brands')}
         />
       </main>
 
-      {/* Mobile Fixed CTA */}
+      {/* Mobile Fixed CTA. Hidden once the quote is on screen so it does not cover the form. */}
+      {!quoteInView && (
       <div className="sm:hidden fixed z-60 left-4 right-4 bottom-[max(12px,env(safe-area-inset-bottom))] pointer-events-none">
         <a 
           href="#quote" 
@@ -273,6 +283,7 @@ export default function App() {
           Get a Free Quote
         </a>
       </div>
+      )}
 
       <Toast 
         isVisible={toast.isVisible}
@@ -281,7 +292,7 @@ export default function App() {
         submessage={toast.submessage}
       />
 
-      <section className="quote-panel relative z-45 min-h-screen bg-[#F6F7FB] text-[#1A1A2E] p-[calc(clamp(84px,10vw,112px)+env(safe-area-inset-top))_clamp(16px,5vw,64px)_calc(40px+env(safe-area-inset-bottom))]" id="quote" aria-labelledby="quote-title" tabIndex={-1}>
+      <section ref={quoteRef} className="quote-panel relative z-45 min-h-screen bg-[#F6F7FB] text-[#1A1A2E] p-[calc(clamp(84px,10vw,112px)+env(safe-area-inset-top))_clamp(16px,5vw,64px)_calc(40px+env(safe-area-inset-bottom))]" id="quote" aria-labelledby="quote-title" tabIndex={-1}>
         <p className="quote-panel__eyebrow m-0 mb-2 text-[0.74rem] font-semibold tracking-[0.14em] uppercase text-[#FF6B00]">Your free quote</p>
         <h2 id="quote-title" className="m-0 mb-4 text-[#1A1A2E] font-bold text-[clamp(1.7rem,3.6vw,2.6rem)] tracking-tight leading-[1.1]">Let's power your home.</h2>
         <div className="mb-7">
@@ -337,8 +348,12 @@ export default function App() {
             </p>
           </div>
         </div>
-        <p className="mt-8 max-w-[1280px] text-[0.98rem] leading-relaxed text-[#4A5568]">
+        <p className="mt-8 max-w-[1280px] text-[0.98rem] leading-relaxed text-[#4A5568] flex flex-wrap gap-4 items-center">
           <a href="/book" className="font-semibold text-[#0066CC] no-underline hover:underline focus-visible:underline">Book a one-hour call on Horace’s calendar</a>
+          <span className="text-gray-300">·</span>
+          <a href="/homeowner" className="inline-flex items-center gap-1.5 font-bold text-[#FF6B00] no-underline hover:underline focus-visible:underline">
+            🔋 Homeowner App: Tesla Powerwall Monitor & $1,000 Referral Program →
+          </a>
         </p>
         <LegalFooter homeChrome />
       </section>

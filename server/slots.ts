@@ -83,9 +83,25 @@ function hoursFor(weekday: number, rules: SlotRules): { start: number; end: numb
   return { start: rules.weekdayStartHour, end: rules.weekdayEndHour }
 }
 
-export function listSlots(rules: SlotRules, now: Date, taken: ReadonlySet<string>): Slot[] {
+export type BusyInterval = { start: string; end: string }
+
+/** Half-open overlap: a block that ends exactly when the slot starts does not block it. */
+export function overlapsSlot(startIso: string, durationMinutes: number, busy: ReadonlyArray<BusyInterval>): boolean {
+  const start = Date.parse(startIso)
+  if (!Number.isFinite(start)) return false
+  const end = start + durationMinutes * 60_000
+  return busy.some(interval => {
+    const blockStart = Date.parse(interval.start)
+    const blockEnd = Date.parse(interval.end)
+    return Number.isFinite(blockStart) && Number.isFinite(blockEnd) && blockStart < end && blockEnd > start
+  })
+}
+
+export function listSlots(rules: SlotRules, now: Date, taken: ReadonlySet<string>, busy: ReadonlyArray<BusyInterval> = []): Slot[] {
   const today = zonedParts(now, rules.timeZone)
   const earliest = now.getTime() + rules.minLeadHours * 60 * 60 * 1000
+  // Same cutoff as /book: a start later than horizonDays from now is closed.
+  const latest = now.getTime() + rules.horizonDays * 24 * 60 * 60 * 1000
   const slots: Slot[] = []
   for (let offset = 0; offset <= rules.horizonDays; offset += 1) {
     const date = addCalendarDays(today.year, today.month, today.day, offset)
@@ -96,10 +112,10 @@ export function listSlots(rules: SlotRules, now: Date, taken: ReadonlySet<string
     const endMin = hours.end * 60
     for (let minute = startMin; minute + rules.durationMinutes <= endMin; minute += rules.durationMinutes) {
       const start = zonedToUtc(date.year, date.month, date.day, Math.floor(minute / 60), minute % 60, rules.timeZone)
-      if (start.getTime() < earliest) continue
+      if (start.getTime() < earliest || start.getTime() > latest) continue
       const end = new Date(start.getTime() + rules.durationMinutes * 60 * 1000)
       const startIso = isoWithOffset(start, rules.timeZone)
-      if (taken.has(startIso)) continue
+      if (taken.has(startIso) || overlapsSlot(startIso, rules.durationMinutes, busy)) continue
       const day = new Intl.DateTimeFormat('en-US', {
         timeZone: rules.timeZone,
         weekday: 'short',

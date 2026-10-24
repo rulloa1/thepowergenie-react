@@ -3,32 +3,36 @@ import ReactDOM from 'react-dom/client'
 import App from './App'
 import PowerGenieAssistant from './components/assistant/PowerGenieAssistant'
 import LegalFooter from './components/LegalFooter'
+import { legacyNodeRedirect, normalizePath, showMarketingAssistant, showRouterLegalFooter, sitePage } from './lib/siteRoutes'
 import PrivacyPage from './pages/PrivacyPage'
 import TermsPage from './pages/TermsPage'
 import './index.css'
 
 // Referral Hub (Supabase Edge Functions) is the public /book and /dashboard.
-// The earlier Vercel-function pages stay available at /node/book and /node/dashboard.
+// Old /node/book and /node/dashboard URLs redirect here; they are not separate pages.
 const HubBooking = lazy(() => import('./hub/BookingPage'))
 const HubDashboard = lazy(() => import('./hub/Dashboard'))
-const NodeBooking = lazy(() => import('./pages/BookPage'))
-const NodeDashboard = lazy(() => import('./pages/DashboardPage'))
+const HomeownerPortal = lazy(() => import('./pages/HomeownerPortalPage'))
 
-const path = window.location.pathname.replace(/\/+$/, '') || '/'
-const page =
-  path === '/privacy' ? <PrivacyPage /> :
-  path === '/terms' ? <TermsPage /> :
-  path === '/book' ? <HubBooking /> :
-  path === '/dashboard' ? <HubDashboard /> :
-  path === '/node/book' ? <NodeBooking /> :
-  path === '/node/dashboard' ? <NodeDashboard /> :
-  <App />
-const marketing = path !== '/book' && path !== '/dashboard' && path !== '/node/book' && path !== '/node/dashboard' && path !== '/privacy' && path !== '/terms'
+const path = normalizePath(window.location.pathname)
+const legacyTarget = legacyNodeRedirect(path)
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    <Suspense fallback={null}>{page}</Suspense>
-    {path === '/' ? null : <LegalFooter />}
-    {marketing ? <PowerGenieAssistant /> : null}
-  </React.StrictMode>,
-)
+if (legacyTarget) {
+  window.location.replace(legacyTarget + window.location.search + window.location.hash)
+} else {
+  const page =
+    sitePage(path) === 'privacy' ? <PrivacyPage /> :
+    sitePage(path) === 'terms' ? <TermsPage /> :
+    sitePage(path) === 'book' ? <HubBooking /> :
+    sitePage(path) === 'dashboard' ? <HubDashboard /> :
+    sitePage(path) === 'homeowner' ? <HomeownerPortal /> :
+    <App />
+
+  ReactDOM.createRoot(document.getElementById('root')!).render(
+    <React.StrictMode>
+      <Suspense fallback={null}>{page}</Suspense>
+      {showRouterLegalFooter(path) ? <LegalFooter /> : null}
+      {showMarketingAssistant(sitePage(path)) ? <PowerGenieAssistant /> : null}
+    </React.StrictMode>,
+  )
+}

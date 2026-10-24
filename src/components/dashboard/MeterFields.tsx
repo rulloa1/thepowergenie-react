@@ -1,5 +1,5 @@
 import { METER_CONSENT_TEXT } from '../../lib/esiId';
-import { fieldClass } from './ui';
+import { inputClass } from '../../hub/ui';
 
 export type MeterFormValues = {
   esiId: string;
@@ -46,7 +46,7 @@ export function MeterFields({
         ESI ID
         <input
           id="book-esi-id"
-          className={fieldClass}
+          className={inputClass}
           inputMode="numeric"
           autoComplete="off"
           value={values.esiId}
@@ -57,7 +57,7 @@ export function MeterFields({
         Meter number
         <input
           id="book-meter-number"
-          className={fieldClass}
+          className={inputClass}
           autoComplete="off"
           value={values.meterNumber}
           onChange={(event) => set({ meterNumber: event.target.value })}
@@ -68,7 +68,7 @@ export function MeterFields({
         <span className="font-normal text-[#4A5568]">Leave this blank to use the email above.</span>
         <input
           id="book-meter-email"
-          className={fieldClass}
+          className={inputClass}
           type="email"
           autoComplete="email"
           value={values.email}

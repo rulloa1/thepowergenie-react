@@ -1,57 +1,55 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
-import { METER_CONSENT_TEXT, type MeterRequest } from '../../src/lib/esiId';
-import type { SmtStatus } from '../../src/lib/smt';
+import type { MeterRequest } from '../../src/lib/esiId';
+import { supabaseConfig, supabaseFetch } from '../supabase.js';
 import { requestAgreementStatus, requestIntervalUsage, requestMonthlyUsage, requestNewAgreement } from './client';
-import { readSmtConfig } from './config';
+import { readSmtConfig, type SmtConfig } from './config';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-export async function saveMeterAuthorization(
-  admin: SupabaseClient,
-  appointmentId: string,
-  meter: MeterRequest,
-): Promise<SmtStatus> {
-  const config = readSmtConfig();
-  const initial: SmtStatus = config ? 'requested' : 'pending_setup';
-  const { data, error } = await admin
-    .from('smt_authorizations')
-    .insert({
-      appointment_id: appointmentId,
-      esi_id: meter.esiId,
-      meter_number: meter.meterNumber,
-      customer_email: meter.email,
-      consent_at: new Date().toISOString(),
-      consent_text: METER_CONSENT_TEXT,
-      status: initial,
-    })
-    .select('id')
-    .single();
-  if (error || !data || typeof (data as { id?: unknown }).id !== 'string') {
-    console.error('save meter authorization failed', error?.code ?? 'unknown');
-    return 'failed';
-  }
-  const id = (data as { id: string }).id;
-  if (!config) return 'pending_setup';
+type RestResult = { ok: boolean; status: number; json: unknown };
+
+async function rest(path: string, init: RequestInit = {}): Promise<RestResult> {
   try {
-    const created = await requestNewAgreement(config, meter);
-    const { error: updateError } = await admin.from('smt_authorizations').update({
-      status: created.status,
-      smt_agreement_number: created.agreementNumber,
-      smt_trans_id: created.transId,
-      last_error: created.error,
-      last_checked_at: new Date().toISOString(),
-    }).eq('id', id);
-    if (updateError) console.error('update meter authorization failed', updateError.code);
-    return created.status;
-  } catch (error) {
-    console.error('smt agreement failed', error instanceof Error ? error.name : 'error');
-    await admin.from('smt_authorizations').update({
-      status: 'failed',
-      last_error: 'Smart Meter Texas could not be reached.',
-      last_checked_at: new Date().toISOString(),
-    }).eq('id', id);
-    return 'failed';
+    supabaseConfig();
+  } catch {
+    return { ok: false, status: 503, json: null };
   }
+  const response = await supabaseFetch(path, init);
+  const text = await response.text();
+  let json: unknown = null;
+  if (text) {
+    try {
+      json = JSON.parse(text) as unknown;
+    } catch {
+      json = null;
+    }
+  }
+  return { ok: response.ok, status: response.status, json };
+}
+
+async function patchAuthorization(id: string, row: Record<string, unknown>): Promise<boolean> {
+  const result = await rest(`/rest/v1/smt_authorizations?id=eq.${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    headers: {
+      'content-type': 'application/json',
+      prefer: 'return=minimal',
+    },
+    body: JSON.stringify(row),
+  });
+  if (!result.ok) console.error('update meter authorization failed', result.status);
+  return result.ok;
+}
+
+async function upsertRows(table: string, conflict: string, rows: Record<string, unknown>[]): Promise<boolean> {
+  const result = await rest(`/rest/v1/${table}?on_conflict=${encodeURIComponent(conflict)}`, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      prefer: 'resolution=merge-duplicates,return=minimal',
+    },
+    body: JSON.stringify(rows),
+  });
+  if (!result.ok) console.error(`save ${table} failed`, result.status);
+  return result.ok;
 }
 
 type AuthRow = {
@@ -64,30 +62,31 @@ type AuthRow = {
   customer_email: string | null;
 };
 
-export async function refreshSmtAuthorizations(admin: SupabaseClient): Promise<{ checked: number }> {
+export async function refreshSmtAuthorizations(): Promise<{ checked: number }> {
   const config = readSmtConfig();
   if (!config) return { checked: 0 };
-  const { data, error } = await admin
-    .from('smt_authorizations')
-    .select('id, status, esi_id, smt_agreement_number, interval_cursor, meter_number, customer_email')
-    .in('status', ['pending_setup', 'requested', 'approved'])
-    .order('last_checked_at', { ascending: true, nullsFirst: true })
-    .limit(3);
-  if (error) {
-    console.error('list smt authorizations failed', error.code);
+  const params = new URLSearchParams({
+    select: 'id,status,esi_id,smt_agreement_number,interval_cursor,meter_number,customer_email',
+    order: 'last_checked_at.asc.nullsfirst',
+    limit: '3',
+  });
+  params.append('status', 'in.(pending_setup,requested,approved)');
+  const listed = await rest(`/rest/v1/smt_authorizations?${params.toString()}`);
+  if (!listed.ok || !Array.isArray(listed.json)) {
+    console.error('list smt authorizations failed', listed.status);
     return { checked: 0 };
   }
   let checked = 0;
-  for (const item of data ?? []) {
+  for (const item of listed.json) {
     const row = readAuthRow(item);
     if (!row) continue;
     checked += 1;
-    await refreshOne(admin, config, row);
+    await refreshOne(config, row);
   }
   return { checked };
 }
 
-async function refreshOne(admin: SupabaseClient, config: NonNullable<ReturnType<typeof readSmtConfig>>, row: AuthRow) {
+async function refreshOne(config: SmtConfig, row: AuthRow) {
   let status = row.status === 'approved' ? 'approved' : 'requested';
   let note: string | null = null;
   try {
@@ -102,23 +101,19 @@ async function refreshOne(admin: SupabaseClient, config: NonNullable<ReturnType<
           consent: true,
         };
         const created = await requestNewAgreement(config, meter);
-        const { error: agreeError } = await admin.from('smt_authorizations').update({
+        await patchAuthorization(row.id, {
           status: created.status,
           smt_agreement_number: created.agreementNumber,
           smt_trans_id: created.transId,
-        }).eq('id', row.id);
-        if (agreeError) console.error('save agreement failed', agreeError.code);
+        });
         status = created.status;
         if (created.error) note = created.error;
       }
     }
     if (row.smt_agreement_number && status !== 'pending_setup') {
       const lookedUp = await requestAgreementStatus(config, row.smt_agreement_number);
-      if (lookedUp.error) {
-        note = lookedUp.error;
-      } else {
-        status = lookedUp.status;
-      }
+      if (lookedUp.error) note = lookedUp.error;
+      else status = lookedUp.status;
     }
     if (status === 'approved') {
       const end = new Date();
@@ -128,7 +123,9 @@ async function refreshOne(admin: SupabaseClient, config: NonNullable<ReturnType<
       else if (monthly.asyncDelivery) {
         note = 'Smart Meter Texas accepted the usage request but did not return JSON. The public guide says that response is delivered by email.';
       } else if (monthly.rows.length > 0) {
-        const { error } = await admin.from('smt_usage_monthly').upsert(
+        await upsertRows(
+          'smt_usage_monthly',
+          'authorization_id,period_start,period_end',
           monthly.rows.map((item) => ({
             authorization_id: row.id,
             esi_id: row.esi_id,
@@ -136,20 +133,19 @@ async function refreshOne(admin: SupabaseClient, config: NonNullable<ReturnType<
             period_end: item.periodEnd,
             kwh: item.kwh,
           })),
-          { onConflict: 'authorization_id,period_start,period_end' },
         );
-        if (error) console.error('save monthly usage failed', error.code);
       }
       const cursor = row.interval_cursor ? new Date(`${row.interval_cursor}T12:00:00.000Z`) : start;
       const intervalEnd = new Date(Math.min(end.getTime(), cursor.getTime() + 7 * DAY_MS));
-      let advancedCursor: string | null = null;
       if (cursor.getTime() < end.getTime()) {
         const intervals = await requestIntervalUsage(config, row.esi_id, cursor, intervalEnd);
         if (intervals.error) note = intervals.error;
         else if (intervals.asyncDelivery && !note) {
           note = 'Smart Meter Texas accepted the 15-minute request but did not return JSON.';
         } else if (intervals.rows.length > 0) {
-          const { error } = await admin.from('smt_usage_intervals').upsert(
+          const saved = await upsertRows(
+            'smt_usage_intervals',
+            'authorization_id,interval_start',
             intervals.rows.map((item) => ({
               authorization_id: row.id,
               esi_id: row.esi_id,
@@ -157,15 +153,10 @@ async function refreshOne(admin: SupabaseClient, config: NonNullable<ReturnType<
               kwh: item.kwh,
               quality: item.quality,
             })),
-            { onConflict: 'authorization_id,interval_start' },
           );
-          if (error) console.error('save interval usage failed', error.code);
-          else advancedCursor = intervalEnd.toISOString().slice(0, 10);
-        }
-        if (advancedCursor) {
-          await admin.from('smt_authorizations').update({
-            interval_cursor: advancedCursor,
-          }).eq('id', row.id);
+          if (saved) {
+            await patchAuthorization(row.id, { interval_cursor: intervalEnd.toISOString().slice(0, 10) });
+          }
         }
       }
     }
@@ -173,12 +164,12 @@ async function refreshOne(admin: SupabaseClient, config: NonNullable<ReturnType<
     console.error('smt refresh failed', error instanceof Error ? error.name : 'error');
     note = 'Smart Meter Texas could not be reached.';
   }
-  await admin.from('smt_authorizations').update({
+  await patchAuthorization(row.id, {
     status,
     sync_note: note,
     last_error: note,
     last_checked_at: new Date().toISOString(),
-  }).eq('id', row.id);
+  });
 }
 
 function readAuthRow(value: unknown): AuthRow | null {

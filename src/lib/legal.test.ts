@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   ASSISTANT_OPENAI_SENTENCE,
   BOOKING_FIELDS_SENTENCE,
+  BOOKING_REQUEST_SENTENCE,
   DELETION_SENTENCE,
   GOOGLE_CALENDAR_USE,
   GOOGLE_LIMITED_USE,
@@ -19,6 +20,7 @@ describe('privacy and terms copy', () => {
     expect(ASSISTANT_OPENAI_SENTENCE).toContain('processed by OpenAI');
     expect(GOOGLE_CALENDAR_USE).toContain('calendar.events');
     expect(GOOGLE_CALENDAR_USE).toContain('calendar.freebusy');
+    expect(GOOGLE_CALENDAR_USE).toContain('show availability');
     expect(GOOGLE_CALENDAR_USE).toContain('create/update appointment events');
     expect(GOOGLE_NOT_SOLD).toContain('not sold');
     expect(GOOGLE_NOT_SOLD).toContain('not used for ads');
@@ -28,6 +30,7 @@ describe('privacy and terms copy', () => {
   });
 
   it('states the referral limits in plain language', () => {
+    expect(BOOKING_REQUEST_SENTENCE).toBe('Booking is a request for a call.');
     expect(NO_SAVINGS_GUARANTEE).toContain('no guarantee of solar savings');
     expect(SUNRUN_SEPARATE).toBe('Sunrun is a separate company from The Power Genie.');
   });

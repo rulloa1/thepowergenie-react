@@ -3,8 +3,13 @@ project_id = "ogwiopxnjpwwzleqwobq"
 [auth]
 # Invite-only dashboard: nobody can sign themselves up.
 enable_signup = false
-site_url = "http://localhost:3000"
-additional_redirect_urls = ["http://localhost:3000/dashboard"]
+# Hosted project ogwiopxnjpwwzleqwobq. Invite and password-reset links land on /dashboard.
+site_url = "https://thepowergenie.theroyeffect.com"
+additional_redirect_urls = [
+  "https://thepowergenie.theroyeffect.com/dashboard",
+  "http://localhost:3000",
+  "http://localhost:3000/dashboard",
+]
 
 [auth.email]
 enable_signup = false

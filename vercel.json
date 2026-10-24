@@ -1,5 +1,11 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "redirects": [
+    { "source": "/node/book", "destination": "/book", "permanent": true },
+    { "source": "/node/book/", "destination": "/book", "permanent": true },
+    { "source": "/node/dashboard", "destination": "/dashboard", "permanent": true },
+    { "source": "/node/dashboard/", "destination": "/dashboard", "permanent": true }
+  ],
   "rewrites": [
     {
       "source": "/api/(chat|uploads|bill|lead|slots)",
@@ -14,7 +20,7 @@
       "destination": "/index.html"
     },
     {
-      "source": "/((?!api/).*)",
+      "source": "/((?!api/|brand-lockups(?:/|$)).*)",
       "destination": "/index.html"
     }
   ],

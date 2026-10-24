@@ -64,26 +64,27 @@ export function NotConfigured({ what }: { what: string }) {
 }
 
 export const inputClass =
-  'w-full rounded-xl border border-[#D6DCE5] bg-white px-3.5 py-3 text-[1rem] text-[#1A1A2E] outline-none transition placeholder:text-[#8A94A3] focus:border-[#FF6B00] focus:ring-4 focus:ring-[#FF6B00]/15';
+  'w-full rounded-xl border border-[#D6DCE5] bg-white px-3.5 py-3 text-[0.98rem] text-[#1A1A2E] outline-none transition-all duration-150 placeholder:text-[#94A3B8] hover:border-[#CBD5E1] focus:border-[#FF6B00] focus:ring-4 focus:ring-[#FF6B00]/15';
 
-export const labelClass = 'mb-1.5 block text-[0.86rem] font-semibold text-[#1A1A2E]';
+export const labelClass = 'mb-1.5 block text-[0.84rem] font-bold text-[#1A1A2E] tracking-tight';
 
 export function Button({
   variant = 'primary',
   className,
   ...props
-}: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'ghost' | 'danger' | 'quiet' }) {
+}: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'accent' | 'ghost' | 'danger' | 'quiet' }) {
   const variants = {
-    primary: 'bg-[#1A1A2E] text-white hover:bg-[#2A2A44] disabled:bg-[#9AA1AD]',
-    ghost: 'border border-[#D6DCE5] bg-white text-[#1A1A2E] hover:border-[#1A1A2E]',
-    danger: 'border border-[#F3C2BB] bg-white text-[#B42318] hover:bg-[#FFF0EE]',
-    quiet: 'text-[#0066CC] hover:underline px-0',
+    primary: 'bg-[#1A1A2E] text-white hover:bg-[#2A2A44] shadow-sm hover:shadow active:scale-[0.99] disabled:bg-[#9AA1AD]',
+    accent: 'bg-[#FF6B00] text-white hover:bg-[#E05E00] shadow-sm hover:shadow-md hover:shadow-[#FF6B00]/20 active:scale-[0.99] disabled:bg-[#FDA4AF]',
+    ghost: 'border border-[#D6DCE5] bg-white text-[#1A1A2E] hover:border-[#1A1A2E] hover:bg-[#F8FAFC] active:scale-[0.99]',
+    danger: 'border border-[#F3C2BB] bg-white text-[#B42318] hover:bg-[#FFF0EE] active:scale-[0.99]',
+    quiet: 'text-[#0066CC] hover:text-[#004C99] hover:underline px-0',
   };
   return (
     <button
       {...props}
       className={cn(
-        'inline-flex min-h-[44px] items-center justify-center gap-2 rounded-full px-5 text-[0.95rem] font-semibold transition disabled:cursor-not-allowed',
+        'inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl px-5 text-[0.92rem] font-bold transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100',
         variants[variant],
         variant === 'quiet' && 'min-h-0 rounded-none',
         className,

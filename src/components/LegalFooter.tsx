@@ -1,4 +1,4 @@
-import { focusRing } from './dashboard/ui';
+import { focusRing } from './legalChrome';
 
 const linkClass = `font-semibold text-[#0066CC] no-underline hover:underline ${focusRing}`;
 

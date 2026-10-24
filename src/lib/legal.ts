@@ -16,7 +16,7 @@ export const ASSISTANT_OPENAI_SENTENCE =
   'AI booking assistant chat messages are processed by OpenAI.';
 
 export const GOOGLE_CALENDAR_USE =
-  'The owner dashboard accesses the owner’s Google Calendar (calendar.events and calendar.freebusy scopes) only to show availability and create/update appointment events.';
+  'The dashboard accesses each connected hub member’s Google Calendar (calendar.events and calendar.freebusy scopes) only to show availability and create/update appointment events.';
 
 export const GOOGLE_NOT_SOLD =
   'Google user data is not sold, is not used for ads, and is not shared except as needed to provide the service.';
@@ -26,6 +26,8 @@ export const GOOGLE_LIMITED_USE =
 
 export const DELETION_SENTENCE =
   'To request deletion of your information, email roryulloa@gmail.com.';
+
+export const BOOKING_REQUEST_SENTENCE = 'Booking is a request for a call.';
 
 export const NO_SAVINGS_GUARANTEE =
   'There is no guarantee of solar savings, a lower bill, a tax credit, an incentive, or a particular price.';

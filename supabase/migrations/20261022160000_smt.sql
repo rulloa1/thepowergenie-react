@@ -1,10 +1,10 @@
 -- Smart Meter Texas consent and usage.
--- Safe to run more than once, after the owner dashboard scripts.
--- The browser cannot insert these rows. The booking server writes them.
+-- Safe to run more than once, after the Referral Hub scripts.
+-- The browser cannot insert these rows. The booking function writes them.
 
 create table if not exists public.smt_authorizations (
   id uuid primary key default gen_random_uuid(),
-  appointment_id uuid not null unique references public.appointments (id) on delete cascade,
+  appointment_id uuid not null unique references public.hub_appointments (id) on delete cascade,
   esi_id text not null,
   meter_number text not null,
   customer_email text not null,
@@ -52,21 +52,21 @@ create policy smt_authorizations_select_dashboard
   on public.smt_authorizations
   for select
   to authenticated
-  using (public.is_dashboard_user());
+  using (public.is_hub_member());
 
 drop policy if exists smt_usage_monthly_select_dashboard on public.smt_usage_monthly;
 create policy smt_usage_monthly_select_dashboard
   on public.smt_usage_monthly
   for select
   to authenticated
-  using (public.is_dashboard_user());
+  using (public.is_hub_member());
 
 drop policy if exists smt_usage_intervals_select_dashboard on public.smt_usage_intervals;
 create policy smt_usage_intervals_select_dashboard
   on public.smt_usage_intervals
   for select
   to authenticated
-  using (public.is_dashboard_user());
+  using (public.is_hub_member());
 
 revoke all on table public.smt_authorizations from public, anon, authenticated;
 revoke all on table public.smt_usage_monthly from public, anon, authenticated;

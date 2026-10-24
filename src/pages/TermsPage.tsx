@@ -1,4 +1,5 @@
 import {
+  BOOKING_REQUEST_SENTENCE,
   CONTACT_EMAIL,
   NO_SAVINGS_GUARANTEE,
   SUNRUN_SEPARATE,
@@ -15,11 +16,12 @@ export default function TermsPage() {
         </p>
       </LegalSection>
 
-      <LegalSection heading="A booking is a request, not a purchase">
+      <LegalSection heading="A booking is a request for a call">
+        <p className="m-0">{BOOKING_REQUEST_SENTENCE}</p>
         <p className="m-0">
-          Booking a time requests a conversation. It is not a contract to buy solar panels, a
-          battery, or any other product, and it does not lock in a price, a payment plan, or an
-          installation date. A time is confirmed only when this site says the booking went through.
+          It is not a contract to buy solar panels, a battery, or any other product, and it does
+          not lock in a price, a payment plan, or an installation date. A time is confirmed only
+          when this site says the booking went through.
         </p>
       </LegalSection>
 

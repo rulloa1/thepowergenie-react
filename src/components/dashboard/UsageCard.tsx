@@ -1,5 +1,5 @@
 import { monthLabel, monthlyCsv, summarizeMonthly, usageStatusCopy, type MonthlyRow } from '../../lib/usage';
-import { secondaryButtonClass } from './ui';
+import { Button } from '../../hub/ui';
 
 export type CustomerUsage = {
   status: 'pending_setup' | 'requested' | 'approved' | 'expired' | 'failed';
@@ -64,9 +64,9 @@ export default function UsageCard({ usage }: { usage: CustomerUsage }) {
               </tbody>
             </table>
           </div>
-          <button type="button" className={`${secondaryButtonClass} mt-3`} onClick={() => downloadUsage(summary.rows)}>
+          <Button type="button" variant="ghost" className="mt-3" onClick={() => downloadUsage(summary.rows)}>
             Download CSV
-          </button>
+          </Button>
         </>
       ) : null}
       {usage.hasIntervals ? (

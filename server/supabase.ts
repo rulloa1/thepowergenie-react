@@ -1,15 +1,14 @@
-import { createClient, type SupabaseClient } from '@supabase/supabase-js'
-import type { ServerEnv } from './env.js'
+import { createHash, timingSafeEqual } from 'node:crypto'
 import { HttpError } from './http.js'
 
 /**
  * Talks to PostgREST and Storage with fetch.
  *
- * The hub's secret key is `sb_secret_...`, which is not a JWT. A legacy
+ * The project's secret key is `sb_secret_...`, which is not a JWT. A legacy
  * service_role JWT is also accepted. The assistant sends either key on the
  * `apikey` header only. Putting it on `Authorization: Bearer` makes Supabase
  * try to verify `sb_secret_` as a JWT and reject the call, so these helpers
- * use fetch. The dashboard helpers further down use supabase-js.
+ * use fetch.
  *
  * The key is also rejected when the User-Agent looks like a browser, so this
  * server identifies itself and never forwards the visitor's User-Agent.
@@ -94,6 +93,64 @@ export async function takenAppointments(fromDate: string, toDate: string): Promi
   return taken
 }
 
+export type BusyInterval = { start: string; end: string }
+
+/** Booked Referral Hub appointments that overlap [fromIso, toIso). Throws when the read fails. */
+export async function hubBusyIntervals(fromIso: string, toIso: string): Promise<BusyInterval[]> {
+  const params = new URLSearchParams()
+  params.set('select', 'starts_at,ends_at')
+  params.set('status', 'eq.booked')
+  params.set('starts_at', `lt.${toIso}`)
+  params.set('ends_at', `gt.${fromIso}`)
+  params.set('limit', '500')
+  const response = await supabaseFetch(`/rest/v1/hub_appointments?${params.toString()}`)
+  if (!response.ok) {
+    console.error('supabase_hub_slots_failed', response.status)
+    throw new HttpError(503, 'Scheduling is not available right now. Please try again.')
+  }
+  const rows = (await response.json()) as Array<{ starts_at?: string; ends_at?: string }>
+  const busy: BusyInterval[] = []
+  for (const row of rows) {
+    if (typeof row.starts_at === 'string' && typeof row.ends_at === 'string') {
+      busy.push({ start: row.starts_at, end: row.ends_at })
+    }
+  }
+  return busy
+}
+
+/**
+ * Constant-time string compare. Digests are fixed length, so this stays
+ * constant-time when the shared secret and the service-role key differ in length.
+ * Empty values never match, including an empty token against an unset secret.
+ */
+function secretEqual(provided: string, expected: string): boolean {
+  if (!provided || !expected) return false
+  const left = createHash('sha256').update(provided, 'utf8').digest()
+  const right = createHash('sha256').update(expected, 'utf8').digest()
+  return timingSafeEqual(left, right)
+}
+
+/**
+ * True when Authorization carries a secret this server was configured with.
+ * Used by the booking function's bill read (`POST /api/assistant?route=extract`).
+ *
+ * Supabase injects SUPABASE_SERVICE_ROLE_KEY into Edge Functions and refuses
+ * secrets whose names start with SUPABASE_, so the function's key is often not
+ * the `sb_secret_` value set on Vercel. EXTRACT_SHARED_SECRET is the shared
+ * value both sides can set. The service-role key remains a fallback for
+ * environments where those two keys really are the same.
+ *
+ * A missing or unknown token is rejected. The route is never anonymous.
+ */
+export function serviceBearerAuthorized(request: Request): boolean {
+  const header = request.headers.get('authorization') || ''
+  const token = header.replace(/^Bearer\s+/i, '').trim()
+  if (!token) return false
+  const shared = (process.env.EXTRACT_SHARED_SECRET || '').trim()
+  const service = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim()
+  return secretEqual(token, shared) || secretEqual(token, service)
+}
+
 type SignedUpload = { url: string; token?: string }
 
 export async function createSignedUpload(objectPath: string): Promise<string> {
@@ -157,96 +214,4 @@ export async function deleteObject(objectPath: string): Promise<void> {
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ prefixes: [objectPath] }),
   })
-}
-
-/** Confirmed one-hour calls from the public booking page. A missing table does not block the assistant. */
-export async function confirmedAppointmentRanges(fromIso: string, toIso: string): Promise<Array<{ start: Date; end: Date }>> {
-  let response: Response
-  try {
-    const params = new URLSearchParams()
-    params.set('select', 'starts_at,ends_at')
-    params.set('status', 'eq.confirmed')
-    params.set('starts_at', `lt.${toIso}`)
-    params.set('ends_at', `gt.${fromIso}`)
-    params.set('limit', '500')
-    response = await supabaseFetch(`/rest/v1/appointments?${params.toString()}`)
-  } catch (error) {
-    if (error instanceof HttpError && error.status === 503) return []
-    throw error
-  }
-  if (!response.ok) return []
-  const payload = await response.json()
-  if (!Array.isArray(payload)) return []
-  const rows = payload as Array<{ starts_at?: unknown; ends_at?: unknown }>
-  const ranges: Array<{ start: Date; end: Date }> = []
-  for (const row of rows) {
-    if (typeof row.starts_at !== 'string' || typeof row.ends_at !== 'string') continue
-    const start = new Date(row.starts_at)
-    const end = new Date(row.ends_at)
-    if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime()) || end <= start) continue
-    ranges.push({ start, end })
-  }
-  return ranges
-}
-
-export type DashboardProfile = {
-  id: string;
-  email: string;
-  role: 'owner' | 'admin';
-  display_name: string | null;
-};
-
-export function createAdmin(env: ServerEnv): SupabaseClient {
-  return createClient(env.supabaseUrl, env.supabaseServiceRoleKey, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-      detectSessionInUrl: false,
-    },
-  });
-}
-
-export async function requireDashboardUser(
-  admin: SupabaseClient,
-  token: string | null,
-): Promise<{ profile: DashboardProfile } | { error: { status: number; message: string } }> {
-  if (!token) {
-    return { error: { status: 401, message: 'Sign in required.' } };
-  }
-  const { data, error } = await admin.auth.getUser(token);
-  if (error || !data.user) {
-    return { error: { status: 401, message: 'Sign in required.' } };
-  }
-
-  const { data: profile, error: profileError } = await admin
-    .from('profiles')
-    .select('id, email, role, display_name')
-    .eq('id', data.user.id)
-    .maybeSingle();
-
-  if (profileError || !profile) {
-    return { error: { status: 403, message: 'This account is not invited to the dashboard.' } };
-  }
-
-  const row = profile as {
-    id?: unknown;
-    email?: unknown;
-    role?: unknown;
-    display_name?: unknown;
-  };
-  if (typeof row.id !== 'string' || typeof row.email !== 'string') {
-    return { error: { status: 403, message: 'This account is not invited to the dashboard.' } };
-  }
-  if (row.role !== 'owner' && row.role !== 'admin') {
-    return { error: { status: 403, message: 'This account is not invited to the dashboard.' } };
-  }
-
-  return {
-    profile: {
-      id: row.id,
-      email: row.email,
-      role: row.role,
-      display_name: typeof row.display_name === 'string' ? row.display_name : null,
-    },
-  };
 }

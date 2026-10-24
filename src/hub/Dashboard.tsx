@@ -1,11 +1,13 @@
 import React, { lazy, Suspense, useEffect, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
-import { CalendarDays, FolderOpen, LogOut, MessageCircle } from 'lucide-react';
+import { CalendarDays, FolderOpen, Inbox, LogOut, MessageCircle } from 'lucide-react';
+import { useLeadFeed } from './useLeadFeed';
 import { arrivalAuthType, supabase } from '../lib/supabase';
 import { BrandMark, Button, Notice, NotConfigured, Spinner, cn, inputClass, labelClass } from './ui';
 
 const ChatTab = lazy(() => import('./ChatTab'));
 const FilesTab = lazy(() => import('./FilesTab'));
+const LeadsTab = lazy(() => import('./LeadsTab'));
 const ScheduleTab = lazy(() => import('./ScheduleTab'));
 
 export interface Profile {
@@ -15,8 +17,9 @@ export interface Profile {
   role: 'owner' | 'admin';
 }
 
-type Tab = 'chat' | 'files' | 'schedule';
+type Tab = 'chat' | 'files' | 'schedule' | 'leads';
 const TABS: { id: Tab; label: string; icon: typeof MessageCircle }[] = [
+  { id: 'leads', label: 'Leads', icon: Inbox },
   { id: 'chat', label: 'Chat', icon: MessageCircle },
   { id: 'files', label: 'Files', icon: FolderOpen },
   { id: 'schedule', label: 'Schedule', icon: CalendarDays },
@@ -24,7 +27,7 @@ const TABS: { id: Tab; label: string; icon: typeof MessageCircle }[] = [
 
 function initialTab(): Tab {
   const t = new URLSearchParams(window.location.search).get('tab');
-  return t === 'files' || t === 'schedule' ? t : 'chat';
+  return t === 'files' || t === 'schedule' || t === 'leads' ? t : 'chat';
 }
 
 export default function Dashboard() {
@@ -200,56 +203,82 @@ function NotInvited({ email }: { email: string }) {
 
 function HubApp({ profile }: { profile: Profile }) {
   const [tab, setTab] = useState<Tab>(initialTab);
+  const leads = useLeadFeed(profile.id);
 
   const go = (t: Tab) => {
     setTab(t);
     const url = new URL(window.location.href);
     url.searchParams.set('tab', t);
+    if (t !== 'leads') url.searchParams.delete('id');
     window.history.replaceState({}, '', url);
   };
 
   return (
-    <div className="flex min-h-[100dvh] flex-col bg-[#F6F7FB] text-[#1A1A2E]">
-      <header className="sticky top-0 z-30 border-b border-[#E3E8EF] bg-white/95 backdrop-blur">
+    <div className="flex min-h-[100dvh] flex-col bg-gradient-to-b from-[#F8FAFC] via-[#F8FAFC] to-[#F1F5F9] text-[#1A1A2E]">
+      <header className="sticky top-0 z-30 border-b border-[#E2E8F0] bg-white/90 shadow-[0_2px_14px_rgba(15,23,42,0.03)] backdrop-blur-md">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-2.5 sm:px-6">
           <div className="flex min-w-0 items-center gap-3">
-            <BrandMark className="h-9" />
-            <span className="hidden text-[0.8rem] font-semibold uppercase tracking-[0.12em] text-[#FF6B00] sm:inline">Referral Hub</span>
+            <BrandMark className="h-9 shadow-sm" />
+            <div className="flex items-center gap-2">
+              <span className="hidden text-[0.8rem] font-bold uppercase tracking-[0.14em] text-[#FF6B00] sm:inline">Referral Hub</span>
+              <span className="hidden items-center gap-1.5 rounded-full border border-[#A7F3D0] bg-[#ECFDF5] px-2.5 py-0.5 text-[0.7rem] font-bold text-[#065F46] md:inline-flex">
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#10B981]" />
+                Live Advisor
+              </span>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="hidden text-right text-[0.82rem] leading-tight sm:block">
-              <span className="block font-semibold">{profile.full_name || profile.email}</span>
-              <span className="text-[#6B7280]">{profile.role === 'owner' ? 'Owner' : 'Admin'}</span>
-            </span>
+          <div className="flex items-center gap-2.5">
+            <div className="flex items-center gap-2">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#1A1A2E] text-[0.78rem] font-bold text-white shadow-sm">
+                {(profile.full_name || profile.email).slice(0, 2).toUpperCase()}
+              </div>
+              <span className="hidden text-left text-[0.82rem] leading-tight sm:block">
+                <span className="block font-bold text-[#1A1A2E]">{profile.full_name || profile.email}</span>
+                <span className="text-[0.72rem] font-semibold text-[#64748B]">{profile.role === 'owner' ? 'Sunrun Partner' : 'Admin'}</span>
+              </span>
+            </div>
             <button
               onClick={() => supabase!.auth.signOut()}
-              className="flex h-10 w-10 items-center justify-center rounded-full border border-[#E3E8EF] hover:border-[#1A1A2E]"
+              className="flex h-9 w-9 items-center justify-center rounded-xl border border-[#E2E8F0] bg-white text-[#64748B] transition-all hover:border-[#1A1A2E] hover:bg-[#F8FAFC] hover:text-[#1A1A2E]"
               aria-label="Sign out"
-              title="Sign out"
+              title="Sign out of Referral Hub"
             >
               <LogOut className="h-4 w-4" />
             </button>
           </div>
         </div>
-        <nav className="mx-auto flex max-w-5xl gap-1 px-3 sm:px-5" aria-label="Dashboard sections">
-          {TABS.map(({ id, label, icon: Icon }) => (
-            <button
-              key={id}
-              onClick={() => go(id)}
-              aria-current={tab === id ? 'page' : undefined}
-              className={cn(
-                'flex min-h-[44px] flex-1 items-center justify-center gap-2 border-b-2 px-3 text-[0.92rem] font-semibold transition sm:flex-none sm:px-5',
-                tab === id ? 'border-[#FF6B00] text-[#1A1A2E]' : 'border-transparent text-[#6B7280] hover:text-[#1A1A2E]',
-              )}
-            >
-              <Icon className="h-4 w-4" /> {label}
-            </button>
-          ))}
+        <nav className="mx-auto flex max-w-5xl gap-1.5 px-3 sm:px-5" aria-label="Dashboard sections">
+          {TABS.map(({ id, label, icon: Icon }) => {
+            const active = tab === id;
+            return (
+              <button
+                key={id}
+                onClick={() => go(id)}
+                aria-current={active ? 'page' : undefined}
+                className={cn(
+                  'relative flex min-h-[42px] min-w-0 flex-1 items-center justify-center gap-1.5 rounded-t-xl px-2.5 text-[0.86rem] font-bold transition-all sm:flex-none sm:gap-2 sm:px-5 sm:text-[0.9rem]',
+                  active
+                    ? 'border-b-2 border-[#FF6B00] bg-[#FFFBF7] text-[#FF6B00]'
+                    : 'border-b-2 border-transparent text-[#64748B] hover:bg-[#F8FAFC] hover:text-[#1A1A2E]',
+                )}
+              >
+                <Icon className={cn('h-4 w-4 shrink-0 transition-transform', active && 'scale-110 text-[#FF6B00]')} />
+                <span>{label}</span>
+                {id === 'leads' && leads.unseen > 0 && (
+                  <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-[#FF6B00] px-1.5 text-[0.66rem] font-extrabold leading-5 text-white shadow-sm shadow-[#FF6B00]/30">
+                    {leads.unseen > 99 ? '99+' : leads.unseen}
+                    <span className="sr-only"> new leads</span>
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </nav>
       </header>
 
       <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col px-4 py-5 sm:px-6">
         <Suspense fallback={<div className="py-10 text-center"><Spinner /></div>}>
+          {tab === 'leads' && <LeadsTab feed={leads} />}
           {tab === 'chat' && <ChatTab profile={profile} />}
           {tab === 'files' && <FilesTab />}
           {tab === 'schedule' && <ScheduleTab profile={profile} />}

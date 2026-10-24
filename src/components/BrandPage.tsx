@@ -1,5 +1,6 @@
 import React from 'react';
 import { openAssistant } from '../lib/openAssistant';
+import { shouldHandleClientNavigation } from '../lib/siteRoutes';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -14,11 +15,47 @@ interface BrandPageProps {
   onQuoteClick?: (msg?: string, sub?: string) => void;
 }
 
+/** Public file URL, prefixed with Vite's base (usually "/"). */
+function publicPath(path: string) {
+  const base = import.meta.env.BASE_URL || '/'
+  return `${base}${path.replace(/^\//, '')}`
+}
+
+/** Updated Power Genie lockup. The family index keeps this; each brand page uses its own. */
+const POWER_GENIE_LOCKUP = {
+  src: 'assets/brand/power-genie-lockup.webp',
+  alt: 'The Power Genie',
+  width: 647,
+  height: 180,
+} as const
+
+// These live outside /assets/brand so the dashboard rewrite for that folder does not 404 them.
+const BRAND_LOCKUPS = {
+  'celebrity-solar': {
+    src: publicPath('brand-lockups/celebrity-solar-lockup.webp'),
+    alt: 'Celebrity Solar',
+    width: 407,
+    height: 234,
+  },
+  'hip-hop-solar': {
+    src: publicPath('brand-lockups/hip-hop-solar-lockup.webp'),
+    alt: 'Hip-Hop Solar',
+    width: 363,
+    height: 237,
+  },
+  'gas-genie': {
+    src: publicPath('brand-lockups/gas-genie-lockup.webp'),
+    alt: 'Gas Genie',
+    width: 387,
+    height: 241,
+  },
+} as const
+
 export default function BrandPage({ id, onNavigate, getSalesforceUrl, onQuoteClick }: BrandPageProps) {
   if (id === 'brands') {
     return (
       <div className="min-h-screen bg-[#071b27] text-[#f4f8fb] font-sans selection:bg-[#a7e6ff] selection:text-[#071b27]">
-        <Header onNavigate={onNavigate} />
+        <Header onNavigate={onNavigate} brandsCurrent />
         <main>
           <section className="px-[7vw] pt-20 pb-16 max-w-[1100px]">
             <p className="text-[11px] font-bold tracking-[2px] text-[#f6cf85] uppercase">THE POWER GENIE FAMILY</p>
@@ -31,7 +68,7 @@ export default function BrandPage({ id, onNavigate, getSalesforceUrl, onQuoteCli
 
           <section className="grid grid-cols-1 md:grid-cols-3 gap-[18px] px-[7vw]" aria-label="Choose a brand">
             <BrandCard 
-              id="celebrity-solar" 
+              href="/celebrity-solar"
               kicker="01 / THE SPOTLIGHT" 
               title="Celebrity Solar" 
               body="A brighter home deserves the spotlight. Explore solar and battery options through The Power Genie." 
@@ -39,7 +76,7 @@ export default function BrandPage({ id, onNavigate, getSalesforceUrl, onQuoteCli
               onClick={() => onNavigate('celebrity-solar')}
             />
             <BrandCard 
-              id="hip-hop-solar" 
+              href="/hip-hop-solar"
               kicker="02 / THE CULTURE" 
               title="Hip-Hop Solar" 
               body="Bring a new perspective to how you power your home. Discover solar and storage through The Power Genie." 
@@ -47,7 +84,7 @@ export default function BrandPage({ id, onNavigate, getSalesforceUrl, onQuoteCli
               onClick={() => onNavigate('hip-hop-solar')}
             />
             <BrandCard 
-              id="gas-genie" 
+              href="/gas-genie"
               kicker="03 / WHAT’S NEXT" 
               title="Gas Genie" 
               body="A new part of The Power Genie family is taking shape." 
@@ -114,7 +151,7 @@ export default function BrandPage({ id, onNavigate, getSalesforceUrl, onQuoteCli
 
   return (
     <div className={cn("min-h-screen bg-[#071b27] text-[#f4f8fb] font-sans selection:bg-[#a7e6ff] selection:text-[#071b27]", id)}>
-      <Header onNavigate={onNavigate} />
+      <Header onNavigate={onNavigate} lockup={BRAND_LOCKUPS[id]} />
       <main>
         <section className="relative isolation-auto min-h-[78svh] flex items-end px-[7vw] pt-24 pb-24 overflow-hidden">
           <img className="absolute inset-0 w-full h-full object-cover z-[-2]" src={content.image} alt="" />
@@ -197,35 +234,75 @@ export default function BrandPage({ id, onNavigate, getSalesforceUrl, onQuoteCli
   );
 }
 
-function Header({ onNavigate }: { onNavigate: (v: string) => void }) {
+function Header({
+  onNavigate,
+  lockup,
+  brandsCurrent = false,
+}: {
+  onNavigate: (v: string) => void;
+  /** Brand lockup. Omitted on the family index, which keeps the Power Genie logo. */
+  lockup?: (typeof BRAND_LOCKUPS)[keyof typeof BRAND_LOCKUPS];
+  brandsCurrent?: boolean;
+}) {
+  const logo = lockup ?? POWER_GENIE_LOCKUP
   return (
-    <header className="flex items-center justify-between gap-5 px-[5vw] py-[18px] border-b border-[#ffffff20] bg-[#071b27]">
-      <button onClick={() => onNavigate('journey')} className="flex items-center gap-[10px] font-semibold text-xl tracking-[-0.6px] bg-transparent border-0 text-inherit p-0 cursor-pointer">
-        <img src="assets/brand/power-genie-lockup.webp" alt="The Power Genie" className="h-10 w-auto aspect-[647/180] object-contain max-md:h-8" />
+    <header className={cn(
+      'flex items-center justify-between border-b border-[#ffffff20] bg-[#071b27]',
+      lockup ? 'gap-3 px-4 py-3 sm:gap-5 sm:px-[5vw]' : 'gap-5 px-[5vw] py-[18px]',
+    )}>
+      <button onClick={() => onNavigate('journey')} className="flex shrink-0 items-center gap-[10px] bg-transparent border-0 p-0 font-semibold text-xl tracking-[-0.6px] text-inherit cursor-pointer">
+        <img
+          src={logo.src}
+          alt={logo.alt}
+          width={logo.width}
+          height={logo.height}
+          className={
+            lockup
+              ? 'block h-20 w-auto shrink-0 object-contain max-sm:h-14'
+              : 'h-10 w-auto aspect-[647/180] object-contain max-md:h-8'
+          }
+        />
       </button>
-      <nav aria-label="Brand navigation" className="flex gap-6 text-sm max-md:gap-3 max-md:text-xs">
-        <span
-          role="link"
-          aria-disabled="true"
-          className="inline-flex items-center gap-2 min-h-[44px] cursor-not-allowed select-none text-[#8aa0ad]"
+      <nav aria-label="Brand navigation" className={cn(
+        'flex items-center gap-6 text-sm max-md:gap-3 max-md:text-xs',
+        lockup && 'shrink-0 whitespace-nowrap',
+      )}>
+        <a
+          href="/brands"
+          aria-current={brandsCurrent ? 'page' : undefined}
+          onClick={(event) => {
+            if (!shouldHandleClientNavigation(event)) return;
+            event.preventDefault();
+            onNavigate('brands');
+          }}
+          className="inline-flex items-center min-h-[44px] bg-transparent text-inherit no-underline cursor-pointer hover:text-[#f6cf85] transition-colors"
         >
           Our brands
-          <span className="inline-flex shrink-0 items-center rounded-full border border-[#FF6B0055] bg-[#FF6B0018] px-2 py-[3px] text-[0.62rem] font-semibold leading-none tracking-[0.04em] text-[#FFB07A]">
-            Coming soon
-          </span>
-        </span>
+        </a>
         <button onClick={() => onNavigate('journey')} className="md:flex hidden items-center min-h-[44px] bg-transparent border-0 text-inherit p-0 cursor-pointer hover:text-[#f6cf85] transition-colors">Explore solar ↗</button>
       </nav>
     </header>
   );
 }
 
-function BrandCard({ id, kicker, title, body, accent, onClick }: any) {
+function BrandCard({ href, kicker, title, body, accent, onClick }: {
+  href: string;
+  kicker: string;
+  title: string;
+  body: string;
+  accent: string;
+  onClick: () => void;
+}) {
   return (
-    <button 
-      onClick={onClick}
-      className="flex flex-col text-left min-h-[350px] p-8 border border-[#ffffff24] bg-[linear-gradient(145deg,#ffffff08,transparent)] rounded-[22px] transition-all hover:-translate-y-1.25 hover:border-[var(--accent)] cursor-pointer group"
-      style={{ '--accent': accent } as any}
+    <a
+      href={href}
+      onClick={(event) => {
+        if (!shouldHandleClientNavigation(event)) return;
+        event.preventDefault();
+        onClick();
+      }}
+      className="flex flex-col text-left text-inherit no-underline min-h-[350px] p-8 border border-[#ffffff24] bg-[linear-gradient(145deg,#ffffff08,transparent)] rounded-[22px] transition-all hover:-translate-y-1.25 hover:border-[var(--accent)] cursor-pointer group"
+      style={{ '--accent': accent } as React.CSSProperties}
     >
       <span className="text-[11px] font-bold tracking-[2px] text-[var(--accent)] uppercase">{kicker}</span>
       <h2 className="mt-10 mb-2.5 text-[clamp(28px,3.3vw,46px)] leading-[1.12] tracking-[-0.045em] font-semibold text-[var(--accent)] group-hover:brightness-110">{title}</h2>
@@ -233,7 +310,7 @@ function BrandCard({ id, kicker, title, body, accent, onClick }: any) {
       <span className="flex justify-between mt-auto text-sm">
         Explore {title} <span aria-hidden="true">↗</span>
       </span>
-    </button>
+    </a>
   );
 }
 

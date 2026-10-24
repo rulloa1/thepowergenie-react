@@ -3,6 +3,7 @@ import { useChat } from '@ai-sdk/react'
 import { DefaultChatTransport } from 'ai'
 import { CalendarCheck, Loader2, Upload, X } from 'lucide-react'
 import type { AssistantMode } from '../../lib/openAssistant'
+import { lockPageScroll } from '../../lib/scrollLock'
 import {
   EMPTY_BILL,
   MAX_BILL_BYTES,
@@ -75,8 +76,10 @@ export default function AssistantPanel({ frameClass, mode, nonce, onClose }: Pan
   }, [nonce, mode])
 
   useEffect(() => {
-    const previous = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
+    return lockPageScroll()
+  }, [])
+
+  useEffect(() => {
     const node = panelRef.current
     const focusable = () =>
       node
@@ -104,7 +107,6 @@ export default function AssistantPanel({ frameClass, mode, nonce, onClose }: Pan
     }
     document.addEventListener('keydown', onKey)
     return () => {
-      document.body.style.overflow = previous
       document.removeEventListener('keydown', onKey)
     }
   }, [onClose])
@@ -188,8 +190,13 @@ export default function AssistantPanel({ frameClass, mode, nonce, onClose }: Pan
   async function submitLead() {
     setError('')
     if (!consent) {
-      setError('Please agree to be contacted before booking.')
+      setError('Please check the authorization box below to confirm your free consult.')
       return
+    }
+    let chosenSlot = slotStart
+    if (!chosenSlot && slots.length > 0) {
+      chosenSlot = slots[0].start
+      setSlotStart(chosenSlot)
     }
     setBusy('Booking your consult…')
     try {
@@ -210,7 +217,7 @@ export default function AssistantPanel({ frameClass, mode, nonce, onClose }: Pan
         serviceAddress: address,
         utility,
         preferredWindows: windows,
-        slotStart,
+        slotStart: chosenSlot || new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
         referralSource,
         receipt,
         bill,
@@ -347,6 +354,14 @@ export default function AssistantPanel({ frameClass, mode, nonce, onClose }: Pan
             <BillField label="Service address" value={bill.serviceAddress} onChange={value => setBill({ ...bill, serviceAddress: value })} />
             <BillField label="Utility" value={bill.utility} onChange={value => setBill({ ...bill, utility: value })} />
             <BillField label="Account number" value={bill.accountNumber} onChange={value => setBill({ ...bill, accountNumber: value })} />
+            <BillField
+              label="ESI ID"
+              hint="Digits only, usually 17–22."
+              value={bill.esiid}
+              onChange={value => setBill({ ...bill, esiid: value ? value.replace(/\D/g, '').slice(0, 22) : null })}
+              inputMode="numeric"
+            />
+            <BillField label="Meter number" value={bill.meterNumber} onChange={value => setBill({ ...bill, meterNumber: value })} />
             <BillField label="Bill date" value={bill.billDate} onChange={value => setBill({ ...bill, billDate: value })} />
             <BillField label="Rate plan" value={bill.ratePlan} onChange={value => setBill({ ...bill, ratePlan: value })} />
             <BillField label="kWh this period" value={numToText(bill.kwhThisPeriod)} onChange={value => setBill({ ...bill, kwhThisPeriod: textToNum(value) })} inputMode="decimal" />
@@ -362,8 +377,9 @@ export default function AssistantPanel({ frameClass, mode, nonce, onClose }: Pan
           <section className="space-y-3">
             <h3 className="text-lg font-bold">Book a free savings consult</h3>
             <p className="text-sm leading-relaxed text-[#4A5568]">
-              Horace Lawrence will use this to reach you. Times are in Central Time, weekdays and Saturday. This savings consult is filed with your bill for Horace. A separate one-hour calendar call is on the{' '}
-              <a className="font-semibold text-[#0066CC]" href="/book">booking page</a>.
+              Horace Lawrence will use this to reach you. Times are in Central Time, weekdays only, one hour each from 9 AM to 8 PM. The last opening starts at 7 PM, with at least one hour’s notice. The{' '}
+              <a className="font-semibold text-[#0066CC]" href="/book">booking page</a>
+              {' '}offers these same times. This savings consult is filed with your bill for Horace.
             </p>
             <label className="block text-sm font-semibold">
               Name
@@ -523,7 +539,7 @@ export default function AssistantPanel({ frameClass, mode, nonce, onClose }: Pan
             <button type="button" className={quietClass} onClick={() => setPhase(receipt ? 'confirm' : 'chat')}>
               Back
             </button>
-            <button type="button" className={`${primaryClass} flex-1`} disabled={!consent || !slotStart || Boolean(busy)} onClick={() => void submitLead()}>
+            <button type="button" className={`${primaryClass} flex-1`} disabled={Boolean(busy)} onClick={() => void submitLead()}>
               Book my consult
             </button>
           </div>
@@ -554,11 +570,13 @@ function Bubble({ from, children }: { from: 'user' | 'assistant'; children: Reac
 
 function BillField({
   label,
+  hint,
   value,
   onChange,
   inputMode,
 }: {
   label: string
+  hint?: string
   value: string | null
   onChange: (value: string | null) => void
   inputMode?: React.HTMLAttributes<HTMLInputElement>['inputMode']
@@ -572,6 +590,7 @@ function BillField({
         inputMode={inputMode}
         onChange={event => onChange(event.target.value.trim() ? event.target.value : null)}
       />
+      {hint ? <span className="mt-1 block text-xs font-normal text-[#4A5568]">{hint}</span> : null}
     </label>
   )
 }

@@ -109,6 +109,10 @@ test('upload, confirm, and book against the mocked hub', async () => {
   assert.equal(mock.files[0].storage_path, mock.files[0].storage_path)
   assert.match(String(mock.files[0].storage_path), /^customers\/44444444-4444-4444-8444-444444444444\/light_bill\//)
   assert.equal(mock.files[0].size_bytes, png.length)
+  assert.equal(customer.esiid, '10443720012345678')
+  assert.equal(customer.meter_number, 'A12345678')
+  assert.equal(customer.phone, '(713) 555-0100')
+  assert.equal(Array.isArray(customer.usage_history) ? customer.usage_history.length : 0, 6)
   assert.match(String(mock.activity[0].message), /website assistant/i)
 
   const serverCalls = mock.calls.filter(call => call.headers['user-agent'] === 'PowerGenieWebsite/1.0')
@@ -144,6 +148,130 @@ test('booking without consent or with a honeypot does not write a lead', async (
   }, '203.0.113.42')
   assert.equal(bot.status, 200)
   assert.equal(mock.customers.length, beforeCount)
+})
+
+test('a hub appointment hides the overlapping assistant slot', async () => {
+  const first = await api('/api/slots', {}, '203.0.113.60')
+  assert.equal(first.status, 200)
+  const { slots } = await first.json() as { slots: Array<{ start: string }> }
+  const target = slots[0]
+  const start = new Date(target.start).getTime()
+  mock.hubBusy.push({
+    starts_at: new Date(start + 30 * 60 * 1000).toISOString(),
+    ends_at: new Date(start + 90 * 60 * 1000).toISOString(),
+  })
+  try {
+    const second = await api('/api/slots', {}, '203.0.113.61')
+    const open = await second.json() as { slots: Array<{ start: string }> }
+    assert.equal(open.slots.some(slot => slot.start === target.start), false)
+    const refused = await api('/api/lead', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        clientRequestId: '77777777-7777-4777-8777-777777777777',
+        consent: true,
+        name: 'Alex Morgan',
+        phone: '7135550101',
+        email: 'alex2@example.com',
+        serviceAddress: '456 Oak Lane, Houston, TX 77008',
+        utility: 'Entergy Texas',
+        slotStart: target.start,
+      }),
+    }, '203.0.113.62')
+    assert.equal(refused.status, 409, await refused.clone().text())
+  } finally {
+    mock.hubBusy.length = 0
+  }
+})
+
+test('the booking extractor requires the service key and returns the bill', async () => {
+  const upload = await api('/api/uploads', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ fileName: 'bill.png', mimeType: 'image/png', sizeBytes: png.length }),
+  }, '203.0.113.63')
+  const started = await upload.json() as { signedUrl: string }
+  const form = new FormData()
+  form.append('', new Blob([png], { type: 'image/png' }), 'bill.png')
+  assert.equal((await fetch(started.signedUrl, { method: 'PUT', body: form })).status, 200)
+  const marker = '/object/upload/sign/powergenie/'
+  const path = decodeURIComponent(new URL(started.signedUrl).pathname.slice(new URL(started.signedUrl).pathname.indexOf(marker) + marker.length))
+
+  const denied = await api('/api/assistant?route=extract', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ path }),
+  }, '203.0.113.64')
+  assert.equal(denied.status, 401)
+
+  const read = await api('/api/assistant?route=extract', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      authorization: 'Bearer sb_secret_test_only',
+    },
+    body: JSON.stringify({ path }),
+  }, '203.0.113.65')
+  assert.equal(read.status, 200, await read.clone().text())
+  const fields = await read.json() as { fields: { esiid: string; kwhThisPeriod: number } }
+  assert.equal(fields.fields.esiid, '10443720012345678')
+  assert.equal(fields.fields.kwhThisPeriod, 1100)
+
+  const gone = await api('/api/assistant?route=extract', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      authorization: 'Bearer sb_secret_test_only',
+    },
+    body: JSON.stringify({ path }),
+  }, '203.0.113.66')
+  assert.equal(gone.status, 400)
+})
+
+test('extract accepts EXTRACT_SHARED_SECRET and still accepts the service key', async () => {
+  process.env.EXTRACT_SHARED_SECRET = 'shared-extract-secret-value'
+  const uploadBill = async (ip: string) => {
+    const upload = await api('/api/uploads', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ fileName: 'bill.png', mimeType: 'image/png', sizeBytes: png.length }),
+    }, ip)
+    assert.equal(upload.status, 200, await upload.clone().text())
+    const started = await upload.json() as { signedUrl: string }
+    const form = new FormData()
+    form.append('', new Blob([png], { type: 'image/png' }), 'bill.png')
+    assert.equal((await fetch(started.signedUrl, { method: 'PUT', body: form })).status, 200)
+    const marker = '/object/upload/sign/powergenie/'
+    const pathname = new URL(started.signedUrl).pathname
+    return decodeURIComponent(pathname.slice(pathname.indexOf(marker) + marker.length))
+  }
+  const extract = (path: string, authorization: string | null, ip: string) => {
+    const headers = new Headers({ 'content-type': 'application/json' })
+    if (authorization) headers.set('authorization', authorization)
+    return api('/api/assistant?route=extract', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ path }),
+    }, ip)
+  }
+  try {
+    const path = await uploadBill('203.0.113.70')
+    assert.equal((await extract(path, null, '203.0.113.71')).status, 401)
+    assert.equal((await extract(path, 'Bearer x', '203.0.113.72')).status, 401)
+    assert.equal((await extract(path, 'Bearer sb_secret_test_only_extra', '203.0.113.73')).status, 401)
+
+    const shared = await extract(path, 'Bearer shared-extract-secret-value', '203.0.113.74')
+    assert.equal(shared.status, 200, await shared.clone().text())
+    const sharedFields = await shared.json() as { fields: { esiid: string } }
+    assert.equal(sharedFields.fields.esiid, '10443720012345678')
+
+    const again = await uploadBill('203.0.113.75')
+    const viaService = await extract(again, 'Bearer sb_secret_test_only', '203.0.113.76')
+    assert.equal(viaService.status, 200, await viaService.clone().text())
+    assert.equal((await extract(again, null, '203.0.113.77')).status, 401)
+  } finally {
+    delete process.env.EXTRACT_SHARED_SECRET
+  }
 })
 
 test('cross-origin and oversized bill requests are rejected', async () => {
