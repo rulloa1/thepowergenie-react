@@ -23,4 +23,8 @@ jobs:
               exit 0
               ;;
           esac
-          gh api --method DELETE "repos/${GITHUB_REPOSITORY}/git/refs/heads/${BRANCH}"
+          status=$(gh api --method DELETE "repos/${GITHUB_REPOSITORY}/git/refs/heads/${BRANCH}" 2>&1) && exit 0
+          case "$status" in
+            *'Reference does not exist'*) echo "Branch was already deleted."; exit 0 ;;
+            *) echo "$status"; exit 1 ;;
+          esac
