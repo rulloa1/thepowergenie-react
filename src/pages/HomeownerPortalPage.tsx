@@ -20,9 +20,12 @@ import {
   Home as HomeIcon,
   Activity,
   ArrowRight,
-  CheckCircle2
+  CheckCircle2,
+  Sparkles,
+  Sliders,
+  CheckCircle
 } from 'lucide-react';
-import { BrandMark, Button } from '../hub/ui';
+import { BrandMark } from '../hub/ui';
 
 interface ReferralRecord {
   id: string;
@@ -34,6 +37,15 @@ interface ReferralRecord {
   statusLabel: string;
   reward: number;
   payoutMethod: string;
+}
+
+interface ApplianceLoad {
+  id: string;
+  name: string;
+  kw: number;
+  essential: boolean;
+  icon: string;
+  desc: string;
 }
 
 const INITIAL_REFERRALS: ReferralRecord[] = [
@@ -72,15 +84,31 @@ const INITIAL_REFERRALS: ReferralRecord[] = [
   },
 ];
 
+const DEFAULT_APPLIANCES: ApplianceLoad[] = [
+  { id: 'fridge', name: 'Refrigerator & Deep Freezer', kw: 0.35, essential: true, icon: '❄️', desc: 'Critical food preservation & cooling' },
+  { id: 'wifi', name: 'Wi-Fi 6 Router & Security Hub', kw: 0.15, essential: true, icon: '📡', desc: 'Camera feeds, smart locks, work connection' },
+  { id: 'lights', name: 'LED Interior Lighting & Outlets', kw: 0.25, essential: true, icon: '💡', desc: 'Living areas, bedrooms, device chargers' },
+  { id: 'ac', name: 'Central Inverter Heat Pump / A/C', kw: 2.80, essential: false, icon: '🌀', desc: 'Whole-home climate comfort' },
+  { id: 'kitchen', name: 'Microwave & Induction Cooking', kw: 1.40, essential: false, icon: '🍳', desc: 'Emergency meal preparation' },
+  { id: 'ev', name: 'Tesla / EV Level 2 Charging', kw: 5.50, essential: false, icon: '🚗', desc: 'High-draw home vehicle replenishment' },
+];
+
 export default function HomeownerPortalPage() {
   const [activeTab, setActiveTab] = useState<'powerwall' | 'referrals' | 'savings' | 'concierge'>('powerwall');
-  
+
   // Powerwall / Energy Firewall state
   const [isOutageSimulated, setIsOutageSimulated] = useState(false);
   const [backupReserve, setBackupReserve] = useState(25);
   const [batteryPct, setBatteryPct] = useState(88);
-  const batteryKwh = 23.8;
-  const batteryCapacity = 27.0;
+  const batteryCapacity = 27.0; // Dual Powerwall 3 (13.5 kWh * 2)
+
+  // Interactive appliance loads during blackout
+  const [activeApplianceIds, setActiveApplianceIds] = useState<string[]>([
+    'fridge',
+    'wifi',
+    'lights',
+    'ac',
+  ]);
 
   // Referral system state
   const [rewardTier, setRewardTier] = useState<number>(1000);
@@ -110,6 +138,9 @@ export default function HomeownerPortalPage() {
   const [copiedLink, setCopiedLink] = useState(false);
   const [showQrModal, setShowQrModal] = useState(false);
 
+  // Savings Inflation Simulator
+  const [utilityInflationRate, setUtilityInflationRate] = useState<number>(4.5);
+
   const referralCode = 'PG-HORACE-7721';
   const referralUrl = `https://thepowergenie.theroyeffect.com/?ref=${referralCode}&tier=${rewardTier}`;
 
@@ -138,11 +169,35 @@ export default function HomeownerPortalPage() {
     });
   };
 
+  const toggleAppliance = (id: string) => {
+    setActiveApplianceIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  // Compute live active load
+  const applianceLoadKw = activeApplianceIds.reduce((sum, id) => {
+    const app = DEFAULT_APPLIANCES.find((a) => a.id === id);
+    return sum + (app ? app.kw : 0);
+  }, 0);
+
+  const solarGenerationKw = isOutageSimulated ? 6.2 : 8.4;
+  const homeLoadKw = Number((0.6 + applianceLoadKw).toFixed(2));
+  const currentBatteryKwh = (batteryCapacity * batteryPct) / 100;
+
+  // Powerwall flow: in normal mode, excess solar charges battery; in outage, battery covers home load
+  const batteryFlowKw = isOutageSimulated
+    ? Number((homeLoadKw - Math.min(solarGenerationKw, homeLoadKw)).toFixed(1))
+    : Number((Math.min(solarGenerationKw - homeLoadKw, 5.0)).toFixed(1));
+
+  // Estimated runtime in hours based on available battery kWh vs net draw
+  const netBlackoutDraw = Math.max(0.4, homeLoadKw - (solarGenerationKw * 0.4));
+  const estRuntimeHours = Math.round((currentBatteryKwh / netBlackoutDraw) * 10) / 10;
+
   const handleDirectReferralSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setFormFeedback(null);
 
-    // Explicit validation so button never fails silently
     if (!refName.trim()) {
       setFormFeedback({ type: 'error', message: 'Please enter your referral neighbor’s full name.' });
       document.getElementById('refNeighborName')?.focus();
@@ -192,8 +247,13 @@ export default function HomeownerPortalPage() {
     }, 400);
   };
 
+  // SVG battery circle calculation
+  const ringRadius = 70;
+  const ringCircumference = 2 * Math.PI * ringRadius;
+  const ringStrokeOffset = ringCircumference - (batteryPct / 100) * ringCircumference;
+
   return (
-    <div className="min-h-screen bg-[#07131F] text-[#F3F7FA] font-sans antialiased">
+    <div className="min-h-screen bg-[#07131F] text-[#F3F7FA] font-sans antialiased selection:bg-[#FF6B00]/30 selection:text-white">
       {/* Top Banner Navigation */}
       <header className="sticky top-0 z-50 border-b border-[#1E2E42] bg-[#0A1828]/95 backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
@@ -210,7 +270,7 @@ export default function HomeownerPortalPage() {
           <div className="flex items-center gap-3">
             <a
               href="tel:+15102417007"
-              className="inline-flex items-center gap-2 rounded-full border border-[#234567] bg-[#0E253B] px-3.5 py-1.5 text-xs font-semibold text-[#90CAF9] hover:bg-[#143452] transition"
+              className="inline-flex items-center gap-2 rounded-full border border-[#234567] bg-[#0E253B] px-3.5 py-1.5 text-xs font-semibold text-[#90CAF9] hover:bg-[#143452] transition shadow-sm"
             >
               <Phone className="h-3.5 w-3.5 text-[#FF6B00]" />
               <span className="hidden md:inline">Advisor Horace Lawrence:</span> 510-241-7007
@@ -224,12 +284,12 @@ export default function HomeownerPortalPage() {
         <div className="mx-auto max-w-6xl flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
-              <span className="inline-flex h-2 w-2 rounded-full bg-[#4CAF50] animate-pulse" />
-              <p className="m-0 text-xs font-semibold uppercase tracking-[0.14em] text-[#4CAF50]">
-                {isOutageSimulated ? 'Microgrid Island Mode Active (Protected)' : 'Tesla Energy Firewall Online & Resilient'}
+              <span className={`inline-flex h-2.5 w-2.5 rounded-full ${isOutageSimulated ? 'bg-[#FF6B00] animate-ping' : 'bg-[#4CAF50] animate-pulse'}`} />
+              <p className={`m-0 text-xs font-bold uppercase tracking-[0.14em] ${isOutageSimulated ? 'text-[#FF8A2B]' : 'text-[#4CAF50]'}`}>
+                {isOutageSimulated ? '⚡ Microgrid Island Mode Engaged (Protected)' : '● Tesla Energy Firewall Online & Resilient'}
               </p>
             </div>
-            <h1 className="m-0 mt-1 text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
+            <h1 className="m-0 mt-1.5 text-2xl sm:text-3xl font-black tracking-tight text-white">
               Homeowner Portal & Energy Firewall
             </h1>
             <p className="m-0 mt-1 text-sm text-[#8EA3B8]">
@@ -238,16 +298,16 @@ export default function HomeownerPortalPage() {
           </div>
 
           {/* Quick Action Badges */}
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2.5">
             <button
               onClick={() => setActiveTab('referrals')}
-              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#FF6B00] to-[#E65100] px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-[#FF6B00]/20 hover:brightness-110 transition active:scale-95"
+              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#FF6B00] to-[#E65100] px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-[#FF6B00]/25 hover:brightness-110 transition active:scale-95 cursor-pointer"
             >
               <DollarSign className="h-4 w-4" /> Refer & Earn $1,000 Cash
             </button>
             <button
               onClick={() => setActiveTab('powerwall')}
-              className="inline-flex items-center gap-2 rounded-xl border border-[#244263] bg-[#0E2841] px-3.5 py-2.5 text-sm font-semibold text-[#A9C8E8] hover:bg-[#143452] transition"
+              className="inline-flex items-center gap-2 rounded-xl border border-[#244263] bg-[#0E2841] px-3.5 py-2.5 text-sm font-semibold text-[#A9C8E8] hover:bg-[#143452] transition cursor-pointer"
             >
               <Battery className="h-4 w-4 text-[#4CAF50]" /> Powerwall Telemetry
             </button>
@@ -255,51 +315,58 @@ export default function HomeownerPortalPage() {
         </div>
       </div>
 
-      {/* Main Tab Navigation */}
+      {/* Main Tab Navigation - ZERO ugly horizontal scrollbar */}
       <div className="border-b border-[#182C44] bg-[#091A2C]">
-        <div className="mx-auto flex max-w-6xl gap-1 overflow-x-auto px-4 py-1.5 sm:px-6">
+        <div className="mx-auto flex max-w-6xl gap-2 overflow-x-auto px-4 py-2 sm:px-6 scrollbar-none [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <button
             onClick={() => setActiveTab('powerwall')}
-            className={`inline-flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-bold transition whitespace-nowrap ${
+            className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs sm:text-sm font-bold transition-all whitespace-nowrap cursor-pointer ${
               activeTab === 'powerwall'
-                ? 'border-[#4CAF50] text-[#81C784]'
-                : 'border-transparent text-[#7F9EB8] hover:text-white'
+                ? 'bg-[#123120] text-[#81C784] border border-[#2E7D32] shadow-sm shadow-[#4CAF50]/20'
+                : 'text-[#8EAEC7] hover:text-white hover:bg-white/5 border border-transparent'
             }`}
           >
-            <Battery className="h-4 w-4" /> 🔋 Tesla Powerwall & Energy Firewall
+            <Battery className={`h-4 w-4 ${activeTab === 'powerwall' ? 'text-[#4CAF50]' : 'text-[#8EAEC7]'}`} />
+            <span>Tesla Powerwall 3 & Firewall</span>
           </button>
 
           <button
             onClick={() => setActiveTab('referrals')}
-            className={`inline-flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-bold transition whitespace-nowrap ${
+            className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs sm:text-sm font-bold transition-all whitespace-nowrap cursor-pointer ${
               activeTab === 'referrals'
-                ? 'border-[#FF6B00] text-[#FF8A2B]'
-                : 'border-transparent text-[#7F9EB8] hover:text-white'
+                ? 'bg-[#3A1E08] text-[#FF8A2B] border border-[#FF6B00]/70 shadow-sm shadow-[#FF6B00]/20'
+                : 'text-[#8EAEC7] hover:text-white hover:bg-white/5 border border-transparent'
             }`}
           >
-            <Users className="h-4 w-4" /> 🤝 Refer Homeowners ($1,000 Reward)
+            <Users className={`h-4 w-4 ${activeTab === 'referrals' ? 'text-[#FF6B00]' : 'text-[#8EAEC7]'}`} />
+            <span>Refer Homeowners ($1,000 Reward)</span>
+            <span className="rounded-full bg-[#FF6B00] px-2 py-0.5 text-[10px] font-black text-white">
+              HOT
+            </span>
           </button>
 
           <button
             onClick={() => setActiveTab('savings')}
-            className={`inline-flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-bold transition whitespace-nowrap ${
+            className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs sm:text-sm font-bold transition-all whitespace-nowrap cursor-pointer ${
               activeTab === 'savings'
-                ? 'border-[#2196F3] text-[#64B5F6]'
-                : 'border-transparent text-[#7F9EB8] hover:text-white'
+                ? 'bg-[#0F2942] text-[#64B5F6] border border-[#1E88E5]/70 shadow-sm shadow-[#2196F3]/20'
+                : 'text-[#8EAEC7] hover:text-white hover:bg-white/5 border border-transparent'
             }`}
           >
-            <TrendingUp className="h-4 w-4" /> 📊 Bill Savings & Performance
+            <TrendingUp className={`h-4 w-4 ${activeTab === 'savings' ? 'text-[#2196F3]' : 'text-[#8EAEC7]'}`} />
+            <span>Bill Savings & Performance</span>
           </button>
 
           <button
             onClick={() => setActiveTab('concierge')}
-            className={`inline-flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-bold transition whitespace-nowrap ${
+            className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs sm:text-sm font-bold transition-all whitespace-nowrap cursor-pointer ${
               activeTab === 'concierge'
-                ? 'border-[#E0E0E0] text-white'
-                : 'border-transparent text-[#7F9EB8] hover:text-white'
+                ? 'bg-[#212E3B] text-white border border-[#475569] shadow-sm'
+                : 'text-[#8EAEC7] hover:text-white hover:bg-white/5 border border-transparent'
             }`}
           >
-            <Shield className="h-4 w-4" /> 🛡️ Sunrun Rep & Warranty
+            <Shield className={`h-4 w-4 ${activeTab === 'concierge' ? 'text-[#FFB300]' : 'text-[#8EAEC7]'}`} />
+            <span>Sunrun Rep & VIP Warranty</span>
           </button>
         </div>
       </div>
@@ -313,26 +380,26 @@ export default function HomeownerPortalPage() {
           <div className="space-y-6">
             {/* Outage Simulation Alert / Banner */}
             {isOutageSimulated ? (
-              <div className="rounded-2xl border-2 border-[#FF6B00] bg-[#FF6B00]/10 p-5 text-white shadow-xl shadow-[#FF6B00]/10 animate-fade-in">
+              <div className="rounded-2xl border-2 border-[#FF6B00] bg-gradient-to-r from-[#FF6B00]/15 via-[#FF6B00]/10 to-[#120800] p-5 text-white shadow-xl shadow-[#FF6B00]/15 animate-fade-in">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <div className="flex items-center gap-3">
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#FF6B00]/20 text-[#FF6B00]">
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#FF6B00]/25 text-[#FF6B00] shadow-inner">
                       <AlertTriangle className="h-6 w-6" />
                     </span>
                     <div>
                       <h3 className="m-0 text-base font-bold text-[#FF8A2B]">
-                        Tesla Microgrid Island Mode Engaged — Grid Power Contactor Open
+                        Tesla Microgrid Island Mode Engaged — Grid Power Contactor Open (8ms)
                       </h3>
-                      <p className="m-0 text-xs sm:text-sm text-[#FFD0AD]">
-                        The Tesla Backup Gateway has isolated your home from the utility grid in 8 milliseconds. All essential loads (AC, fridge, lights, Wi-Fi) are safely powered by your Powerwall 3.
+                      <p className="m-0 text-xs sm:text-sm text-[#FFD0AD] mt-0.5">
+                        The Tesla Backup Gateway has completely isolated your home from the utility grid. Your active appliances ({activeApplianceIds.length} connected, {homeLoadKw} kW) are seamlessly powered by your Dual Powerwall 3.
                       </p>
                     </div>
                   </div>
                   <button
                     onClick={() => setIsOutageSimulated(false)}
-                    className="shrink-0 rounded-xl bg-[#4CAF50] px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-white shadow hover:bg-[#43A047] transition"
+                    className="shrink-0 rounded-xl bg-[#4CAF50] px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-white shadow hover:bg-[#43A047] transition cursor-pointer"
                   >
-                    Restore Grid Power
+                    Restore Utility Grid
                   </button>
                 </div>
               </div>
@@ -340,102 +407,226 @@ export default function HomeownerPortalPage() {
 
             {/* Core Telemetry Cards */}
             <div className="grid gap-6 md:grid-cols-3">
-              {/* Card 1: Powerwall Battery Gauge */}
-              <div className="rounded-2xl border border-[#1B324B] bg-[#0C1E32] p-5 shadow-lg">
+              {/* Card 1: Powerwall Battery Gauge with Animated SVG */}
+              <div className="rounded-2xl border border-[#1B324B] bg-gradient-to-b from-[#0C1E32] to-[#081726] p-5 shadow-xl">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold uppercase tracking-wider text-[#7E98B0]">State of Charge</span>
-                  <span className="rounded-full bg-[#4CAF50]/15 px-2.5 py-0.5 text-xs font-bold text-[#4CAF50]">
-                    {isOutageSimulated ? 'Discharging (Island)' : 'Optimal Charging'}
+                  <span className="text-xs font-bold uppercase tracking-wider text-[#7E98B0]">State of Charge</span>
+                  <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${
+                    isOutageSimulated ? 'bg-[#FF6B00]/20 text-[#FF9E4A]' : 'bg-[#4CAF50]/15 text-[#4CAF50]'
+                  }`}>
+                    {isOutageSimulated ? '⚡ Discharging (Island)' : 'Optimal Charging'}
                   </span>
                 </div>
 
-                <div className="my-5 flex items-center justify-center">
-                  <div className="relative flex h-40 w-40 items-center justify-center rounded-full border-4 border-[#163556] bg-[#081726]">
-                    <div className="text-center">
-                      <span className="text-4xl font-black text-white">{batteryPct}%</span>
-                      <p className="m-0 text-xs font-medium text-[#7E98B0]">
-                        {batteryKwh} / {batteryCapacity} kWh
-                      </p>
+                {/* SVG Progress Ring */}
+                <div className="my-4 flex items-center justify-center">
+                  <div className="relative flex items-center justify-center">
+                    <svg className="h-44 w-44 -rotate-90 transform" viewBox="0 0 160 160">
+                      <defs>
+                        <linearGradient id="batteryChargingGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" stopColor="#4CAF50" />
+                          <stop offset="100%" stopColor="#81C784" />
+                        </linearGradient>
+                        <linearGradient id="batteryDischargingGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" stopColor="#FF6B00" />
+                          <stop offset="100%" stopColor="#FFA040" />
+                        </linearGradient>
+                        <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                          <feGaussianBlur stdDeviation="3" result="coloredBlur" />
+                          <feMerge>
+                            <feMergeNode in="coloredBlur" />
+                            <feMergeNode in="SourceGraphic" />
+                          </feMerge>
+                        </filter>
+                      </defs>
+                      <circle
+                        cx="80"
+                        cy="80"
+                        r={ringRadius}
+                        stroke="#132B45"
+                        strokeWidth="10"
+                        fill="transparent"
+                      />
+                      <circle
+                        cx="80"
+                        cy="80"
+                        r={ringRadius}
+                        stroke={isOutageSimulated ? 'url(#batteryDischargingGrad)' : 'url(#batteryChargingGrad)'}
+                        strokeWidth="10"
+                        strokeDasharray={ringCircumference}
+                        strokeDashoffset={ringStrokeOffset}
+                        strokeLinecap="round"
+                        fill="transparent"
+                        filter="url(#glow)"
+                        className="transition-all duration-700 ease-out"
+                      />
+                    </svg>
+
+                    <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+                      <span className="text-3xl sm:text-4xl font-black tracking-tight text-white">{batteryPct}%</span>
+                      <span className="text-xs font-semibold text-[#8FAEC7] mt-0.5">
+                        {currentBatteryKwh.toFixed(1)} / {batteryCapacity.toFixed(1)} kWh
+                      </span>
+                      <span className="text-[10px] text-[#607D8B] font-mono mt-0.5">
+                        Dual LFP Cells
+                      </span>
                     </div>
                   </div>
                 </div>
 
-                <div className="space-y-2 border-t border-white/10 pt-3 text-xs text-[#8BA4BD]">
-                  <div className="flex justify-between">
+                <div className="space-y-2.5 border-t border-white/10 pt-3 text-xs text-[#8BA4BD]">
+                  <div className="flex justify-between items-center">
                     <span>Est. Backup Runtime:</span>
-                    <strong className="text-white">18 hrs 42 mins</strong>
+                    <strong className="text-white font-mono text-sm">{estRuntimeHours} Hours</strong>
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex justify-between items-center">
                     <span>Inverter Max Output:</span>
-                    <strong className="text-white">11.5 kW Continuous</strong>
+                    <strong className="text-white font-mono">11.5 kW Continuous</strong>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span>Peak Surge Starting Power:</span>
+                    <strong className="text-[#81C784] font-mono">18.5 kW (LRA Ready)</strong>
                   </div>
                 </div>
               </div>
 
-              {/* Card 2: Real-time Power Flow Nodes */}
-              <div className="rounded-2xl border border-[#1B324B] bg-[#0C1E32] p-5 shadow-lg md:col-span-2">
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-xs font-semibold uppercase tracking-wider text-[#7E98B0]">Live Microgrid Energy Flow</span>
-                  <span className="text-xs text-[#4CAF50] font-semibold">● Real-time Telemetry (Tesla Gateway 2)</span>
-                </div>
-
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
-                  {/* Node: Solar */}
-                  <div className="rounded-xl border border-[#28496B] bg-[#081827] p-3">
-                    <Sun className="mx-auto h-6 w-6 text-[#FFB300] mb-1" />
-                    <p className="m-0 text-xs text-[#7E98B0]">Solar Roof</p>
-                    <p className="m-0 text-lg font-bold text-[#FFB300]">8.4 kW</p>
-                    <span className="text-[10px] text-[#4CAF50]">Producing</span>
-                  </div>
-
-                  {/* Node: Powerwall */}
-                  <div className="rounded-xl border border-[#28496B] bg-[#081827] p-3">
-                    <Battery className="mx-auto h-6 w-6 text-[#4CAF50] mb-1" />
-                    <p className="m-0 text-xs text-[#7E98B0]">Powerwall 3</p>
-                    <p className="m-0 text-lg font-bold text-[#4CAF50]">{isOutageSimulated ? '-2.6 kW' : '+4.6 kW'}</p>
-                    <span className="text-[10px] text-[#4CAF50]">{isOutageSimulated ? 'Discharging' : 'Storing Power'}</span>
-                  </div>
-
-                  {/* Node: Home */}
-                  <div className="rounded-xl border border-[#28496B] bg-[#081827] p-3">
-                    <HomeIcon className="mx-auto h-6 w-6 text-[#64B5F6] mb-1" />
-                    <p className="m-0 text-xs text-[#7E98B0]">Home Load</p>
-                    <p className="m-0 text-lg font-bold text-[#64B5F6]">2.6 kW</p>
-                    <span className="text-[10px] text-[#7E98B0]">AC & Appliances</span>
-                  </div>
-
-                  {/* Node: Grid */}
-                  <div className={`rounded-xl border p-3 ${isOutageSimulated ? 'border-red-500/50 bg-red-950/20' : 'border-[#28496B] bg-[#081827]'}`}>
-                    <Zap className={`mx-auto h-6 w-6 mb-1 ${isOutageSimulated ? 'text-red-400' : 'text-[#81C784]'}`} />
-                    <p className="m-0 text-xs text-[#7E98B0]">Utility Grid</p>
-                    <p className={`m-0 text-lg font-bold ${isOutageSimulated ? 'text-red-400' : 'text-[#81C784]'}`}>
-                      {isOutageSimulated ? '0.0 kW' : '+1.2 kW'}
-                    </p>
-                    <span className={`text-[10px] ${isOutageSimulated ? 'text-red-400 font-semibold' : 'text-[#81C784]'}`}>
-                      {isOutageSimulated ? 'ISOLATED / DOWN' : 'Exporting Credits'}
+              {/* Card 2: Interactive Real-time Microgrid Energy Flow */}
+              <div className="rounded-2xl border border-[#1B324B] bg-[#0C1E32] p-5 shadow-xl md:col-span-2 flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-xs font-bold uppercase tracking-wider text-[#7E98B0]">Live Microgrid Energy Flow</span>
+                    <span className="text-xs text-[#4CAF50] font-semibold flex items-center gap-1.5">
+                      <span className="h-2 w-2 rounded-full bg-[#4CAF50] animate-ping" />
+                      Tesla Backup Gateway 2 Active
                     </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+                    {/* Node 1: Solar */}
+                    <div className="rounded-xl border border-[#28496B] bg-[#081827] p-3 relative overflow-hidden">
+                      <Sun className="mx-auto h-6 w-6 text-[#FFB300] mb-1 animate-spin-slow" />
+                      <p className="m-0 text-xs text-[#7E98B0]">Solar Roof</p>
+                      <p className="m-0 text-lg font-bold text-[#FFB300]">{solarGenerationKw} kW</p>
+                      <span className="text-[10px] text-[#4CAF50]">● Producing Clean DC</span>
+                    </div>
+
+                    {/* Node 2: Powerwall */}
+                    <div className="rounded-xl border border-[#28496B] bg-[#081827] p-3">
+                      <Battery className={`mx-auto h-6 w-6 mb-1 ${isOutageSimulated ? 'text-[#FF6B00]' : 'text-[#4CAF50]'}`} />
+                      <p className="m-0 text-xs text-[#7E98B0]">Powerwall 3</p>
+                      <p className={`m-0 text-lg font-bold ${isOutageSimulated ? 'text-[#FF6B00]' : 'text-[#4CAF50]'}`}>
+                        {isOutageSimulated ? `-${batteryFlowKw} kW` : `+${batteryFlowKw} kW`}
+                      </p>
+                      <span className={`text-[10px] ${isOutageSimulated ? 'text-[#FF8A2B] font-semibold' : 'text-[#4CAF50]'}`}>
+                        {isOutageSimulated ? '⚡ Discharging to Home' : '● Storing Solar'}
+                      </span>
+                    </div>
+
+                    {/* Node 3: Home */}
+                    <div className="rounded-xl border border-[#28496B] bg-[#081827] p-3">
+                      <HomeIcon className="mx-auto h-6 w-6 text-[#64B5F6] mb-1" />
+                      <p className="m-0 text-xs text-[#7E98B0]">Home Load</p>
+                      <p className="m-0 text-lg font-bold text-[#64B5F6]">{homeLoadKw} kW</p>
+                      <span className="text-[10px] text-[#90CAF9]">{activeApplianceIds.length} Appliances Active</span>
+                    </div>
+
+                    {/* Node 4: Grid */}
+                    <div className={`rounded-xl border p-3 transition-colors ${
+                      isOutageSimulated ? 'border-red-500/60 bg-red-950/30' : 'border-[#28496B] bg-[#081827]'
+                    }`}>
+                      <Zap className={`mx-auto h-6 w-6 mb-1 ${isOutageSimulated ? 'text-red-400' : 'text-[#81C784]'}`} />
+                      <p className="m-0 text-xs text-[#7E98B0]">Utility Grid</p>
+                      <p className={`m-0 text-lg font-bold ${isOutageSimulated ? 'text-red-400 font-mono' : 'text-[#81C784]'}`}>
+                        {isOutageSimulated ? '0.0 kW' : '+1.2 kW'}
+                      </p>
+                      <span className={`text-[10px] ${isOutageSimulated ? 'text-red-400 font-bold' : 'text-[#81C784]'}`}>
+                        {isOutageSimulated ? '⚡ CONTACTOR OPEN' : '● Exporting Credits'}
+                      </span>
+                    </div>
                   </div>
                 </div>
 
                 {/* Simulation Contactor Control */}
                 <div className="mt-5 rounded-xl border border-[#1E3B5C] bg-[#081624] p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
                   <div>
-                    <h4 className="m-0 text-sm font-bold text-white">Tesla Energy Firewall Blackout Simulator</h4>
-                    <p className="m-0 text-xs text-[#8BA4BD]">
-                      Test your home microgrid contactor to verify island mode resilience without waiting for a storm.
+                    <h4 className="m-0 text-sm font-bold text-white flex items-center gap-2">
+                      <Zap className="h-4 w-4 text-[#FF6B00]" />
+                      Tesla Energy Firewall Blackout Simulator
+                    </h4>
+                    <p className="m-0 text-xs text-[#8BA4BD] mt-0.5">
+                      Verify your whole-home microgrid islanding response without waiting for severe weather.
                     </p>
                   </div>
                   <button
                     onClick={() => setIsOutageSimulated(!isOutageSimulated)}
-                    className={`shrink-0 rounded-xl px-4 py-2 text-xs font-bold uppercase tracking-wider transition ${
+                    className={`shrink-0 rounded-xl px-4 py-2.5 text-xs font-bold uppercase tracking-wider transition cursor-pointer ${
                       isOutageSimulated
-                        ? 'bg-[#4CAF50] text-white hover:bg-[#43A047]'
-                        : 'bg-[#FF6B00] text-white hover:bg-[#F57C00]'
+                        ? 'bg-[#4CAF50] text-white hover:bg-[#43A047] shadow-lg shadow-[#4CAF50]/30'
+                        : 'bg-gradient-to-r from-[#FF6B00] to-[#E65100] text-white hover:brightness-110 shadow-lg shadow-[#FF6B00]/30'
                     }`}
                   >
-                    {isOutageSimulated ? '✓ Reconnect Grid' : '⚡ Simulate Grid Outage'}
+                    {isOutageSimulated ? '✓ Reconnect Utility Grid' : '⚡ Simulate Grid Outage'}
                   </button>
                 </div>
+              </div>
+            </div>
+
+            {/* Blackout Appliance Load Tester & Runtime Optimizer */}
+            <div className="rounded-2xl border border-[#1F3752] bg-[#0C1E32] p-6 shadow-xl">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-white/10 pb-4 mb-4">
+                <div>
+                  <h3 className="m-0 text-base sm:text-lg font-bold text-white flex items-center gap-2">
+                    <Sliders className="h-5 w-5 text-[#FFB300]" /> Blackout Appliance Load Management & Runtime Tester
+                  </h3>
+                  <p className="m-0 text-xs text-[#8BA4BD] mt-0.5">
+                    Toggle home appliances on or off to see how your Powerwall backup duration dynamically changes.
+                  </p>
+                </div>
+                <div className="rounded-xl bg-[#081827] px-3.5 py-1.5 border border-[#234567] text-right">
+                  <span className="text-[10px] uppercase font-bold text-[#8FAEC7] block">Estimated Backup Runtime</span>
+                  <span className="text-lg font-black text-[#81C784] font-mono">{estRuntimeHours} Hours</span>
+                </div>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {DEFAULT_APPLIANCES.map((app) => {
+                  const isActive = activeApplianceIds.includes(app.id);
+                  return (
+                    <button
+                      key={app.id}
+                      type="button"
+                      onClick={() => toggleAppliance(app.id)}
+                      className={`flex items-start justify-between p-3.5 rounded-xl border text-left transition cursor-pointer ${
+                        isActive
+                          ? 'border-[#2E7D32] bg-[#0B2518]'
+                          : 'border-[#1C3652] bg-[#081726] opacity-60 hover:opacity-100 hover:border-[#2C537D]'
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <span className="text-xl shrink-0">{app.icon}</span>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <strong className="text-xs sm:text-sm font-bold text-white">{app.name}</strong>
+                            {app.essential && (
+                              <span className="rounded bg-[#1B432C] px-1.5 py-0.5 text-[9px] font-bold text-[#81C784]">
+                                Essential
+                              </span>
+                            )}
+                          </div>
+                          <p className="m-0 text-[11px] text-[#8EAEC7] mt-0.5">{app.desc}</p>
+                          <span className="inline-block mt-1 text-[11px] font-mono font-bold text-[#FFB300]">
+                            {app.kw.toFixed(2)} kW draw
+                          </span>
+                        </div>
+                      </div>
+                      <span className={`h-5 w-5 shrink-0 rounded-full flex items-center justify-center text-xs font-bold ${
+                        isActive ? 'bg-[#4CAF50] text-white' : 'border border-[#38597E] text-transparent'
+                      }`}>
+                        ✓
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -541,7 +732,7 @@ export default function HomeownerPortalPage() {
                         key={tier.amount}
                         type="button"
                         onClick={() => setRewardTier(tier.amount)}
-                        className={`rounded-xl border px-3.5 py-2 text-xs font-bold transition ${
+                        className={`rounded-xl border px-3.5 py-2 text-xs font-bold transition cursor-pointer ${
                           rewardTier === tier.amount
                             ? 'border-[#FF6B00] bg-[#FF6B00] text-white shadow-md shadow-[#FF6B00]/30'
                             : 'border-[#244263] bg-[#0A1D30] text-[#A5C3DF] hover:border-[#386494]'
@@ -555,7 +746,7 @@ export default function HomeownerPortalPage() {
               </div>
             </div>
 
-            {/* Dynamic Earnings Calculator */}
+            {/* Dynamic Earnings Calculator & Milestones */}
             <div className="rounded-2xl border border-[#1F3752] bg-[#0C1E32] p-6 shadow-xl">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
@@ -594,6 +785,26 @@ export default function HomeownerPortalPage() {
                   <span>10 ($ {(10 * rewardTier).toLocaleString()})</span>
                 </div>
               </div>
+
+              {/* Referral Milestone Badges */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 border-t border-white/10">
+                <div className={`rounded-xl p-3 border text-center ${referralCount >= 1 ? 'border-[#4CAF50] bg-[#102D1C]' : 'border-[#1E3752] bg-[#081827] opacity-60'}`}>
+                  <span className="text-sm font-bold text-white">Bronze Tier</span>
+                  <p className="m-0 text-[11px] text-[#81C784]">1 Referral ($1,000)</p>
+                </div>
+                <div className={`rounded-xl p-3 border text-center ${referralCount >= 3 ? 'border-[#2196F3] bg-[#0F2942]' : 'border-[#1E3752] bg-[#081827] opacity-60'}`}>
+                  <span className="text-sm font-bold text-white">Silver Tier</span>
+                  <p className="m-0 text-[11px] text-[#64B5F6]">3 Referrals ($3,000)</p>
+                </div>
+                <div className={`rounded-xl p-3 border text-center ${referralCount >= 5 ? 'border-[#FFB300] bg-[#3B2C0B]' : 'border-[#1E3752] bg-[#081827] opacity-60'}`}>
+                  <span className="text-sm font-bold text-white">Gold Tier</span>
+                  <p className="m-0 text-[11px] text-[#FFD54F]">5 Referrals ($5,000)</p>
+                </div>
+                <div className={`rounded-xl p-3 border text-center ${referralCount >= 10 ? 'border-[#E040FB] bg-[#381142]' : 'border-[#1E3752] bg-[#081827] opacity-60'}`}>
+                  <span className="text-sm font-bold text-white">Platinum VIP</span>
+                  <p className="m-0 text-[11px] text-[#EA80FC]">10 Referrals ($10,000)</p>
+                </div>
+              </div>
             </div>
 
             {/* 1-Click Share & Custom Link Bar */}
@@ -611,14 +822,14 @@ export default function HomeownerPortalPage() {
                 </div>
                 <button
                   onClick={handleCopyLink}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#1E3B5C] px-4 py-2.5 text-xs font-bold text-white hover:bg-[#29507D] transition"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#1E3B5C] px-4 py-2.5 text-xs font-bold text-white hover:bg-[#29507D] transition cursor-pointer"
                 >
                   {copiedLink ? <Check className="h-4 w-4 text-[#4CAF50]" /> : <Copy className="h-4 w-4" />}
                   {copiedLink ? 'Copied!' : 'Copy Link'}
                 </button>
                 <button
                   onClick={() => setShowQrModal(true)}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#244263] bg-[#0C243B] px-3.5 py-2.5 text-xs font-bold text-white hover:bg-[#133352] transition"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#244263] bg-[#0C243B] px-3.5 py-2.5 text-xs font-bold text-white hover:bg-[#133352] transition cursor-pointer"
                 >
                   <QrCode className="h-4 w-4 text-[#FFB300]" /> QR Code
                 </button>
@@ -788,7 +999,7 @@ export default function HomeownerPortalPage() {
                   />
                 </div>
 
-                {/* Submit Referral Button (Explicitly clickable, NEVER disabled) */}
+                {/* Submit Referral Button */}
                 <div className="pt-2">
                   <button
                     id="btnSubmitReferral"
@@ -873,16 +1084,16 @@ export default function HomeownerPortalPage() {
         {activeTab === 'savings' && (
           <div className="space-y-6">
             <div className="grid gap-6 md:grid-cols-3">
-              <div className="rounded-2xl border border-[#1B324B] bg-[#0C1E32] p-5 shadow-lg">
-                <span className="text-xs uppercase font-semibold text-[#7E98B0]">Utility Bill Comparison</span>
+              <div className="rounded-2xl border border-[#1B324B] bg-gradient-to-b from-[#0C1E32] to-[#081827] p-5 shadow-lg">
+                <span className="text-xs uppercase font-bold text-[#7E98B0] tracking-wider">Utility Bill Comparison</span>
                 <div className="mt-4 flex items-baseline justify-between">
                   <div>
-                    <span className="text-xs text-[#E57373]">Before Solar</span>
+                    <span className="text-xs text-[#E57373] font-semibold">Before Solar</span>
                     <p className="m-0 text-2xl font-black text-white">$385/mo</p>
                   </div>
                   <ChevronRight className="h-6 w-6 text-[#7E98B0]" />
                   <div>
-                    <span className="text-xs text-[#81C784]">Sunrun + Powerwall</span>
+                    <span className="text-xs text-[#81C784] font-semibold">Sunrun + Powerwall</span>
                     <p className="m-0 text-2xl font-black text-[#81C784]">$18/mo</p>
                   </div>
                 </div>
@@ -891,8 +1102,8 @@ export default function HomeownerPortalPage() {
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-[#1B324B] bg-[#0C1E32] p-5 shadow-lg">
-                <span className="text-xs uppercase font-semibold text-[#7E98B0]">Lifetime Savings</span>
+              <div className="rounded-2xl border border-[#1B324B] bg-gradient-to-b from-[#0C1E32] to-[#081827] p-5 shadow-lg">
+                <span className="text-xs uppercase font-bold text-[#7E98B0] tracking-wider">Lifetime Net Savings</span>
                 <p className="m-0 mt-3 text-3xl font-black text-[#FFB300]">$4,820</p>
                 <p className="m-0 mt-1 text-xs text-[#8BA4BD]">Saved since system installation (14 months active).</p>
                 <div className="mt-4 border-t border-white/10 pt-3 text-xs text-[#8BA4BD]">
@@ -900,12 +1111,71 @@ export default function HomeownerPortalPage() {
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-[#1B324B] bg-[#0C1E32] p-5 shadow-lg">
-                <span className="text-xs uppercase font-semibold text-[#7E98B0]">Environmental Offset</span>
+              <div className="rounded-2xl border border-[#1B324B] bg-gradient-to-b from-[#0C1E32] to-[#081827] p-5 shadow-lg">
+                <span className="text-xs uppercase font-bold text-[#7E98B0] tracking-wider">Environmental Offset</span>
                 <p className="m-0 mt-3 text-3xl font-black text-[#64B5F6]">14.2 Tons</p>
-                <p className="m-0 mt-1 text-xs text-[#8BA4BD]">CO2 greenhouse gas eliminated from grid.</p>
+                <p className="m-0 mt-1 text-xs text-[#8BA4BD]">CO2 greenhouse gas eliminated from utility grid.</p>
                 <div className="mt-4 border-t border-white/10 pt-3 text-xs text-[#8BA4BD]">
                   Equivalent to: <strong className="text-white">328 Trees Planted</strong>
+                </div>
+              </div>
+            </div>
+
+            {/* Interactive 25-Year Inflation Protection Simulator */}
+            <div className="rounded-2xl border border-[#1F3752] bg-[#0C1E32] p-6 shadow-xl">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-white/10 pb-4 mb-4">
+                <div>
+                  <h3 className="m-0 text-base sm:text-lg font-bold text-white flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5 text-[#4CAF50]" /> 25-Year Utility Rate Inflation Hedge
+                  </h3>
+                  <p className="m-0 text-xs text-[#8BA4BD] mt-0.5">
+                    Electric utility rates in Texas & California have risen over 4.2% annually. Your solar rate is locked at $0.
+                  </p>
+                </div>
+                <div className="text-right">
+                  <span className="text-xs text-[#8BA4BD]">Utility Rate Inflation:</span>
+                  <p className="m-0 text-xl font-bold text-[#FFB300] font-mono">{utilityInflationRate}% / yr</p>
+                </div>
+              </div>
+
+              <div className="my-4">
+                <input
+                  type="range"
+                  min="2.0"
+                  max="8.0"
+                  step="0.5"
+                  value={utilityInflationRate}
+                  onChange={(e) => setUtilityInflationRate(Number(e.target.value))}
+                  className="w-full h-2 rounded-lg bg-[#18314C] accent-[#4CAF50] cursor-pointer"
+                />
+                <div className="flex justify-between text-[11px] text-[#5D7A96] mt-1 font-mono">
+                  <span>2% (Conservative)</span>
+                  <span>4.5% (Historical Average)</span>
+                  <span>8% (High Grid Stress)</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3">
+                <div className="rounded-xl bg-[#081827] p-3 border border-[#234567]">
+                  <span className="text-[11px] uppercase font-bold text-[#8FAEC7]">5-Year Utility Cost</span>
+                  <p className="m-0 text-lg font-bold text-red-400 font-mono">
+                    ${Math.round(385 * 12 * 5 * (1 + utilityInflationRate / 200)).toLocaleString()}
+                  </p>
+                  <span className="text-[10px] text-[#81C784]">You save ~${Math.round(367 * 12 * 5).toLocaleString()}</span>
+                </div>
+                <div className="rounded-xl bg-[#081827] p-3 border border-[#234567]">
+                  <span className="text-[11px] uppercase font-bold text-[#8FAEC7]">15-Year Utility Cost</span>
+                  <p className="m-0 text-lg font-bold text-red-400 font-mono">
+                    ${Math.round(385 * 12 * 15 * (1 + (utilityInflationRate * 1.5) / 100)).toLocaleString()}
+                  </p>
+                  <span className="text-[10px] text-[#81C784]">You save ~${Math.round(367 * 12 * 15).toLocaleString()}</span>
+                </div>
+                <div className="rounded-xl bg-[#081827] p-3 border border-[#234567]">
+                  <span className="text-[11px] uppercase font-bold text-[#8FAEC7]">25-Year Cumulative Savings</span>
+                  <p className="m-0 text-xl font-black text-[#FFB300] font-mono">
+                    ${Math.round(74500 * (1 + (utilityInflationRate - 4) * 0.12)).toLocaleString()}+
+                  </p>
+                  <span className="text-[10px] text-[#81C784]">Guaranteed Solar Production</span>
                 </div>
               </div>
             </div>
@@ -916,9 +1186,11 @@ export default function HomeownerPortalPage() {
               <p className="mt-1 text-xs text-[#8BA4BD]">
                 Sunrun guarantees 100% of your estimated annual kWh solar generation or compensates you directly.
               </p>
-              <div className="mt-4 rounded-xl bg-[#081827] p-4 text-xs text-[#90CAF9] flex items-center justify-between">
+              <div className="mt-4 rounded-xl bg-[#081827] p-4 text-xs text-[#90CAF9] flex flex-col sm:flex-row sm:items-center justify-between gap-2 border border-[#1A3859]">
                 <span>System Production Target: 16,400 kWh / yr</span>
-                <span className="font-bold text-[#4CAF50]">Current Performance: 104% of Target (Exceeding)</span>
+                <span className="font-bold text-[#4CAF50] flex items-center gap-1.5">
+                  <CheckCircle className="h-4 w-4" /> Current Performance: 104% of Target (Exceeding)
+                </span>
               </div>
             </div>
           </div>
@@ -929,12 +1201,14 @@ export default function HomeownerPortalPage() {
         {/* ========================================================================= */}
         {activeTab === 'concierge' && (
           <div className="space-y-6">
-            <div className="rounded-2xl border border-[#1B324B] bg-[#0C1E32] p-6 sm:p-8 shadow-xl">
+            <div className="rounded-2xl border border-[#1B324B] bg-gradient-to-br from-[#0C1E32] via-[#091D30] to-[#081726] p-6 sm:p-8 shadow-xl">
               <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
                 <div>
-                  <span className="text-xs font-bold uppercase tracking-wider text-[#FF6B00]">Dedicated Sunrun Solar Expert</span>
-                  <h2 className="m-0 mt-1 text-2xl font-bold text-white">Horace Lawrence</h2>
-                  <p className="m-0 mt-0.5 text-sm text-[#8BA4BD]">The Block Sales Expert Team Lead · Sunrun</p>
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-[#FF6B00]/20 px-3 py-0.5 text-xs font-bold uppercase tracking-wider text-[#FF8A2B]">
+                    ⭐ Dedicated Sunrun Solar Expert
+                  </span>
+                  <h2 className="m-0 mt-2 text-2xl sm:text-3xl font-black text-white">Horace Lawrence</h2>
+                  <p className="m-0 mt-0.5 text-sm text-[#8BA4BD]">The Block Sales Expert Team Lead · Sunrun Solar Advisor</p>
 
                   <div className="mt-4 flex flex-wrap gap-4 text-sm">
                     <a href="tel:+15102417007" className="inline-flex items-center gap-2 text-white font-semibold hover:underline">
@@ -946,10 +1220,10 @@ export default function HomeownerPortalPage() {
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-2 w-full md:w-auto">
+                <div className="flex flex-col gap-2.5 w-full md:w-auto">
                   <a
                     href="/book"
-                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#FF6B00] px-5 py-3 text-sm font-bold text-white hover:bg-[#F57C00] transition no-underline shadow-lg"
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#FF6B00] to-[#E65100] px-5 py-3 text-sm font-bold text-white hover:brightness-110 transition no-underline shadow-lg shadow-[#FF6B00]/25"
                   >
                     <Calendar className="h-4 w-4" /> Book Time With Horace
                   </a>
@@ -979,6 +1253,9 @@ export default function HomeownerPortalPage() {
                   <li className="flex items-center gap-2">
                     <Check className="h-4 w-4 text-[#4CAF50]" /> Full system transferability if you ever sell your residence.
                   </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="h-4 w-4 text-[#4CAF50]" /> 100% Production Guarantee with annual cash true-up credits.
+                  </li>
                 </ul>
               </div>
 
@@ -996,6 +1273,9 @@ export default function HomeownerPortalPage() {
                   <li className="flex items-center gap-2">
                     <Check className="h-4 w-4 text-[#FFB300]" /> Liquid cooling and over-the-air firmware optimizations.
                   </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="h-4 w-4 text-[#FFB300]" /> 18.5 kW Motor Starting LRA support for whole-home central A/C.
+                  </li>
                 </ul>
               </div>
             </div>
@@ -1005,7 +1285,7 @@ export default function HomeownerPortalPage() {
 
       {/* QR Code Modal */}
       {showQrModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm animate-fade-in">
           <div className="w-full max-w-sm rounded-3xl border border-[#2B4E73] bg-[#0C1E32] p-6 text-center shadow-2xl">
             <h3 className="m-0 text-lg font-bold text-white">Neighbor Scan QR Code</h3>
             <p className="m-0 mt-1 text-xs text-[#8BA4BD]">
@@ -1024,7 +1304,7 @@ export default function HomeownerPortalPage() {
 
             <button
               onClick={() => setShowQrModal(false)}
-              className="mt-5 w-full rounded-xl bg-[#1C3A5A] py-2.5 text-xs font-bold text-white hover:bg-[#28507B] transition"
+              className="mt-5 w-full rounded-xl bg-[#1C3A5A] py-2.5 text-xs font-bold text-white hover:bg-[#28507B] transition cursor-pointer"
             >
               Close
             </button>
