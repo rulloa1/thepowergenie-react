@@ -81,10 +81,23 @@ export default function BookingPage() {
 
   const submit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!slot || submitting) return;
+    if (submitting) return;
+
+    if (!slot) {
+      if (slots.length > 0) {
+        setFormError('Please choose an available day and time in Step 1 above to complete your booking.');
+        document.getElementById('pick-time')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+    }
+
     setFormError(null);
     const fd = new FormData(e.currentTarget);
-    fd.set('start', slot.start);
+    const bookingSlot = slot || {
+      start: new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
+      end: new Date(Date.now() + 25 * 3600 * 1000).toISOString(),
+    };
+    fd.set('start', bookingSlot.start);
     fd.delete('bill');
     if (bill) fd.set('bill', bill, bill.name);
     setSubmitting(true);
@@ -98,7 +111,7 @@ export default function BookingPage() {
       }
       return;
     }
-    setBooked(slot);
+    setBooked(bookingSlot);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -320,7 +333,7 @@ export default function BookingPage() {
 
                   {formError && <Notice tone="error">{formError}</Notice>}
 
-                  <Button type="submit" disabled={!slot || submitting} className="min-h-[52px] w-full text-[1rem]">
+                  <Button type="submit" disabled={submitting} className="min-h-[52px] w-full text-[1rem]">
                     {submitting ? (
                       <>
                         <Spinner className="h-4 w-4" /> Booking…
@@ -328,7 +341,7 @@ export default function BookingPage() {
                     ) : slot ? (
                       `Book ${formatTime(slot.start)} on ${formatShortDay(slot.start)}`
                     ) : (
-                      'Choose a time to book'
+                      'Choose a time above or tap to book'
                     )}
                   </Button>
                 </form>

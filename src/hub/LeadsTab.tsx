@@ -1,15 +1,21 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   AlertTriangle,
+  Check,
   CheckCircle2,
   ChevronDown,
   ChevronUp,
+  Copy,
+  Download,
+  ExternalLink,
   Eye,
+  FileSpreadsheet,
   FileText,
   Mail,
   MapPin,
   Phone,
   RefreshCw,
+  Share2,
   ShieldCheck,
   Zap,
 } from 'lucide-react';
@@ -17,6 +23,15 @@ import { supabase } from '../lib/supabase';
 import type { Lead, LeadFeed } from './useLeadFeed';
 import { Button, Notice, Spinner, cn } from './ui';
 import { formatDateTime } from './time';
+import {
+  downloadFile,
+  generateProposalEmailUrl,
+  generateProposalSmsUrl,
+  getProposalUrl,
+  leadsToCsvString,
+  leadsToJsonString,
+  solarProposalScheduleToCsv,
+} from './leadExports';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -132,6 +147,7 @@ const WORKFLOW_STEPS = [
 function SunrunOptionBWorkflow({ lead }: { lead: Lead }) {
   const [open, setOpen] = useState(true);
   const [showPlan, setShowPlan] = useState(false);
+  const [copied, setCopied] = useState(false);
   const storageKey = `pg_workflow_${lead.id}`;
   const [completed, setCompleted] = useState<Record<string, boolean>>(() => {
     try {
@@ -149,6 +165,23 @@ function SunrunOptionBWorkflow({ lead }: { lead: Lead }) {
       } catch {}
       return next;
     });
+  };
+
+  const handleCopyLink = async () => {
+    const url = typeof window !== 'undefined'
+      ? `${window.location.origin}${getProposalUrl(lead)}`
+      : `https://thepowergenie.com${getProposalUrl(lead)}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    } catch {}
+  };
+
+  const handleDownloadSchedule = () => {
+    const csv = solarProposalScheduleToCsv(lead);
+    const fname = `${lead.name.toLowerCase().replace(/\s+/g, '-')}-sunrun-25yr-schedule.csv`;
+    downloadFile(fname, csv, 'text/csv;charset=utf-8;');
   };
 
   const doneCount = WORKFLOW_STEPS.filter((s) => completed[s.id]).length;
@@ -221,6 +254,77 @@ function SunrunOptionBWorkflow({ lead }: { lead: Lead }) {
               <span className="block text-[0.68rem] font-bold uppercase text-[#6B7280]">30% Federal ITC</span>
               <strong className="text-[1.1rem] font-extrabold text-[#FF6B00]">$14,170 Credit</strong>
               <span className="block text-[0.72rem] text-[#6B7280]">IRC Section 25D Tax Credit</span>
+            </div>
+          </div>
+
+          {/* Proposal & Export Command Center */}
+          <div className="rounded-xl border border-[#FFD0B0] bg-white p-3.5 shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#F1F5F9] pb-2.5">
+              <div>
+                <h4 className="m-0 text-[0.92rem] font-bold text-[#1A1A2E]">
+                  Proposal Package & Export Center
+                </h4>
+                <p className="m-0 text-[0.76rem] text-[#6B7280]">
+                  Printable Sunrun proposal, 25-yr financial schedule, share links & DocuSign contract
+                </p>
+              </div>
+              <span className="rounded-full bg-[#FFF5EC] px-2.5 py-0.5 text-[0.72rem] font-bold uppercase text-[#C2410C]">
+                Option B Package
+              </span>
+            </div>
+
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <a
+                href={getProposalUrl(lead)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-[#FF6B00] bg-[#FF6B00] px-3 py-1.5 text-[0.78rem] font-bold text-white shadow-sm hover:bg-[#E05E00] no-underline"
+              >
+                <FileText className="h-3.5 w-3.5" /> View / Print Proposal (PDF)
+              </a>
+
+              <button
+                type="button"
+                onClick={handleDownloadSchedule}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-[#CBD5E1] bg-white px-3 py-1.5 text-[0.78rem] font-bold text-[#1E7B34] shadow-sm hover:bg-[#F3FAF5]"
+                title="Download 25-year financial breakdown & solar output in CSV format"
+              >
+                <FileSpreadsheet className="h-3.5 w-3.5" /> 25-Yr Schedule (CSV)
+              </button>
+
+              <button
+                type="button"
+                onClick={handleCopyLink}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-[#CBD5E1] bg-white px-3 py-1.5 text-[0.78rem] font-bold text-[#334155] shadow-sm hover:bg-[#F8FAFC]"
+              >
+                {copied ? <Check className="h-3.5 w-3.5 text-[#1E7B34]" /> : <Copy className="h-3.5 w-3.5 text-[#6B7280]" />}
+                {copied ? 'Link Copied!' : 'Copy Proposal Link'}
+              </button>
+
+              <a
+                href={generateProposalEmailUrl(lead)}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-[#CBD5E1] bg-white px-3 py-1.5 text-[0.78rem] font-bold text-[#334155] shadow-sm hover:bg-[#F8FAFC] no-underline"
+              >
+                <Mail className="h-3.5 w-3.5 text-[#3B82F6]" /> Email Proposal
+              </a>
+
+              {lead.phone && (
+                <a
+                  href={generateProposalSmsUrl(lead)}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-[#CBD5E1] bg-white px-3 py-1.5 text-[0.78rem] font-bold text-[#334155] shadow-sm hover:bg-[#F8FAFC] no-underline"
+                >
+                  <Share2 className="h-3.5 w-3.5 text-[#10B981]" /> SMS Link
+                </a>
+              )}
+
+              <a
+                href="https://sunrun.my.salesforce-sites.com/purl/?srep=/powergenie"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-[#1A1A2E] bg-[#1A1A2E] px-3 py-1.5 text-[0.78rem] font-bold text-white shadow-sm hover:bg-[#2E2E48] no-underline"
+              >
+                <ExternalLink className="h-3.5 w-3.5 text-[#FF6B00]" /> DocuSign Portal
+              </a>
             </div>
           </div>
 
@@ -415,13 +519,35 @@ export default function LeadsTab({ feed }: { feed: LeadFeed }) {
           <h2 className="m-0 text-lg font-bold">Leads</h2>
           <p className="m-0 text-[0.86rem] text-[#6B7280]">Website assistant and booking page, newest first</p>
         </div>
-        <button
-          onClick={feed.refresh}
-          className="flex h-10 w-10 items-center justify-center rounded-full border border-[#E3E8EF] hover:border-[#1A1A2E]"
-          aria-label="Refresh leads"
-        >
-          <RefreshCw className={cn('h-4 w-4', feed.loading && 'animate-spin')} />
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          {feed.leads.length > 0 && (
+            <>
+              <button
+                type="button"
+                onClick={() => downloadFile('powergenie-all-leads.csv', leadsToCsvString(feed.leads), 'text/csv;charset=utf-8;')}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-[#E3E8EF] bg-white px-3 py-1.5 text-[0.78rem] font-semibold text-[#1A1A2E] shadow-sm hover:border-[#CBD5E1] hover:bg-[#F8FAFC]"
+                title="Download all leads in CSV format"
+              >
+                <FileSpreadsheet className="h-3.5 w-3.5 text-[#1E7B34]" /> Export CSV
+              </button>
+              <button
+                type="button"
+                onClick={() => downloadFile('powergenie-all-leads.json', leadsToJsonString(feed.leads), 'application/json')}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-[#E3E8EF] bg-white px-3 py-1.5 text-[0.78rem] font-semibold text-[#1A1A2E] shadow-sm hover:border-[#CBD5E1] hover:bg-[#F8FAFC]"
+                title="Download all leads in JSON format"
+              >
+                <Download className="h-3.5 w-3.5 text-[#FF6B00]" /> Export JSON
+              </button>
+            </>
+          )}
+          <button
+            onClick={feed.refresh}
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-[#E3E8EF] hover:border-[#1A1A2E]"
+            aria-label="Refresh leads"
+          >
+            <RefreshCw className={cn('h-4 w-4', feed.loading && 'animate-spin')} />
+          </button>
+        </div>
       </div>
 
       {feed.error && <div className="mt-4"><Notice tone="error">{feed.error}</Notice></div>}
@@ -514,24 +640,43 @@ export default function LeadsTab({ feed }: { feed: LeadFeed }) {
                   <SunrunOptionBWorkflow lead={lead} />
                 )}
 
-                <div className="mt-3 border-t border-[#EEF1F5] pt-3">
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-[#EEF1F5] pt-3">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => downloadFile(`${lead.name.toLowerCase().replace(/\s+/g, '-')}-lead.csv`, leadsToCsvString([lead]), 'text/csv;charset=utf-8;')}
+                      className="inline-flex items-center gap-1 rounded-lg border border-[#E3E8EF] bg-white px-2 py-1 text-[0.74rem] font-medium text-[#4A5568] hover:bg-[#F8FAFC]"
+                      title="Export this lead as CSV"
+                    >
+                      <FileSpreadsheet className="h-3 w-3 text-[#1E7B34]" /> Lead CSV
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => downloadFile(`${lead.name.toLowerCase().replace(/\s+/g, '-')}-lead.json`, leadsToJsonString([lead]), 'application/json')}
+                      className="inline-flex items-center gap-1 rounded-lg border border-[#E3E8EF] bg-white px-2 py-1 text-[0.74rem] font-medium text-[#4A5568] hover:bg-[#F8FAFC]"
+                      title="Export this lead as JSON"
+                    >
+                      <Download className="h-3 w-3 text-[#FF6B00]" /> Lead JSON
+                    </button>
+                  </div>
+
                   {lead.bill ? (
-                    <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#BFE3C6] bg-[#EEF9F0] px-3 py-2">
-                      <span className="inline-flex min-w-0 items-center gap-2 text-[0.88rem]">
-                        <FileText className="h-4 w-4 shrink-0 text-[#1E7B34]" />
-                        <span className="truncate">{lead.bill.name || 'Light bill'}</span>
+                    <div className="flex flex-wrap items-center gap-2 rounded-xl border border-[#BFE3C6] bg-[#EEF9F0] px-3 py-1.5">
+                      <span className="inline-flex min-w-0 items-center gap-1.5 text-[0.84rem]">
+                        <FileText className="h-3.5 w-3.5 shrink-0 text-[#1E7B34]" />
+                        <span className="max-w-[200px] truncate">{lead.bill.name || 'Light bill'}</span>
                       </span>
                       <Button
                         variant="ghost"
-                        className="min-h-[36px] px-3 text-[0.84rem]"
+                        className="min-h-[32px] px-2.5 text-[0.8rem]"
                         onClick={() => void openBill(lead)}
                         disabled={opening === `${lead.source}:${lead.id}`}
                       >
-                        <Eye className="h-4 w-4" /> {opening === `${lead.source}:${lead.id}` ? 'Opening…' : 'View bill'}
+                        <Eye className="h-3.5 w-3.5" /> {opening === `${lead.source}:${lead.id}` ? 'Opening…' : 'View bill'}
                       </Button>
                     </div>
                   ) : (
-                    <p className="m-0 text-[0.86rem] text-[#6B7280]">No bill attached.</p>
+                    <span className="text-[0.8rem] text-[#6B7280]">No bill attached.</span>
                   )}
                 </div>
               </li>

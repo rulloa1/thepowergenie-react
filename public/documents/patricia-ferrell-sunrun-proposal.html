@@ -13,6 +13,7 @@
       --bg-light: #F8FAFC;
       --green: #1E7B34;
       --red: #DC2626;
+      --blue: #2563EB;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -23,20 +24,61 @@
       padding: 24px 16px;
     }
     .container {
-      max-width: 860px;
+      max-width: 890px;
       margin: 0 auto;
       background: #ffffff;
       border-radius: 16px;
       box-shadow: 0 10px 30px rgba(0,0,0,0.08);
       padding: 40px;
+      position: relative;
     }
+    .actions-bar {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .actions-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 9px 14px;
+      font-size: 13px;
+      font-weight: 700;
+      border-radius: 8px;
+      text-decoration: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border: none;
+      font-family: inherit;
+    }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: #E05E00; }
+    .btn-navy { background: var(--navy); color: #fff; }
+    .btn-navy:hover { background: #2E2E48; }
+    .btn-green { background: var(--green); color: #fff; }
+    .btn-green:hover { background: #166534; }
+    .btn-outline { background: #fff; border: 1px solid var(--border); color: var(--navy); }
+    .btn-outline:hover { background: var(--bg-light); border-color: #CBD5E1; }
+    .btn-red { background: var(--red); color: #fff; }
+    .btn-red:hover { background: #B91C1C; }
+
     .header {
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
       border-bottom: 2px solid var(--primary);
-      padding-bottom: 24px;
-      margin-bottom: 28px;
+      padding-bottom: 20px;
+      margin-bottom: 24px;
       flex-wrap: wrap;
       gap: 16px;
     }
@@ -59,23 +101,25 @@
       color: var(--slate);
     }
     .meta-box strong { color: var(--navy); }
+
     .urgent-banner {
       background: #FEF2F2;
       border: 1px solid #FCA5A5;
       border-left: 6px solid var(--red);
       padding: 16px 20px;
       border-radius: 10px;
-      margin-bottom: 28px;
+      margin-bottom: 24px;
     }
     .urgent-title {
       color: var(--red);
-      font-size: 15px;
+      font-size: 14.5px;
       font-weight: 800;
       margin-bottom: 6px;
     }
     .urgent-text {
-      font-size: 13.5px;
+      font-size: 13px;
       color: #991B1B;
+      line-height: 1.5;
     }
     .urgent-actions {
       margin-top: 10px;
@@ -83,36 +127,17 @@
       gap: 12px;
       flex-wrap: wrap;
     }
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 10px 18px;
-      font-size: 14px;
-      font-weight: 700;
-      border-radius: 8px;
-      text-decoration: none;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      border: none;
-    }
-    .btn-red { background: var(--red); color: #fff; }
-    .btn-red:hover { background: #B91C1C; }
-    .btn-primary { background: var(--primary); color: #fff; }
-    .btn-primary:hover { background: #E05E00; }
-    .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--navy); }
-    .btn-outline:hover { background: var(--bg-light); }
-    
+
     .grid-4 {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 16px;
-      margin: 24px 0;
+      gap: 14px;
+      margin: 20px 0;
     }
     .card {
       border: 1px solid var(--border);
       border-radius: 12px;
-      padding: 16px;
+      padding: 14px 16px;
       background: var(--bg-light);
     }
     .card-label {
@@ -132,21 +157,24 @@
     .card-sub { font-size: 12px; color: var(--slate); }
 
     .section-title {
-      font-size: 18px;
+      font-size: 17px;
       font-weight: 800;
       color: var(--navy);
-      margin: 32px 0 14px 0;
-      padding-bottom: 8px;
+      margin: 28px 0 12px 0;
+      padding-bottom: 6px;
       border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
     table {
       width: 100%;
       border-collapse: collapse;
-      margin: 16px 0;
+      margin: 14px 0;
       font-size: 13.5px;
     }
     th, td {
-      padding: 12px 14px;
+      padding: 10px 14px;
       text-align: left;
       border-bottom: 1px solid var(--border);
     }
@@ -155,11 +183,35 @@
       font-weight: 700;
       color: var(--navy);
     }
+
+    .plan-toggle {
+      display: flex;
+      gap: 8px;
+      background: #E2E8F0;
+      padding: 4px;
+      border-radius: 8px;
+    }
+    .plan-btn {
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 700;
+      border: none;
+      cursor: pointer;
+      background: transparent;
+      color: var(--slate);
+    }
+    .plan-btn.active {
+      background: #fff;
+      color: var(--navy);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
     .img-box {
       border: 1px solid var(--border);
       border-radius: 12px;
       overflow: hidden;
-      margin: 20px 0;
+      margin: 18px 0;
       background: #001020;
       text-align: center;
     }
@@ -170,17 +222,28 @@
       margin: 0 auto;
     }
     .img-caption {
-      padding: 8px;
+      padding: 8px 12px;
       font-size: 12px;
       color: #94A3B8;
       background: #0A192F;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
     }
+    .img-caption a {
+      color: #38BDF8;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
     .signature-grid {
       display: grid;
       grid-template-columns: 2fr 1fr;
       gap: 24px;
-      margin-top: 40px;
-      padding-top: 24px;
+      margin-top: 36px;
+      padding-top: 20px;
       border-top: 1px dashed var(--border);
     }
     .sig-line {
@@ -188,27 +251,57 @@
       height: 40px;
       margin-bottom: 8px;
     }
-    .actions-bar {
-      display: flex;
-      justify-content: flex-end;
-      gap: 12px;
-      margin-bottom: 20px;
+
+    /* Toast */
+    #toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #1A1A2E;
+      color: #ffffff;
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-size: 13.5px;
+      font-weight: 600;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(10px);
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      z-index: 9999;
     }
+    #toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
     @media print {
       body { background: #fff; padding: 0; }
-      .container { box-shadow: none; border-radius: 0; padding: 20px; max-width: 100%; }
-      .actions-bar, .no-print { display: none !important; }
+      .container { box-shadow: none; border-radius: 0; padding: 15px; max-width: 100%; }
+      .actions-bar, .no-print, #toast, .plan-toggle { display: none !important; }
+      table { font-size: 12px; }
+      th, td { padding: 6px 10px; }
     }
   </style>
 </head>
 <body>
 
   <div class="container">
+    <!-- Interactive Export & Sharing Toolbar -->
     <div class="actions-bar no-print">
-      <button class="btn btn-outline" onclick="window.print()">🖨️ Print / Save as PDF</button>
-      <a class="btn btn-primary" href="https://sunrun.my.salesforce-sites.com/purl/?srep=/powergenie" target="_blank" rel="noopener noreferrer">
-        ✍️ Electronically Sign via DocuSign
-      </a>
+      <div class="actions-group">
+        <button class="btn btn-outline" onclick="window.print()">🖨️ Print / PDF</button>
+        <button class="btn btn-green" onclick="exportScheduleCsv()">📊 Export 25-Yr CSV</button>
+        <button class="btn btn-outline" onclick="exportProposalJson()">📥 Export JSON</button>
+      </div>
+      <div class="actions-group">
+        <button class="btn btn-outline" onclick="copyProposalLink()">📋 Copy Link</button>
+        <button class="btn btn-outline" onclick="emailProposal()">✉️ Email</button>
+        <button class="btn btn-outline" onclick="smsProposal()">📱 SMS</button>
+        <a class="btn btn-primary" href="https://sunrun.my.salesforce-sites.com/purl/?srep=/powergenie" target="_blank" rel="noopener noreferrer">
+          ✍️ DocuSign Sign
+        </a>
+      </div>
     </div>
 
     <div class="header">
@@ -237,7 +330,9 @@
     </div>
 
     <!-- Client & Property Details -->
-    <div class="section-title">1. Customer & Property Profile</div>
+    <div class="section-title">
+      <span>1. Customer & Property Profile</span>
+    </div>
     <table>
       <tr>
         <th style="width: 25%;">Customer Name</th>
@@ -268,13 +363,13 @@
       </div>
       <div class="card">
         <div class="card-label">New Solar Payment</div>
-        <div class="card-val card-green">$198.00</div>
-        <div class="card-sub">25-Yr Fixed · $0 Down</div>
+        <div class="card-val card-green" id="metric-monthly">$198.00</div>
+        <div class="card-sub" id="metric-sub">25-Yr Fixed · $0 Down</div>
       </div>
       <div class="card">
         <div class="card-label">Instant Monthly Relief</div>
-        <div class="card-val card-green">+$181.18</div>
-        <div class="card-sub">Saves $2,174 in Year 1</div>
+        <div class="card-val card-green" id="metric-relief">+$181.18</div>
+        <div class="card-sub" id="metric-yr1">Saves $2,174 in Year 1</div>
       </div>
       <div class="card">
         <div class="card-label">30% Federal ITC</div>
@@ -284,10 +379,18 @@
     </div>
 
     <!-- System & CAD Blueprint -->
-    <div class="section-title">2. Architectural CAD Roof Plan (9896 Hannah Ward Dr)</div>
+    <div class="section-title">
+      <span>2. Architectural CAD Roof Plan (9896 Hannah Ward Dr)</span>
+      <span class="no-print" style="font-size: 12px; font-weight: normal;">
+        <a href="/assets/plans/patricia-ferrell-solar-plan.jpg" target="_blank" style="color: var(--blue); text-decoration: none;">🔍 Expand Full Image</a>
+      </span>
+    </div>
     <div class="img-box">
       <img src="/assets/plans/patricia-ferrell-solar-plan.jpg" alt="Sunrun Solar CAD Roof Blueprint" />
-      <div class="img-caption">Architectural Roof Layout & Single-Line Electrical Schematic · 14.76 kW DC Solar + Tesla Powerwall 3 (13.5 kWh)</div>
+      <div class="img-caption">
+        <span>Architectural Roof Layout & Single-Line Electrical Schematic · 14.76 kW DC Solar + Tesla Powerwall 3 (13.5 kWh)</span>
+        <a href="/assets/plans/patricia-ferrell-solar-plan.jpg" download="patricia-ferrell-cad-blueprint.jpg" class="no-print">⬇️ Download Blueprint JPG</a>
+      </div>
     </div>
 
     <table>
@@ -328,8 +431,14 @@
       </tr>
     </table>
 
-    <!-- Financial Breakdown -->
-    <div class="section-title">3. Truth-in-Lending Financial Breakdown</div>
+    <!-- Financial Breakdown with Interactive Comparison -->
+    <div class="section-title">
+      <span>3. Truth-in-Lending Financial Breakdown</span>
+      <div class="plan-toggle no-print">
+        <button class="plan-btn active" id="btn-loan" onclick="switchFinancing('loan')">Option B: 25-Yr Loan ($198/mo)</button>
+        <button class="plan-btn" id="btn-cash" onclick="switchFinancing('cash')">Option B: Cash Purchase</button>
+      </div>
+    </div>
     <table>
       <tr>
         <th>Item Description</th>
@@ -347,17 +456,21 @@
         <td><strong>Net Effective Investment</strong></td>
         <td style="text-align: right;"><strong>$33,062.00</strong></td>
       </tr>
-      <tr>
+      <tr id="row-upfront">
         <td>Upfront Cash Required at Signing</td>
         <td style="text-align: right; font-weight: 800; color: var(--green);">$0.00</td>
       </tr>
-      <tr>
+      <tr id="row-monthly">
         <td>Fixed Monthly Payment (25 Years Fixed Loan)</td>
         <td style="text-align: right; font-weight: 800; color: var(--navy);">$198.00 / mo</td>
       </tr>
       <tr>
         <td>Montgomery County Property Tax Added Valuation</td>
         <td style="text-align: right; color: var(--green);"><strong>$0.00 (100% Exempt per TX Tax Code § 11.27)</strong></td>
+      </tr>
+      <tr id="row-savings">
+        <td>Estimated 25-Year Cumulative Utility Savings</td>
+        <td style="text-align: right; font-weight: 800; color: var(--green);">$82,410.00</td>
       </tr>
     </table>
 
@@ -396,6 +509,164 @@
     </div>
 
   </div>
+
+  <div id="toast">Link copied to clipboard!</div>
+
+  <script>
+    const PROPOSAL_DATA = {
+      proposalId: "SR-TX-2026-9896HW",
+      customer: "Patricia Ferrell",
+      address: "9896 Hannah Ward Dr, Conroe, TX 77385-3215",
+      utility: "Entergy Texas (IOU)",
+      accountNumber: "206732844",
+      meterNumber: "AN14864224",
+      contractId: "23929051",
+      systemSizeKw: 14.76,
+      panels: "36x 410W Monocrystalline Tier-1",
+      storage: "Tesla Powerwall 3 (13.5 kWh LFP)",
+      grossCost: 47232.00,
+      itcTaxCredit: 14170.00,
+      netInvestment: 33062.00,
+      monthlyPayment: 198.00,
+      termYears: 25,
+      yearOneGenerationKwh: 21250,
+      annualUtilitySavingsYr1: 2174.16,
+      advisor: "Horace Lawrence",
+      advisorCode: "srep=/powergenie"
+    };
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2600);
+    }
+
+    function switchFinancing(mode) {
+      const btnLoan = document.getElementById('btn-loan');
+      const btnCash = document.getElementById('btn-cash');
+      const rowUpfront = document.getElementById('row-upfront');
+      const rowMonthly = document.getElementById('row-monthly');
+      const rowSavings = document.getElementById('row-savings');
+      const mMonthly = document.getElementById('metric-monthly');
+      const mSub = document.getElementById('metric-sub');
+      const mRelief = document.getElementById('metric-relief');
+      const mYr1 = document.getElementById('metric-yr1');
+
+      if (mode === 'cash') {
+        btnCash.classList.add('active');
+        btnLoan.classList.remove('active');
+        rowUpfront.innerHTML = '<td>Upfront Net Cash Required (After 30% Tax Credit)</td><td style="text-align: right; font-weight: 800; color: var(--navy);">$33,062.00</td>';
+        rowMonthly.innerHTML = '<td>Monthly Solar Financing Payment</td><td style="text-align: right; font-weight: 800; color: var(--green);">$0.00 / mo (100% Owned)</td>';
+        rowSavings.innerHTML = '<td>25-Year Net Utility Savings (After System Cost)</td><td style="text-align: right; font-weight: 800; color: var(--green);">$128,450.00 (Payback: 6.8 Yrs)</td>';
+        mMonthly.textContent = '$0 / mo';
+        mSub.textContent = '100% Cash Paid';
+        mRelief.textContent = '+$386.18';
+        mYr1.textContent = 'Payback in 6.8 Years';
+      } else {
+        btnLoan.classList.add('active');
+        btnCash.classList.remove('active');
+        rowUpfront.innerHTML = '<td>Upfront Cash Required at Signing</td><td style="text-align: right; font-weight: 800; color: var(--green);">$0.00</td>';
+        rowMonthly.innerHTML = '<td>Fixed Monthly Payment (25 Years Fixed Loan)</td><td style="text-align: right; font-weight: 800; color: var(--navy);">$198.00 / mo</td>';
+        rowSavings.innerHTML = '<td>Estimated 25-Year Cumulative Utility Savings</td><td style="text-align: right; font-weight: 800; color: var(--green);">$82,410.00</td>';
+        mMonthly.textContent = '$198.00';
+        mSub.textContent = '25-Yr Fixed · $0 Down';
+        mRelief.textContent = '+$181.18';
+        mYr1.textContent = 'Saves $2,174 in Year 1';
+      }
+    }
+
+    function exportProposalJson() {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(PROPOSAL_DATA, null, 2));
+      const a = document.createElement('a');
+      a.href = dataStr;
+      a.download = "patricia-ferrell-sunrun-proposal.json";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      showToast("Downloaded proposal summary JSON!");
+    }
+
+    function exportScheduleCsv() {
+      const headers = [
+        "Year",
+        "Sunrun Solar Payment ($/yr)",
+        "Entergy Cost Without Solar ($/yr)",
+        "Entergy Grid Connection Fee ($/yr)",
+        "Total Energy Cost ($/yr)",
+        "Annual Savings ($)",
+        "Cumulative Savings ($)",
+        "Solar Output (kWh)"
+      ];
+
+      const baselineAnnualUtility = 401.18 * 12; // $4,814.16
+      const annualSolar = 198.00 * 12; // $2,376
+      const baseOutput = 21250;
+      let cumulativeSavings = 0;
+      const rows = [];
+
+      for (let y = 1; y <= 25; y++) {
+        const utilWithout = baselineAnnualUtility * Math.pow(1.04, y - 1);
+        const gridFee = (15 * 12) * Math.pow(1.04, y - 1);
+        const output = Math.round(baseOutput * Math.pow(0.995, y - 1));
+        const totalWith = annualSolar + gridFee;
+        const annualSav = utilWithout - totalWith;
+        cumulativeSavings += annualSav;
+
+        rows.push([
+          y,
+          annualSolar.toFixed(2),
+          utilWithout.toFixed(2),
+          gridFee.toFixed(2),
+          totalWith.toFixed(2),
+          annualSav.toFixed(2),
+          cumulativeSavings.toFixed(2),
+          output
+        ].join(','));
+      }
+
+      const csvContent = "data:text/csv;charset=utf-8," + encodeURIComponent([headers.join(','), ...rows].join('\r\n'));
+      const a = document.createElement('a');
+      a.href = csvContent;
+      a.download = "patricia-ferrell-sunrun-25yr-amortization.csv";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      showToast("Downloaded 25-Year Amortization CSV!");
+    }
+
+    function copyProposalLink() {
+      navigator.clipboard.writeText(window.location.href).then(() => {
+        showToast("Proposal link copied to clipboard!");
+      }).catch(() => {
+        showToast("Link: " + window.location.href);
+      });
+    }
+
+    function emailProposal() {
+      const subject = encodeURIComponent("Sunrun Brightbox 14.76 kW + Tesla Powerwall 3 Proposal for Patricia Ferrell");
+      const body = encodeURIComponent(
+        "Hi Patricia,\n\n" +
+        "Here is your official Sunrun Brightbox™ Ownership Proposal for 9896 Hannah Ward Dr:\n\n" +
+        "• System Size: 14.76 kW (36x 410W Monocrystalline Panels)\n" +
+        "• Battery: Tesla Powerwall 3 (13.5 kWh LFP Backup)\n" +
+        "• Monthly Payment: $198.00/mo ($0 down, 25-yr fixed loan)\n" +
+        "• 30% Federal Tax Credit: $14,170 (IRC Section 25D)\n" +
+        "• 25-Yr Full Sunrun Protect Warranty\n\n" +
+        "View the interactive proposal and architectural CAD blueprint here:\n" +
+        window.location.href + "\n\n" +
+        "Best regards,\nHorace Lawrence · Sunrun Solar Advisor\nRep Code: srep=/powergenie\nPhone: 800-368-3749"
+      );
+      window.location.href = "mailto:patricia.ferrell@conroe-home.com?subject=" + subject + "&body=" + body;
+    }
+
+    function smsProposal() {
+      const body = encodeURIComponent(
+        "Hi Patricia, here is your Sunrun 14.76 kW + Tesla Powerwall 3 solar proposal ($198/mo fixed, $0 down): " + window.location.href
+      );
+      window.location.href = "sms:8003683749?body=" + body;
+    }
+  </script>
 
 </body>
 </html>
