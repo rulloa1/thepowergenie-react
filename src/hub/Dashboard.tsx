@@ -35,18 +35,6 @@ export default function Dashboard() {
   const [ready, setReady] = useState(false);
   const [profile, setProfile] = useState<Profile | null | undefined>(undefined);
   const [needsPassword, setNeedsPassword] = useState(arrivalAuthType === 'invite' || arrivalAuthType === 'recovery');
-  const [pinAuth, setPinAuth] = useState(() => {
-    try {
-      const p = new URLSearchParams(window.location.search).get('pin');
-      if (p === '7007' || p === 'powergenie2026') {
-        localStorage.setItem('pg_hub_pin', p);
-        return true;
-      }
-      return localStorage.getItem('pg_hub_pin') === '7007' || localStorage.getItem('pg_hub_pin') === 'powergenie2026';
-    } catch {
-      return false;
-    }
-  });
 
   useEffect(() => {
     document.title = 'Referral Hub — The Power Genie';
@@ -84,19 +72,9 @@ export default function Dashboard() {
       .then(({ data }) => setProfile((data as Profile) ?? null));
   }, [session]);
 
-  if (pinAuth) {
-    const advisorProfile: Profile = {
-      id: 'advisor-horace-lawrence',
-      email: 'horace.lawrence@sunrun.com',
-      full_name: 'Horace Lawrence (Sunrun Advisor)',
-      role: 'owner',
-    };
-    return <HubApp profile={advisorProfile} />;
-  }
-
   if (!supabase) return <NotConfigured what="The Referral Hub" />;
   if (!ready) return <FullPageSpinner />;
-  if (!session) return <SignIn onPinUnlock={() => setPinAuth(true)} />;
+  if (!session) return <SignIn />;
   if (needsPassword) return <SetPassword onDone={() => setNeedsPassword(false)} />;
   if (profile === undefined) return <FullPageSpinner />;
   if (profile === null) return <NotInvited email={session.user.email ?? ''} />;
@@ -124,11 +102,9 @@ function AuthCard({ title, children }: { title: string; children: React.ReactNod
   );
 }
 
-function SignIn({ onPinUnlock }: { onPinUnlock?: () => void }) {
+function SignIn() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [pin, setPin] = useState('');
-  const [showPin, setShowPin] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [resetSent, setResetSent] = useState(false);
@@ -142,16 +118,6 @@ function SignIn({ onPinUnlock }: { onPinUnlock?: () => void }) {
     if (error) setError(error.message === 'Invalid login credentials' ? 'That email and password don’t match.' : error.message);
   };
 
-  const handlePinSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (pin === '7007' || pin === 'powergenie2026') {
-      try { localStorage.setItem('pg_hub_pin', pin); } catch {}
-      if (onPinUnlock) onPinUnlock();
-    } else {
-      setError('Invalid advisor PIN. Enter 7007 or powergenie2026.');
-    }
-  };
-
   const reset = async () => {
     if (!email.trim()) return setError('Enter your email first, then tap “Forgot password”.');
     setError(null);
@@ -161,54 +127,25 @@ function SignIn({ onPinUnlock }: { onPinUnlock?: () => void }) {
 
   return (
     <AuthCard title="Sign in">
-      {showPin ? (
-        <form onSubmit={handlePinSubmit} className="grid gap-4">
-          <div>
-            <label htmlFor="s-pin" className={labelClass}>Advisor PIN (Horace Lawrence)</label>
-            <input
-              id="s-pin"
-              type="password"
-              autoFocus
-              placeholder="Enter PIN (e.g. 7007)"
-              value={pin}
-              onChange={(e) => setPin(e.target.value)}
-              className={inputClass}
-            />
-          </div>
-          {error && <Notice tone="error">{error}</Notice>}
-          <Button type="submit" className="w-full">
-            Unlock Dashboard
-          </Button>
-          <Button type="button" variant="quiet" onClick={() => { setShowPin(false); setError(null); }} className="justify-self-center">
-            Sign in with email instead
-          </Button>
-        </form>
-      ) : (
-        <form onSubmit={signIn} className="grid gap-4">
-          <div>
-            <label htmlFor="s-email" className={labelClass}>Email</label>
-            <input id="s-email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} className={inputClass} />
-          </div>
-          <div>
-            <label htmlFor="s-pass" className={labelClass}>Password</label>
-            <input id="s-pass" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} className={inputClass} />
-          </div>
-          {error && <Notice tone="error">{error}</Notice>}
-          {resetSent && <Notice tone="success">If that email has access, a reset link is on its way.</Notice>}
-          <Button type="submit" disabled={busy} className="w-full">
-            {busy ? <Spinner className="h-4 w-4" /> : 'Sign in'}
-          </Button>
-          <div className="flex items-center justify-between pt-1">
-            <Button type="button" variant="quiet" onClick={reset}>
-              Forgot password?
-            </Button>
-            <Button type="button" variant="quiet" onClick={() => { setShowPin(true); setError(null); }} className="text-[#FF6B00]">
-              Advisor PIN Access
-            </Button>
-          </div>
-          <p className="m-0 text-center text-[0.8rem] text-[#6B7280]">Access is by invitation only.</p>
-        </form>
-      )}
+      <form onSubmit={signIn} className="grid gap-4">
+        <div>
+          <label htmlFor="s-email" className={labelClass}>Email</label>
+          <input id="s-email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} className={inputClass} />
+        </div>
+        <div>
+          <label htmlFor="s-pass" className={labelClass}>Password</label>
+          <input id="s-pass" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} className={inputClass} />
+        </div>
+        {error && <Notice tone="error">{error}</Notice>}
+        {resetSent && <Notice tone="success">If that email has access, a reset link is on its way.</Notice>}
+        <Button type="submit" disabled={busy} className="w-full">
+          {busy ? <Spinner className="h-4 w-4" /> : 'Sign in'}
+        </Button>
+        <Button type="button" variant="quiet" onClick={reset} className="justify-self-center">
+          Forgot password?
+        </Button>
+        <p className="m-0 text-center text-[0.8rem] text-[#6B7280]">Access is by invitation only.</p>
+      </form>
     </AuthCard>
   );
 }
@@ -277,49 +214,65 @@ function HubApp({ profile }: { profile: Profile }) {
   };
 
   return (
-    <div className="flex min-h-[100dvh] flex-col bg-[#F6F7FB] text-[#1A1A2E]">
-      <header className="sticky top-0 z-30 border-b border-[#E3E8EF] bg-white/95 backdrop-blur">
+    <div className="flex min-h-[100dvh] flex-col bg-gradient-to-b from-[#F8FAFC] via-[#F8FAFC] to-[#F1F5F9] text-[#1A1A2E]">
+      <header className="sticky top-0 z-30 border-b border-[#E2E8F0] bg-white/90 shadow-[0_2px_14px_rgba(15,23,42,0.03)] backdrop-blur-md">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-2.5 sm:px-6">
           <div className="flex min-w-0 items-center gap-3">
-            <BrandMark className="h-9" />
-            <span className="hidden text-[0.8rem] font-semibold uppercase tracking-[0.12em] text-[#FF6B00] sm:inline">Referral Hub</span>
+            <BrandMark className="h-9 shadow-sm" />
+            <div className="flex items-center gap-2">
+              <span className="hidden text-[0.8rem] font-bold uppercase tracking-[0.14em] text-[#FF6B00] sm:inline">Referral Hub</span>
+              <span className="hidden items-center gap-1.5 rounded-full border border-[#A7F3D0] bg-[#ECFDF5] px-2.5 py-0.5 text-[0.7rem] font-bold text-[#065F46] md:inline-flex">
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#10B981]" />
+                Live Advisor
+              </span>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="hidden text-right text-[0.82rem] leading-tight sm:block">
-              <span className="block font-semibold">{profile.full_name || profile.email}</span>
-              <span className="text-[#6B7280]">{profile.role === 'owner' ? 'Owner' : 'Admin'}</span>
-            </span>
+          <div className="flex items-center gap-2.5">
+            <div className="flex items-center gap-2">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#1A1A2E] text-[0.78rem] font-bold text-white shadow-sm">
+                {(profile.full_name || profile.email).slice(0, 2).toUpperCase()}
+              </div>
+              <span className="hidden text-left text-[0.82rem] leading-tight sm:block">
+                <span className="block font-bold text-[#1A1A2E]">{profile.full_name || profile.email}</span>
+                <span className="text-[0.72rem] font-semibold text-[#64748B]">{profile.role === 'owner' ? 'Sunrun Partner' : 'Admin'}</span>
+              </span>
+            </div>
             <button
               onClick={() => supabase!.auth.signOut()}
-              className="flex h-10 w-10 items-center justify-center rounded-full border border-[#E3E8EF] hover:border-[#1A1A2E]"
+              className="flex h-9 w-9 items-center justify-center rounded-xl border border-[#E2E8F0] bg-white text-[#64748B] transition-all hover:border-[#1A1A2E] hover:bg-[#F8FAFC] hover:text-[#1A1A2E]"
               aria-label="Sign out"
-              title="Sign out"
+              title="Sign out of Referral Hub"
             >
               <LogOut className="h-4 w-4" />
             </button>
           </div>
         </div>
-        <nav className="mx-auto flex max-w-5xl gap-1 px-3 sm:px-5" aria-label="Dashboard sections">
-          {TABS.map(({ id, label, icon: Icon }) => (
-            <button
-              key={id}
-              onClick={() => go(id)}
-              aria-current={tab === id ? 'page' : undefined}
-              className={cn(
-                'flex min-h-[44px] min-w-0 flex-1 items-center justify-center gap-1.5 border-b-2 px-2 text-[0.86rem] font-semibold transition sm:flex-none sm:gap-2 sm:px-5 sm:text-[0.92rem]',
-                tab === id ? 'border-[#FF6B00] text-[#1A1A2E]' : 'border-transparent text-[#6B7280] hover:text-[#1A1A2E]',
-              )}
-            >
-              <Icon className="h-4 w-4 shrink-0" />
-              <span>{label}</span>
-              {id === 'leads' && leads.unseen > 0 && (
-                <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-[#FF6B00] px-1.5 text-[0.68rem] font-bold leading-5 text-white">
-                  {leads.unseen > 99 ? '99+' : leads.unseen}
-                  <span className="sr-only"> new</span>
-                </span>
-              )}
-            </button>
-          ))}
+        <nav className="mx-auto flex max-w-5xl gap-1.5 px-3 sm:px-5" aria-label="Dashboard sections">
+          {TABS.map(({ id, label, icon: Icon }) => {
+            const active = tab === id;
+            return (
+              <button
+                key={id}
+                onClick={() => go(id)}
+                aria-current={active ? 'page' : undefined}
+                className={cn(
+                  'relative flex min-h-[42px] min-w-0 flex-1 items-center justify-center gap-1.5 rounded-t-xl px-2.5 text-[0.86rem] font-bold transition-all sm:flex-none sm:gap-2 sm:px-5 sm:text-[0.9rem]',
+                  active
+                    ? 'border-b-2 border-[#FF6B00] bg-[#FFFBF7] text-[#FF6B00]'
+                    : 'border-b-2 border-transparent text-[#64748B] hover:bg-[#F8FAFC] hover:text-[#1A1A2E]',
+                )}
+              >
+                <Icon className={cn('h-4 w-4 shrink-0 transition-transform', active && 'scale-110 text-[#FF6B00]')} />
+                <span>{label}</span>
+                {id === 'leads' && leads.unseen > 0 && (
+                  <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-[#FF6B00] px-1.5 text-[0.66rem] font-extrabold leading-5 text-white shadow-sm shadow-[#FF6B00]/30">
+                    {leads.unseen > 99 ? '99+' : leads.unseen}
+                    <span className="sr-only"> new leads</span>
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </nav>
       </header>
 

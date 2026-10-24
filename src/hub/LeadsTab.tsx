@@ -65,17 +65,17 @@ function UsageHistory({ points }: { points: Lead['usageHistory'] }) {
   const withYear = years.size > 1;
   const summary = points.map((point) => `${point.month} ${Math.round(point.kwh).toLocaleString('en-US')} kWh`).join(', ');
   return (
-    <div>
+    <div className="rounded-xl border border-[#EEF2F6] bg-[#F8FAFC]/70 p-2.5">
       <div className="overflow-x-auto" role="img" aria-label={`Monthly usage: ${summary}`}>
-        <div className="flex h-24 items-end gap-1" style={{ minWidth: Math.max(points.length * 32, 160) }}>
+        <div className="flex h-24 items-end gap-1.5" style={{ minWidth: Math.max(points.length * 34, 160) }}>
           {points.map((point) => (
-            <div key={point.month} className="flex min-w-7 flex-1 flex-col items-center justify-end gap-1" title={`${point.month}: ${point.kwh} kWh`}>
-              <span className="text-[0.62rem] font-semibold text-[#4A5568]">{Math.round(point.kwh)}</span>
+            <div key={point.month} className="group flex min-w-7 flex-1 flex-col items-center justify-end gap-1" title={`${point.month}: ${point.kwh} kWh`}>
+              <span className="text-[0.62rem] font-bold text-[#475569] transition-colors group-hover:text-[#FF6B00]">{Math.round(point.kwh)}</span>
               <div
-                className="w-full rounded-t bg-[#FF6B00]"
-                style={{ height: `${Math.max(6, (point.kwh / max) * 52)}px` }}
+                className="w-full rounded-t-md bg-gradient-to-t from-[#FF6B00] to-[#FFA25B] shadow-sm transition-all group-hover:brightness-110"
+                style={{ height: `${Math.max(8, (point.kwh / max) * 52)}px` }}
               />
-              <span className="text-[0.62rem] text-[#6B7280]">{monthLabel(point.month, withYear)}</span>
+              <span className="text-[0.62rem] font-medium text-[#64748B]">{monthLabel(point.month, withYear)}</span>
             </div>
           ))}
         </div>
@@ -86,9 +86,9 @@ function UsageHistory({ points }: { points: Lead['usageHistory'] }) {
 
 function Fact({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="min-w-0">
-      <dt className="text-[0.72rem] font-semibold uppercase tracking-wide text-[#6B7280]">{label}</dt>
-      <dd className="m-0 mt-0.5 break-words text-[0.95rem]">{children}</dd>
+    <div className="min-w-0 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-2.5 transition-colors hover:border-[#CBD5E1]">
+      <dt className="text-[0.68rem] font-bold uppercase tracking-wider text-[#64748B]">{label}</dt>
+      <dd className="m-0 mt-0.5 break-words text-[0.92rem] font-bold text-[#0F172A]">{children}</dd>
     </div>
   );
 }
@@ -491,13 +491,7 @@ export default function LeadsTab({ feed }: { feed: LeadFeed }) {
   };
 
   const openBill = async (lead: Lead) => {
-    if (!lead.bill) return;
-    if (lead.bill.bucket === 'local' || lead.bill.path.startsWith('/assets/')) {
-      window.open(lead.bill.path, '_blank', 'noopener');
-      void select(lead);
-      return;
-    }
-    if (!supabase) return;
+    if (!lead.bill || !supabase) return;
     setOpening(`${lead.source}:${lead.id}`);
     setBillError(null);
     const { data, error } = await supabase.storage.from(lead.bill.bucket).createSignedUrl(lead.bill.path, 60);
@@ -618,7 +612,7 @@ export default function LeadsTab({ feed }: { feed: LeadFeed }) {
                   <Fact label="kWh">{formatKwh(lead.kwh)}</Fact>
                   <Fact label="Bill amount">{formatMoney(lead.amount)}</Fact>
                   <Fact label="Appointment">{formatWhen(lead.appointment)}</Fact>
-                  <Fact label="Account #">{lead.accountNumber || (lead.name.toLowerCase().includes('patricia') ? '206732844' : lead.esiid || '—')}</Fact>
+                  <Fact label="ESI ID">{lead.esiid || '—'}</Fact>
                   <Fact label="Meter">{lead.meterNumber || '—'}</Fact>
                   <Fact label="Average monthly">{lead.avgMonthlyKwh == null ? '—' : formatKwh(lead.avgMonthlyKwh)}</Fact>
                 </dl>

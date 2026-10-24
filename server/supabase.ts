@@ -1,4 +1,4 @@
-import { timingSafeEqual } from 'node:crypto'
+import { createHash, timingSafeEqual } from 'node:crypto'
 import { HttpError } from './http.js'
 
 /**
@@ -118,16 +118,37 @@ export async function hubBusyIntervals(fromIso: string, toIso: string): Promise<
   return busy
 }
 
-/** True when Authorization is the website's service-role key. Used by the booking function's bill read. */
+/**
+ * Constant-time string compare. Digests are fixed length, so this stays
+ * constant-time when the shared secret and the service-role key differ in length.
+ * Empty values never match, including an empty token against an unset secret.
+ */
+function secretEqual(provided: string, expected: string): boolean {
+  if (!provided || !expected) return false
+  const left = createHash('sha256').update(provided, 'utf8').digest()
+  const right = createHash('sha256').update(expected, 'utf8').digest()
+  return timingSafeEqual(left, right)
+}
+
+/**
+ * True when Authorization carries a secret this server was configured with.
+ * Used by the booking function's bill read (`POST /api/assistant?route=extract`).
+ *
+ * Supabase injects SUPABASE_SERVICE_ROLE_KEY into Edge Functions and refuses
+ * secrets whose names start with SUPABASE_, so the function's key is often not
+ * the `sb_secret_` value set on Vercel. EXTRACT_SHARED_SECRET is the shared
+ * value both sides can set. The service-role key remains a fallback for
+ * environments where those two keys really are the same.
+ *
+ * A missing or unknown token is rejected. The route is never anonymous.
+ */
 export function serviceBearerAuthorized(request: Request): boolean {
-  const expected = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim()
   const header = request.headers.get('authorization') || ''
   const token = header.replace(/^Bearer\s+/i, '').trim()
-  if (!expected || !token) return false
-  const left = Buffer.from(token)
-  const right = Buffer.from(expected)
-  if (left.length !== right.length) return false
-  return timingSafeEqual(left, right)
+  if (!token) return false
+  const shared = (process.env.EXTRACT_SHARED_SECRET || '').trim()
+  const service = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim()
+  return secretEqual(token, shared) || secretEqual(token, service)
 }
 
 type SignedUpload = { url: string; token?: string }
