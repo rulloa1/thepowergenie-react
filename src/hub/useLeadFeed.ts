@@ -25,53 +25,6 @@ export type Lead = {
   bill: { bucket: string; path: string; name: string | null } | null;
   cancelled: boolean;
   unseen: boolean;
-  workflowOption?: 'option_b_ownership' | 'option_a_ppa';
-  accountNumber?: string | null;
-  notes?: string | null;
-};
-
-export const PATRICIA_FERRELL_LEAD: Lead = {
-  id: 'lead-patricia-ferrell-conroe',
-  source: 'customer',
-  sourceLabel: 'Sunrun Option B Workflow',
-  createdAt: '2026-09-23T16:45:00.000Z',
-  name: 'Patricia Ferrell',
-  phone: '800-368-3749',
-  email: 'patricia.ferrell@conroe-home.com',
-  address: '9896 Hanna Ward Dr, Conroe, TX 77385-3215',
-  kwh: 2713,
-  amount: 795.24,
-  appointment: '2026-10-24T15:00:00.000Z',
-  esiid: '23929051',
-  meterNumber: 'AN14864224',
-  accountNumber: '206732844',
-  tdu: 'Entergy Texas (Rate: TX_RS · Acct: 206732844)',
-  repPuctCertificate: 'Entergy IOU',
-  avgMonthlyKwh: 1780,
-  workflowOption: 'option_b_ownership',
-  notes: 'Disconnect notice issued 09/18/2026. Past due $394.06 + Current $401.18 = $795.24 total balance. Brightbox Ownership (14.76 kW + Powerwall 3) cuts monthly cost to $198/mo.',
-  usageHistory: [
-    { month: '2025-09', kwh: 2046 },
-    { month: '2025-10', kwh: 1580 },
-    { month: '2025-11', kwh: 1390 },
-    { month: '2025-12', kwh: 1420 },
-    { month: '2026-01', kwh: 1480 },
-    { month: '2026-02', kwh: 1360 },
-    { month: '2026-03', kwh: 1410 },
-    { month: '2026-04', kwh: 1520 },
-    { month: '2026-05', kwh: 1690 },
-    { month: '2026-06', kwh: 2280 },
-    { month: '2026-07', kwh: 2540 },
-    { month: '2026-08', kwh: 2680 },
-    { month: '2026-09', kwh: 2713 }
-  ],
-  bill: {
-    bucket: 'local',
-    path: '/assets/bills/patricia-ferrell-entergy-bill.png',
-    name: 'Entergy Texas Statement - Sep 2026 ($795.24 Total Due)'
-  },
-  cancelled: false,
-  unseen: true
 };
 
 export type LeadFeed = {
@@ -251,27 +204,20 @@ function toLeads(customers: CustomerRow[], files: FileRow[], appointments: Appoi
     };
   });
 
-  const combined = [...fromCustomers, ...fromBookings].sort((left, right) => {
+  return [...fromCustomers, ...fromBookings].sort((left, right) => {
     const delta = Date.parse(right.createdAt) - Date.parse(left.createdAt);
     if (Number.isFinite(delta) && delta !== 0) return delta;
     return right.id < left.id ? -1 : right.id > left.id ? 1 : 0;
   });
-
-  const hasPatricia = combined.some(
-    (l) => l.name.toLowerCase().includes('patricia') || (l.address && l.address.includes('Hanna Ward'))
-  );
-
-  return hasPatricia ? combined : [PATRICIA_FERRELL_LEAD, ...combined];
 }
 
 export function useLeadFeed(userId: string): LeadFeed {
-  const [leads, setLeads] = useState<Lead[]>([PATRICIA_FERRELL_LEAD]);
+  const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async (silent = false) => {
     if (!supabase) {
-      setLeads([PATRICIA_FERRELL_LEAD]);
       setLoading(false);
       return;
     }
@@ -283,9 +229,7 @@ export function useLeadFeed(userId: string): LeadFeed {
       supabase.from('hub_lead_seen').select('source, lead_id').eq('user_id', userId),
     ]);
     if (customers.error || files.error || appointments.error || seen.error) {
-      // Keep Patricia Ferrell loaded so advisor workflow is always accessible
-      setLeads([PATRICIA_FERRELL_LEAD]);
-      setError("Note: Remote database sync pending. Local customer workflow active.");
+      setError("Couldn't load leads. Apply the latest database migration, then refresh.");
       if (!silent) setLoading(false);
       return;
     }
