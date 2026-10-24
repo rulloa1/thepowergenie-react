@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   brandPageFromPath,
+  legacyHtmlBrandSource,
   legacyNodeRedirect,
+  referralBrandFromLocation,
   marketingViewFromLocation,
   marketingViewHref,
   normalizePath,
@@ -27,6 +29,11 @@ describe('public routes', () => {
   it('keeps Referral Hub routes and redirects the old /node booking URLs', () => {
     expect(sitePage('/book')).toBe('book');
     expect(sitePage('/dashboard')).toBe('dashboard');
+    expect(sitePage('/homeowner')).toBe('homeowner');
+    expect(sitePage('/portal')).toBe('homeowner');
+    expect(sitePage('/referrals')).toBe('homeowner');
+    expect(showMarketingAssistant(sitePage('/homeowner'))).toBe(false);
+    expect(showRouterLegalFooter('/homeowner')).toBe(true);
     expect(legacyNodeRedirect(normalizePath('/node/book'))).toBe('/book');
     expect(legacyNodeRedirect(normalizePath('/node/dashboard'))).toBe('/dashboard');
     expect(legacyNodeRedirect(normalizePath('/node/book/'))).toBe('/book');
@@ -47,6 +54,19 @@ describe('public routes', () => {
 
     expect(brandPageFromPath('/')).toBeNull();
     expect(brandPageFromPath('/privacy')).toBeNull();
+    expect(brandPageFromPath('/celebrity-solar.html')).toBeNull();
+    expect(brandPageFromPath('/homeowner')).toBeNull();
+    expect(marketingViewFromLocation('/celebrity-solar.html', '')).toBe('journey');
+    expect(legacyHtmlBrandSource('/celebrity-solar.html')).toBe('celebrity-solar');
+    expect(legacyHtmlBrandSource('/hip-hop-solar.html')).toBe('hip-hop-solar');
+    expect(legacyHtmlBrandSource('/gas-genie.html')).toBe('gas-genie');
+    expect(legacyHtmlBrandSource('/nested/celebrity-solar.html')).toBe('celebrity-solar');
+    expect(legacyHtmlBrandSource('/celebrity-solar')).toBeNull();
+    expect(legacyHtmlBrandSource('/brands.html')).toBeNull();
+    expect(referralBrandFromLocation('/celebrity-solar')).toBe('celebrity-solar');
+    expect(referralBrandFromLocation('/celebrity-solar.html')).toBe('celebrity-solar');
+    expect(referralBrandFromLocation('/brands')).toBeNull();
+    expect(referralBrandFromLocation('/homeowner')).toBeNull();
     expect(marketingViewFromLocation('/', '?view=brands')).toBe('brands');
     expect(marketingViewFromLocation('/', '?view=gas-genie')).toBe('gas-genie');
     expect(marketingViewFromLocation('/celebrity-solar', '?view=brands')).toBe('celebrity-solar');

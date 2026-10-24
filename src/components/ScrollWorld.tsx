@@ -694,6 +694,12 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
                 >
                   Our brands
                 </a>
+                <a
+                  href="/homeowner"
+                  className="sw-nav__item whitespace-nowrap font-inherit text-[0.82rem] no-underline px-3.5 py-1.5 rounded-full transition-colors duration-200 text-[#FF6B00] font-bold hover:bg-[#FF6B00]/10"
+                >
+                  🔋 Homeowner Portal
+                </a>
               </nav>
 
               {/* Mobile Menu */}
@@ -705,7 +711,7 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
                     <span className="absolute bottom-0 left-0 w-full h-0.5 bg-[var(--sw-ink)] rounded-full group-open:-rotate-45 group-open:bottom-2 transition-all duration-300"></span>
                   </div>
                 </summary>
-                <nav className="fixed top-[74px] right-4 w-48 py-2 bg-white rounded-2xl shadow-xl border border-[rgba(0,0,0,0.05)] overflow-hidden" aria-label="Mobile navigation">
+                <nav className="fixed top-[74px] right-4 w-52 py-2 bg-white rounded-2xl shadow-xl border border-[rgba(0,0,0,0.05)] overflow-hidden" aria-label="Mobile navigation">
                   {config.sections.map((s, i) => (
                     <button
                       key={s.id}
@@ -721,6 +727,13 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
                       {s.label}
                     </button>
                   ))}
+                  <div className="h-px bg-gray-100 my-1" />
+                  <a
+                    href="/homeowner"
+                    className="block w-full text-left px-5 py-3 text-[0.9rem] font-bold text-[#FF6B00] active:bg-orange-50 no-underline"
+                  >
+                    🔋 Homeowner & Referrals
+                  </a>
                   <div className="h-px bg-gray-100 my-1" />
                   <a
                     href="/brands"

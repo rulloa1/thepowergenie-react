@@ -1,6 +1,27 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { AlertTriangle, ChevronDown, ChevronUp, Eye, FileText, Mail, MapPin, Phone, Printer, RefreshCw, ShieldCheck, X, Zap } from 'lucide-react';
+import {
+  AlertTriangle,
+  Check,
+  CheckCircle2,
+  ChevronDown,
+  ChevronUp,
+  Copy,
+  Download,
+  ExternalLink,
+  Eye,
+  FileSpreadsheet,
+  FileText,
+  Mail,
+  MapPin,
+  Phone,
+  Printer,
+  RefreshCw,
+  Share2,
+  ShieldCheck,
+  X,
+  Zap,
+} from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { HTML_PREVIEW_SANDBOX, isHtmlObjectPath, openHtmlBlob, readSignedHtml } from './htmlDocument';
 import {
@@ -16,6 +37,15 @@ import {
 import type { Lead, LeadFeed } from './useLeadFeed';
 import { Button, Notice, Spinner, cn } from './ui';
 import { formatDateTime } from './time';
+import {
+  downloadFile,
+  generateProposalEmailUrl,
+  generateProposalSmsUrl,
+  getProposalUrl,
+  leadsToCsvString,
+  leadsToJsonString,
+  solarProposalScheduleToCsv,
+} from './leadExports';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -49,17 +79,17 @@ function UsageHistory({ points }: { points: Lead['usageHistory'] }) {
   const withYear = years.size > 1;
   const summary = points.map((point) => `${point.month} ${Math.round(point.kwh).toLocaleString('en-US')} kWh`).join(', ');
   return (
-    <div>
+    <div className="rounded-xl border border-[#EEF2F6] bg-[#F8FAFC]/70 p-2.5">
       <div className="overflow-x-auto" role="img" aria-label={`Monthly usage: ${summary}`}>
-        <div className="flex h-24 items-end gap-1" style={{ minWidth: Math.max(points.length * 32, 160) }}>
+        <div className="flex h-24 items-end gap-1.5" style={{ minWidth: Math.max(points.length * 34, 160) }}>
           {points.map((point) => (
-            <div key={point.month} className="flex min-w-7 flex-1 flex-col items-center justify-end gap-1" title={`${point.month}: ${point.kwh} kWh`}>
-              <span className="text-[0.62rem] font-semibold text-[#4A5568]">{Math.round(point.kwh)}</span>
+            <div key={point.month} className="group flex min-w-7 flex-1 flex-col items-center justify-end gap-1" title={`${point.month}: ${point.kwh} kWh`}>
+              <span className="text-[0.62rem] font-bold text-[#475569] transition-colors group-hover:text-[#FF6B00]">{Math.round(point.kwh)}</span>
               <div
-                className="w-full rounded-t bg-[#FF6B00]"
-                style={{ height: `${Math.max(6, (point.kwh / max) * 52)}px` }}
+                className="w-full rounded-t-md bg-gradient-to-t from-[#FF6B00] to-[#FFA25B] shadow-sm transition-all group-hover:brightness-110"
+                style={{ height: `${Math.max(8, (point.kwh / max) * 52)}px` }}
               />
-              <span className="text-[0.62rem] text-[#6B7280]">{monthLabel(point.month, withYear)}</span>
+              <span className="text-[0.62rem] font-medium text-[#64748B]">{monthLabel(point.month, withYear)}</span>
             </div>
           ))}
         </div>
@@ -70,9 +100,9 @@ function UsageHistory({ points }: { points: Lead['usageHistory'] }) {
 
 function Fact({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="min-w-0">
-      <dt className="text-[0.72rem] font-semibold uppercase tracking-wide text-[#6B7280]">{label}</dt>
-      <dd className="m-0 mt-0.5 break-words text-[0.95rem]">{children}</dd>
+    <div className="min-w-0 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-2.5 transition-colors hover:border-[#CBD5E1]">
+      <dt className="text-[0.68rem] font-bold uppercase tracking-wider text-[#64748B]">{label}</dt>
+      <dd className="m-0 mt-0.5 break-words text-[0.92rem] font-bold text-[#0F172A]">{children}</dd>
     </div>
   );
 }
@@ -521,13 +551,35 @@ export default function LeadsTab({ feed }: { feed: LeadFeed }) {
           <h2 className="m-0 text-lg font-bold">Leads</h2>
           <p className="m-0 text-[0.86rem] text-[#6B7280]">Website assistant and booking page, newest first</p>
         </div>
-        <button
-          onClick={feed.refresh}
-          className="flex h-10 w-10 items-center justify-center rounded-full border border-[#E3E8EF] hover:border-[#1A1A2E]"
-          aria-label="Refresh leads"
-        >
-          <RefreshCw className={cn('h-4 w-4', feed.loading && 'animate-spin')} />
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          {feed.leads.length > 0 && (
+            <>
+              <button
+                type="button"
+                onClick={() => downloadFile('powergenie-all-leads.csv', leadsToCsvString(feed.leads), 'text/csv;charset=utf-8;')}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-[#E3E8EF] bg-white px-3 py-1.5 text-[0.78rem] font-semibold text-[#1A1A2E] shadow-sm hover:border-[#CBD5E1] hover:bg-[#F8FAFC]"
+                title="Download all leads in CSV format"
+              >
+                <FileSpreadsheet className="h-3.5 w-3.5 text-[#1E7B34]" /> Export CSV
+              </button>
+              <button
+                type="button"
+                onClick={() => downloadFile('powergenie-all-leads.json', leadsToJsonString(feed.leads), 'application/json')}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-[#E3E8EF] bg-white px-3 py-1.5 text-[0.78rem] font-semibold text-[#1A1A2E] shadow-sm hover:border-[#CBD5E1] hover:bg-[#F8FAFC]"
+                title="Download all leads in JSON format"
+              >
+                <Download className="h-3.5 w-3.5 text-[#FF6B00]" /> Export JSON
+              </button>
+            </>
+          )}
+          <button
+            onClick={feed.refresh}
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-[#E3E8EF] hover:border-[#1A1A2E]"
+            aria-label="Refresh leads"
+          >
+            <RefreshCw className={cn('h-4 w-4', feed.loading && 'animate-spin')} />
+          </button>
+        </div>
       </div>
 
       {feed.error && <div className="mt-4"><Notice tone="error">{feed.error}</Notice></div>}
@@ -616,26 +668,47 @@ export default function LeadsTab({ feed }: { feed: LeadFeed }) {
                   <UsageHistory points={lead.usageHistory} />
                 </div>
 
-                {lead.source === 'customer' && <SunrunOptionBWorkflow lead={lead} />}
+                {/* Sunrun Option B Workflow Integration for Option B Leads */}
+                {(lead.source === 'customer' || lead.workflowOption === 'option_b_ownership') && (
+                  <SunrunOptionBWorkflow lead={lead} />
+                )}
 
-                <div className="mt-3 border-t border-[#EEF1F5] pt-3">
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-[#EEF1F5] pt-3">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => downloadFile(`${lead.name.toLowerCase().replace(/\s+/g, '-')}-lead.csv`, leadsToCsvString([lead]), 'text/csv;charset=utf-8;')}
+                      className="inline-flex items-center gap-1 rounded-lg border border-[#E3E8EF] bg-white px-2 py-1 text-[0.74rem] font-medium text-[#4A5568] hover:bg-[#F8FAFC]"
+                      title="Export this lead as CSV"
+                    >
+                      <FileSpreadsheet className="h-3 w-3 text-[#1E7B34]" /> Lead CSV
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => downloadFile(`${lead.name.toLowerCase().replace(/\s+/g, '-')}-lead.json`, leadsToJsonString([lead]), 'application/json')}
+                      className="inline-flex items-center gap-1 rounded-lg border border-[#E3E8EF] bg-white px-2 py-1 text-[0.74rem] font-medium text-[#4A5568] hover:bg-[#F8FAFC]"
+                      title="Export this lead as JSON"
+                    >
+                      <Download className="h-3 w-3 text-[#FF6B00]" /> Lead JSON
+                    </button>
+                  </div>
                   {lead.bill ? (
-                    <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#BFE3C6] bg-[#EEF9F0] px-3 py-2">
-                      <span className="inline-flex min-w-0 items-center gap-2 text-[0.88rem]">
-                        <FileText className="h-4 w-4 shrink-0 text-[#1E7B34]" />
-                        <span className="truncate">{lead.bill.name || 'Light bill'}</span>
+                    <div className="flex flex-wrap items-center gap-2 rounded-xl border border-[#BFE3C6] bg-[#EEF9F0] px-3 py-1.5">
+                      <span className="inline-flex min-w-0 items-center gap-1.5 text-[0.84rem]">
+                        <FileText className="h-3.5 w-3.5 shrink-0 text-[#1E7B34]" />
+                        <span className="max-w-[200px] truncate">{lead.bill.name || 'Light bill'}</span>
                       </span>
                       <Button
                         variant="ghost"
-                        className="min-h-[36px] px-3 text-[0.84rem]"
+                        className="min-h-[32px] px-2.5 text-[0.8rem]"
                         onClick={() => void openBill(lead)}
                         disabled={opening === `${lead.source}:${lead.id}`}
                       >
-                        <Eye className="h-4 w-4" /> {opening === `${lead.source}:${lead.id}` ? 'Opening…' : 'View bill'}
+                        <Eye className="h-3.5 w-3.5" /> {opening === `${lead.source}:${lead.id}` ? 'Opening…' : 'View bill'}
                       </Button>
                     </div>
                   ) : (
-                    <p className="m-0 text-[0.86rem] text-[#6B7280]">No bill attached.</p>
+                    <span className="text-[0.8rem] text-[#6B7280]">No bill attached.</span>
                   )}
                 </div>
               </li>

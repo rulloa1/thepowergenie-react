@@ -7,8 +7,8 @@ import { Config } from './types';
 import LegalFooter from './components/LegalFooter';
 import { openAssistant } from './lib/openAssistant';
 import {
-  brandPageFromPath,
   isBrandPage,
+  referralBrandFromLocation,
   marketingViewFromLocation,
   marketingViewHref,
   type MarketingView,
@@ -148,9 +148,9 @@ export default function App() {
     const allowed = new Set(['celebrity-solar', 'hip-hop-solar', 'gas-genie']);
     const params = new URLSearchParams(window.location.search);
     const incoming = params.get('source');
-    const pageBrand = brandPageFromPath(window.location.pathname);
+    const pageBrand = referralBrandFromLocation(window.location.pathname);
 
-    let currentSource = allowed.has(incoming || '') ? incoming : pageBrand && allowed.has(pageBrand) ? pageBrand : null;
+    let currentSource = allowed.has(incoming || '') ? incoming : pageBrand;
     
     try {
       if (currentSource) {
@@ -326,8 +326,12 @@ export default function App() {
             </p>
           </div>
         </div>
-        <p className="mt-8 max-w-[1280px] text-[0.98rem] leading-relaxed text-[#4A5568]">
+        <p className="mt-8 max-w-[1280px] text-[0.98rem] leading-relaxed text-[#4A5568] flex flex-wrap gap-4 items-center">
           <a href="/book" className="font-semibold text-[#0066CC] no-underline hover:underline focus-visible:underline">Book a one-hour call on Horace’s calendar</a>
+          <span className="text-gray-300">·</span>
+          <a href="/homeowner" className="inline-flex items-center gap-1.5 font-bold text-[#FF6B00] no-underline hover:underline focus-visible:underline">
+            🔋 Homeowner App: Tesla Powerwall Monitor & $1,000 Referral Program →
+          </a>
         </p>
         <LegalFooter homeChrome />
       </section>

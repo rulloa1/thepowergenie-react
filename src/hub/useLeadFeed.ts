@@ -29,6 +29,7 @@ export type Lead = {
   notes: string | null;
   cancelled: boolean;
   unseen: boolean;
+  workflowOption?: 'option_b_ownership' | 'option_a_ppa';
 };
 
 export type LeadFeed = {

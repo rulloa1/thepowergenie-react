@@ -39,6 +39,10 @@ test('the Vercel SPA rewrite serves /privacy and /terms', () => {
   assert.equal(pattern.test('/celebrity-solar'), true)
   assert.equal(pattern.test('/hip-hop-solar'), true)
   assert.equal(pattern.test('/gas-genie'), true)
+  assert.equal(pattern.test('/homeowner'), true)
+  assert.equal(pattern.test('/portal'), true)
+  assert.equal(pattern.test('/referrals'), true)
+  assert.equal(pattern.test('/celebrity-solar.html'), true)
   assert.equal(pattern.test('/api/book'), false)
   assert.equal(pattern.test('/api/google/callback'), false)
   assert.equal(pattern.test('/brand-lockups/celebrity-solar-lockup.webp'), false)
@@ -50,6 +54,7 @@ test('the Vercel SPA rewrite serves /privacy and /terms', () => {
   const main = readFileSync('src/main.tsx', 'utf8')
   assert.match(main, /sitePage\(path\) === 'privacy'/)
   assert.match(main, /sitePage\(path\) === 'terms'/)
+  assert.match(main, /sitePage\(path\) === 'homeowner'/)
   assert.match(main, /legacyNodeRedirect/)
   assert.doesNotMatch(main, /pages\/BookPage/)
   assert.doesNotMatch(main, /pages\/DashboardPage/)
@@ -72,12 +77,15 @@ test('the Vercel SPA rewrite serves /privacy and /terms', () => {
 
   const scroll = readFileSync('src/components/ScrollWorld.tsx', 'utf8')
   assert.match(scroll, /href="\/brands"/)
+  assert.match(scroll, /href="\/homeowner"/)
   assert.doesNotMatch(scroll, /Coming soon/)
   assert.doesNotMatch(scroll, /aria-disabled/)
   assert.doesNotMatch(scroll, /cursor-not-allowed/)
 
   assert.match(app, /marketingViewFromLocation/)
   assert.match(app, /onNavigateBrands/)
+  assert.match(app, /referralBrandFromLocation/)
+  assert.match(app, /href="\/homeowner"/)
 
   const privacy = readFileSync('src/pages/PrivacyPage.tsx', 'utf8')
   for (const name of [

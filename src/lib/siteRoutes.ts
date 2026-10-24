@@ -1,6 +1,6 @@
 /** Client routes for the public site. Old /node booking URLs redirect to the Referral Hub. */
 
-export type SitePage = 'privacy' | 'terms' | 'book' | 'dashboard' | 'marketing';
+export type SitePage = 'privacy' | 'terms' | 'book' | 'dashboard' | 'homeowner' | 'marketing';
 
 /** Brand family pages rendered by the marketing app. Gas Genie is reachable; its service stays marked coming soon. */
 export const BRAND_PAGES = ['brands', 'celebrity-solar', 'hip-hop-solar', 'gas-genie'] as const;
@@ -21,6 +21,33 @@ export function isBrandPage(value: string | null | undefined): value is BrandPag
 export function brandPageFromPath(pathname: string): BrandPageId | null {
   const slug = normalizePath(pathname).slice(1);
   return isBrandPage(slug) ? slug : null;
+}
+
+/** Quote-form referral brands. The family index is a page, not a source. */
+const REFERRAL_BRANDS = ['celebrity-solar', 'hip-hop-solar', 'gas-genie'] as const;
+
+export type ReferralBrand = (typeof REFERRAL_BRANDS)[number];
+
+export function isReferralBrand(value: string | null | undefined): value is ReferralBrand {
+  return !!value && (REFERRAL_BRANDS as readonly string[]).includes(value);
+}
+
+/**
+ * Legacy files such as `/celebrity-solar.html` still attribute the quote form.
+ * They are not marketing routes; those stay extensionless (`/celebrity-solar`).
+ */
+export function legacyHtmlBrandSource(pathname: string): ReferralBrand | null {
+  const file = pathname.split('/').pop() ?? '';
+  if (!file.includes('.html')) return null;
+  const slug = file.replace('.html', '');
+  return isReferralBrand(slug) ? slug : null;
+}
+
+/** Extensionless brand paths, then legacy `.html` filenames. */
+export function referralBrandFromLocation(pathname: string): ReferralBrand | null {
+  const fromRoute = brandPageFromPath(pathname);
+  if (isReferralBrand(fromRoute)) return fromRoute;
+  return legacyHtmlBrandSource(pathname);
 }
 
 /**
@@ -73,6 +100,7 @@ export function sitePage(path: string): SitePage {
   if (path === '/terms') return 'terms';
   if (path === '/book') return 'book';
   if (path === '/dashboard') return 'dashboard';
+  if (path === '/homeowner' || path === '/portal' || path === '/referrals') return 'homeowner';
   return 'marketing';
 }
 
