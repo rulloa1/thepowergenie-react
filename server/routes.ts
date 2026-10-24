@@ -95,6 +95,8 @@ const PENDING_BILL = /^pending\/[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][
 
 /**
  * Service-to-service bill read used by the /book Edge Function.
+ * Authorization must be EXTRACT_SHARED_SECRET or, as a fallback, this server's
+ * SUPABASE_SERVICE_ROLE_KEY. Callers without one of those secrets are rejected.
  * The caller uploads into powergenie/pending and passes that path.
  * This is the same extractor the assistant uses. The temp object is deleted here.
  */
