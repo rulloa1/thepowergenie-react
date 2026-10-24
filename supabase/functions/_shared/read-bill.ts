@@ -23,10 +23,14 @@ export async function readUploadedBill(admin: Admin, bytes: Uint8Array, mediaTyp
     console.error('booking_bill_extract_skipped', mediaType || 'unknown')
     return null
   }
-  const key = serviceKey()
+  // Supabase injects SUPABASE_SERVICE_ROLE_KEY and will not let a function
+  // secret override a SUPABASE_ name, so that value often differs from the
+  // sb_secret_ key on Vercel. EXTRACT_SHARED_SECRET is a name both sides can
+  // set. The service-role key is only the fallback when the shared secret is unset.
+  const key = env('EXTRACT_SHARED_SECRET') || serviceKey()
   const site = siteOrigin(env('SITE_URL'))
   if (!key) {
-    console.error('booking_bill_extract_skipped', 'no_service_key')
+    console.error('booking_bill_extract_skipped', 'no_extract_auth')
     return null
   }
   const uploadId = crypto.randomUUID()

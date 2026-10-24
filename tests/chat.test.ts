@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { afterEach, test } from 'node:test'
 import { handleApi } from '../server/routes'
 import { ASSISTANT_INSTRUCTIONS, mockAiEnabled } from '../server/prompt'
-import { supabaseConfig } from '../server/supabase'
+import { serviceBearerAuthorized, supabaseConfig } from '../server/supabase'
 import { resetRateLimits } from '../server/rate-limit'
 
 const original = { ...process.env }
@@ -62,6 +62,39 @@ function roleJwt(role: string): string {
   const payload = Buffer.from(JSON.stringify({ role })).toString('base64url')
   return `${header}.${payload}.sig`
 }
+
+function requestWithAuth(value: string | null): Request {
+  const headers = new Headers()
+  if (value !== null) headers.set('authorization', value)
+  return new Request('http://127.0.0.1:3000/api/assistant?route=extract', { method: 'POST', headers })
+}
+
+test('extract auth accepts the shared secret or the service key and rejects everyone else', () => {
+  process.env.SUPABASE_SERVICE_ROLE_KEY = 'sb_secret_test_only'
+  delete process.env.EXTRACT_SHARED_SECRET
+  assert.equal(serviceBearerAuthorized(requestWithAuth('Bearer sb_secret_test_only')), true)
+  assert.equal(serviceBearerAuthorized(requestWithAuth('bearer   sb_secret_test_only')), true)
+  assert.equal(serviceBearerAuthorized(requestWithAuth(null)), false)
+  assert.equal(serviceBearerAuthorized(requestWithAuth('Bearer')), false)
+  assert.equal(serviceBearerAuthorized(requestWithAuth('Bearer wrong')), false)
+  assert.equal(serviceBearerAuthorized(requestWithAuth('Bearer sb_secret_test_only_extra')), false)
+  assert.equal(serviceBearerAuthorized(requestWithAuth('Basic sb_secret_test_only')), false)
+
+  process.env.EXTRACT_SHARED_SECRET = '  extract-shared-test-secret  '
+  assert.equal(serviceBearerAuthorized(requestWithAuth('Bearer extract-shared-test-secret')), true)
+  assert.equal(serviceBearerAuthorized(requestWithAuth('Bearer sb_secret_test_only')), true)
+  assert.equal(serviceBearerAuthorized(requestWithAuth('Bearer extract-shared-test-secret-nope')), false)
+  assert.equal(serviceBearerAuthorized(requestWithAuth('Bearer ')), false)
+
+  process.env.EXTRACT_SHARED_SECRET = ''
+  assert.equal(serviceBearerAuthorized(requestWithAuth('Bearer ')), false)
+  assert.equal(serviceBearerAuthorized(requestWithAuth('Bearer sb_secret_test_only')), true)
+
+  delete process.env.SUPABASE_SERVICE_ROLE_KEY
+  delete process.env.EXTRACT_SHARED_SECRET
+  assert.equal(serviceBearerAuthorized(requestWithAuth('Bearer sb_secret_test_only')), false)
+  assert.equal(serviceBearerAuthorized(requestWithAuth('Bearer extract-shared-test-secret')), false)
+})
 
 test('the assistant accepts an sb_secret key or a service_role JWT and refuses an anon JWT', () => {
   process.env.SUPABASE_URL = 'https://example.supabase.co/'

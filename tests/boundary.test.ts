@@ -16,6 +16,7 @@ test('the browser bundle cannot see the service role key', () => {
   for (const path of paths) {
     const text = readFileSync(path, 'utf8')
     assert.equal(text.includes('SUPABASE_SERVICE_ROLE_KEY'), false, path)
+    assert.equal(text.includes('EXTRACT_SHARED_SECRET'), false, path)
     assert.equal(text.includes('sb_secret_'), false, path)
     assert.equal(text.includes('AI_GATEWAY_API_KEY'), false, path)
   }

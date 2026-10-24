@@ -228,6 +228,52 @@ test('the booking extractor requires the service key and returns the bill', asyn
   assert.equal(gone.status, 400)
 })
 
+test('extract accepts EXTRACT_SHARED_SECRET and still accepts the service key', async () => {
+  process.env.EXTRACT_SHARED_SECRET = 'shared-extract-secret-value'
+  const uploadBill = async (ip: string) => {
+    const upload = await api('/api/uploads', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ fileName: 'bill.png', mimeType: 'image/png', sizeBytes: png.length }),
+    }, ip)
+    assert.equal(upload.status, 200, await upload.clone().text())
+    const started = await upload.json() as { signedUrl: string }
+    const form = new FormData()
+    form.append('', new Blob([png], { type: 'image/png' }), 'bill.png')
+    assert.equal((await fetch(started.signedUrl, { method: 'PUT', body: form })).status, 200)
+    const marker = '/object/upload/sign/powergenie/'
+    const pathname = new URL(started.signedUrl).pathname
+    return decodeURIComponent(pathname.slice(pathname.indexOf(marker) + marker.length))
+  }
+  const extract = (path: string, authorization: string | null, ip: string) => {
+    const headers = new Headers({ 'content-type': 'application/json' })
+    if (authorization) headers.set('authorization', authorization)
+    return api('/api/assistant?route=extract', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ path }),
+    }, ip)
+  }
+  try {
+    const path = await uploadBill('203.0.113.70')
+    assert.equal((await extract(path, null, '203.0.113.71')).status, 401)
+    assert.equal((await extract(path, 'Bearer x', '203.0.113.72')).status, 401)
+    assert.equal((await extract(path, 'Bearer sb_secret_test_only_extra', '203.0.113.73')).status, 401)
+
+    const shared = await extract(path, 'Bearer shared-extract-secret-value', '203.0.113.74')
+    assert.equal(shared.status, 200, await shared.clone().text())
+    const sharedFields = await shared.json() as { fields: { esiid: string } }
+    assert.equal(sharedFields.fields.esiid, '10443720012345678')
+
+    const again = await uploadBill('203.0.113.75')
+    const viaService = await extract(again, 'Bearer sb_secret_test_only', '203.0.113.76')
+    assert.equal(viaService.status, 200, await viaService.clone().text())
+    assert.equal((await extract(again, null, '203.0.113.77')).status, 401)
+  } finally {
+    delete process.env.EXTRACT_SHARED_SECRET
+  }
+})
+
 test('cross-origin and oversized bill requests are rejected', async () => {
   const blocked = await handleApi(new Request('http://127.0.0.1:3000/api/slots', {
     headers: { origin: 'https://evil.example', host: '127.0.0.1:3000', 'x-forwarded-for': '203.0.113.43' },
