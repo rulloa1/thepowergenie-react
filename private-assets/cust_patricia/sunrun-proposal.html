@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sunrun Brightbox™ Ownership Proposal - Patricia Ferrell</title>
+  <style>
+    :root {
+      --primary: #FF6B00;
+      --navy: #1A1A2E;
+      --slate: #4A5568;
+      --border: #E2E8F0;
+      --bg-light: #F8FAFC;
+      --green: #1E7B34;
+      --red: #DC2626;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: var(--navy);
+      background: #F1F5F9;
+      line-height: 1.6;
+      padding: 24px 16px;
+    }
+    .container {
+      max-width: 860px;
+      margin: 0 auto;
+      background: #ffffff;
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+      padding: 40px;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      border-bottom: 2px solid var(--primary);
+      padding-bottom: 24px;
+      margin-bottom: 28px;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .brand-title {
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--primary);
+      letter-spacing: -0.5px;
+    }
+    .brand-subtitle {
+      font-size: 13px;
+      color: var(--slate);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .meta-box {
+      text-align: right;
+      font-size: 13px;
+      color: var(--slate);
+    }
+    .meta-box strong { color: var(--navy); }
+    .urgent-banner {
+      background: #FEF2F2;
+      border: 1px solid #FCA5A5;
+      border-left: 6px solid var(--red);
+      padding: 16px 20px;
+      border-radius: 10px;
+      margin-bottom: 28px;
+    }
+    .urgent-title {
+      color: var(--red);
+      font-size: 15px;
+      font-weight: 800;
+      margin-bottom: 6px;
+    }
+    .urgent-text {
+      font-size: 13.5px;
+      color: #991B1B;
+    }
+    .urgent-actions {
+      margin-top: 10px;
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 18px;
+      font-size: 14px;
+      font-weight: 700;
+      border-radius: 8px;
+      text-decoration: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border: none;
+    }
+    .btn-red { background: var(--red); color: #fff; }
+    .btn-red:hover { background: #B91C1C; }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: #E05E00; }
+    .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--navy); }
+    .btn-outline:hover { background: var(--bg-light); }
+    
+    .grid-4 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      margin: 24px 0;
+    }
+    .card {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      background: var(--bg-light);
+    }
+    .card-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      font-weight: 700;
+      color: var(--slate);
+    }
+    .card-val {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--navy);
+      margin: 4px 0;
+    }
+    .card-green { color: var(--green); }
+    .card-orange { color: var(--primary); }
+    .card-sub { font-size: 12px; color: var(--slate); }
+
+    .section-title {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--navy);
+      margin: 32px 0 14px 0;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0;
+      font-size: 13.5px;
+    }
+    th, td {
+      padding: 12px 14px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    th {
+      background: #F8FAFC;
+      font-weight: 700;
+      color: var(--navy);
+    }
+    .img-box {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      margin: 20px 0;
+      background: #001020;
+      text-align: center;
+    }
+    .img-box img {
+      max-width: 100%;
+      height: auto;
+      display: block;
+      margin: 0 auto;
+    }
+    .img-caption {
+      padding: 8px;
+      font-size: 12px;
+      color: #94A3B8;
+      background: #0A192F;
+    }
+    .signature-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 24px;
+      margin-top: 40px;
+      padding-top: 24px;
+      border-top: 1px dashed var(--border);
+    }
+    .sig-line {
+      border-bottom: 1.5px solid var(--navy);
+      height: 40px;
+      margin-bottom: 8px;
+    }
+    .actions-bar {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    @media print {
+      body { background: #fff; padding: 0; }
+      .container { box-shadow: none; border-radius: 0; padding: 20px; max-width: 100%; }
+      .actions-bar, .no-print { display: none !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <div class="actions-bar no-print">
+      <button class="btn btn-outline" onclick="window.print()">🖨️ Print / Save as PDF</button>
+      <a class="btn btn-primary" href="https://sunrun.my.salesforce-sites.com/purl/?srep=/powergenie" target="_blank" rel="noopener noreferrer">
+        ✍️ Electronically Sign via DocuSign
+      </a>
+    </div>
+
+    <div class="header">
+      <div>
+        <div class="brand-title">SUNRUN BRIGHTBOX™ OWNERSHIP PROPOSAL</div>
+        <div class="brand-subtitle">Option B: 14.76 kW Solar + Tesla Powerwall 3 · Conroe, TX</div>
+      </div>
+      <div class="meta-box">
+        <div><strong>Proposal ID:</strong> SR-TX-2026-9896HW</div>
+        <div><strong>Date:</strong> October 24, 2026</div>
+        <div><strong>Advisor:</strong> Horace Lawrence (<code>srep=/powergenie</code>)</div>
+      </div>
+    </div>
+
+    <!-- Entergy Delay Notice -->
+    <div class="urgent-banner">
+      <div class="urgent-title">⚠️ PRIORITY STEP 0: ENTERGY TEXAS 14-DAY DISCONNECT HOLD</div>
+      <div class="urgent-text">
+        <strong>Account # 206732844</strong> | Meter # <strong>AN14864224</strong> | Contract # <strong>23929051</strong><br>
+        Past Due: <strong>$394.06</strong> · Current: <strong>$401.18</strong> · Total Due: <strong>$795.24</strong> (Disconnect Notice 09/18/2026)<br>
+        Customer Care instructions: Request an immediate 14-day hold pending solar installation under Entergy Schedule IPODG.
+      </div>
+      <div class="urgent-actions no-print">
+        <a class="btn btn-red" href="tel:18003683749">📞 Call Entergy Texas (1-800-368-3749)</a>
+      </div>
+    </div>
+
+    <!-- Client & Property Details -->
+    <div class="section-title">1. Customer & Property Profile</div>
+    <table>
+      <tr>
+        <th style="width: 25%;">Customer Name</th>
+        <td style="width: 35%;"><strong>Patricia Ferrell</strong></td>
+        <th style="width: 20%;">Electric Utility</th>
+        <td style="width: 20%;">Entergy Texas (IOU)</td>
+      </tr>
+      <tr>
+        <th>Service Address</th>
+        <td>9896 Hannah Ward Dr, Conroe, TX 77385-3215</td>
+        <th>Rate Class</th>
+        <td>TX_RS Residential</td>
+      </tr>
+      <tr>
+        <th>Summer Consumption</th>
+        <td><strong>2,713 kWh</strong> (90.4 kWh/day)</td>
+        <th>Current Bill</th>
+        <td><strong style="color: var(--red);">$401.18 / month</strong></td>
+      </tr>
+    </table>
+
+    <!-- Financial Impact Grid -->
+    <div class="grid-4">
+      <div class="card">
+        <div class="card-label">Current Utility Bill</div>
+        <div class="card-val" style="color: var(--red);">$401.18</div>
+        <div class="card-sub">Escalating Entergy rate</div>
+      </div>
+      <div class="card">
+        <div class="card-label">New Solar Payment</div>
+        <div class="card-val card-green">$198.00</div>
+        <div class="card-sub">25-Yr Fixed · $0 Down</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Instant Monthly Relief</div>
+        <div class="card-val card-green">+$181.18</div>
+        <div class="card-sub">Saves $2,174 in Year 1</div>
+      </div>
+      <div class="card">
+        <div class="card-label">30% Federal ITC</div>
+        <div class="card-val card-orange">$14,170</div>
+        <div class="card-sub">IRC Section 25D Credit</div>
+      </div>
+    </div>
+
+    <!-- System & CAD Blueprint -->
+    <div class="section-title">2. Architectural CAD Roof Plan (9896 Hannah Ward Dr)</div>
+    <div class="img-box">
+      <p style="margin: 0; padding: 16px; text-align: center;">The CAD roof plan and the property footprint plan are separate files in this private customer folder. Open them from the Referral Hub. They are not published on the website.</p>
+      <div class="img-caption">Architectural Roof Layout & Single-Line Electrical Schematic · 14.76 kW DC Solar + Tesla Powerwall 3 (13.5 kWh)</div>
+    </div>
+
+    <table>
+      <tr>
+        <th>Component</th>
+        <th>Specification</th>
+        <th>Engineering Advantage</th>
+      </tr>
+      <tr>
+        <td><strong>Photovoltaic Array</strong></td>
+        <td><strong>14.76 kW DC</strong> (36× 410W Monocrystalline Tier-1 Panels)</td>
+        <td>Produces ~21,250 kWh/year (96.5% annual energy offset)</td>
+      </tr>
+      <tr>
+        <td><strong>West Array (Array 1)</strong></td>
+        <td>18 Modules (7.38 kW) · Azimuth 270°</td>
+        <td>Offsets peak afternoon AC consumption (2:00 PM – 7:30 PM) during 100°F+ heat</td>
+      </tr>
+      <tr>
+        <td><strong>East Array (Array 2)</strong></td>
+        <td>18 Modules (7.38 kW) · Azimuth 90°</td>
+        <td>Captures morning sun (8:00 AM – 1:30 PM) to fully recharge Tesla Powerwall 3</td>
+      </tr>
+      <tr>
+        <td><strong>Battery Storage</strong></td>
+        <td><strong>1× Tesla Powerwall 3</strong> (13.5 kWh LFP)</td>
+        <td>Whole-home backup during freezes & storms; 11.5 kW continuous power (starts central AC)</td>
+      </tr>
+      <tr>
+        <td><strong>Fire Safety Compliance</strong></td>
+        <td>36-Inch Continuous Ridge Setbacks</td>
+        <td>Compliant with Montgomery County Fire Code for emergency ventilation access</td>
+      </tr>
+      <tr>
+        <td><strong>Entergy Interconnection</strong></td>
+        <td>External Lockable Manual AC Disconnect Switch</td>
+        <td>Compliant with Entergy Schedule IPODG; isolates solar under utility inspection</td>
+      </tr>
+    </table>
+
+    <!-- Financial Breakdown -->
+    <div class="section-title">3. Truth-in-Lending Financial Breakdown</div>
+    <table>
+      <tr>
+        <th>Item Description</th>
+        <th style="text-align: right;">Amount</th>
+      </tr>
+      <tr>
+        <td>Gross Turnkey System (36 Panels, Powerwall 3, Gateway, Permits & Installation)</td>
+        <td style="text-align: right;"><strong>$47,232.00</strong></td>
+      </tr>
+      <tr>
+        <td>30% Federal Clean Energy Tax Credit (IRC Section 25D)</td>
+        <td style="text-align: right; color: var(--green);"><strong>-$14,170.00</strong></td>
+      </tr>
+      <tr>
+        <td><strong>Net Effective Investment</strong></td>
+        <td style="text-align: right;"><strong>$33,062.00</strong></td>
+      </tr>
+      <tr>
+        <td>Upfront Cash Required at Signing</td>
+        <td style="text-align: right; font-weight: 800; color: var(--green);">$0.00</td>
+      </tr>
+      <tr>
+        <td>Fixed Monthly Payment (25 Years Fixed Loan)</td>
+        <td style="text-align: right; font-weight: 800; color: var(--navy);">$198.00 / mo</td>
+      </tr>
+      <tr>
+        <td>Montgomery County Property Tax Added Valuation</td>
+        <td style="text-align: right; color: var(--green);"><strong>$0.00 (100% Exempt per TX Tax Code § 11.27)</strong></td>
+      </tr>
+    </table>
+
+    <!-- Warranty -->
+    <div class="section-title">4. Sunrun Protect™ 25-Year Comprehensive Warranty</div>
+    <ul style="margin-left: 20px; font-size: 13.5px; color: var(--slate); line-height: 1.8;">
+      <li><strong>25-Year Full Equipment Coverage:</strong> Complete repair or replacement on panels, Tesla Powerwall 3, and mounting hardware.</li>
+      <li><strong>25-Year Roof Penetration Leak Warranty:</strong> Waterproof seal guarantee on every roof mount.</li>
+      <li><strong>25-Year Production Guarantee:</strong> Guaranteed annual kWh output with financial reimbursement if underperformed.</li>
+      <li><strong>24/7 Telemetry & Monitoring:</strong> Active app monitoring with automated error detection and technician dispatch.</li>
+    </ul>
+
+    <!-- Signatures -->
+    <div class="signature-grid">
+      <div>
+        <div class="sig-line"></div>
+        <div style="font-size: 13px;"><strong>Patricia Ferrell (Customer Signature)</strong></div>
+        <div style="font-size: 12px; color: var(--slate);">Entergy Texas Acct # 206732844 · 9896 Hannah Ward Dr</div>
+      </div>
+      <div>
+        <div class="sig-line"></div>
+        <div style="font-size: 13px;"><strong>Date</strong></div>
+      </div>
+    </div>
+
+    <div style="margin-top: 32px; padding: 16px; background: #FFF5EC; border-radius: 10px; border: 1px solid #FFE0CC; text-align: center;">
+      <p style="font-size: 13.5px; color: #9A3412; font-weight: 600; margin-bottom: 10px;">
+        Ready to lock in your $198/mo fixed rate and file the Entergy 14-day hold?
+      </p>
+      <a class="btn btn-primary" href="https://sunrun.my.salesforce-sites.com/purl/?srep=/powergenie" target="_blank" rel="noopener noreferrer">
+        ✍️ Sign Electronically via Sunrun DocuSign Portal
+      </a>
+      <div style="font-size: 11.5px; color: #9A3412; margin-top: 8px;">
+        Advisor: Horace Lawrence · Rep Code: <code>srep=/powergenie</code>
+      </div>
+    </div>
+
+  </div>
+
+</body>
+</html>

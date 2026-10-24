@@ -23,6 +23,10 @@ export type Lead = {
   avgMonthlyKwh: number | null;
   usageHistory: UsageMonth[] | null;
   bill: { bucket: string; path: string; name: string | null } | null;
+  accountNumber: string | null;
+  pastDue: number | null;
+  currentCharges: number | null;
+  notes: string | null;
   cancelled: boolean;
   unseen: boolean;
 };
@@ -47,6 +51,8 @@ type CustomerRow = {
   kwh_this_period: number | null;
   total_due: number | null;
   current_charges: number | null;
+  past_due: number | null;
+  account_number: string | null;
   appointment_date: string | null;
   esiid: string | null;
   meter_number: string | null;
@@ -94,7 +100,7 @@ type AppointmentRow = {
 type SeenRow = { source: string; lead_id: string };
 
 const CUSTOMER_COLUMNS =
-  'id,created_at,customer_name,service_address,phone,email,notes,kwh_this_period,total_due,current_charges,appointment_date,esiid,meter_number,tdu,rep_puct_certificate,avg_monthly_kwh,usage_history' as const;
+  'id,created_at,customer_name,service_address,phone,email,notes,kwh_this_period,total_due,current_charges,past_due,account_number,appointment_date,esiid,meter_number,tdu,rep_puct_certificate,avg_monthly_kwh,usage_history' as const;
 
 function asNumber(value: unknown): number | null {
   if (typeof value === 'number' && Number.isFinite(value)) return value;
@@ -171,6 +177,10 @@ function toLeads(customers: CustomerRow[], files: FileRow[], appointments: Appoi
       avgMonthlyKwh: asNumber(row.avg_monthly_kwh),
       usageHistory: asUsage(row.usage_history),
       bill: file ? { bucket: 'powergenie', path: file.storage_path, name: file.file_name } : null,
+      accountNumber: text(row.account_number),
+      pastDue: asNumber(row.past_due),
+      currentCharges: current,
+      notes: text(row.notes),
       cancelled: false,
       unseen: !seen.has(`customer:${row.id}`),
     };
@@ -199,6 +209,10 @@ function toLeads(customers: CustomerRow[], files: FileRow[], appointments: Appoi
       bill: file
         ? { bucket: file.bucket || 'hub-light-bills', path: file.storage_path, name: file.original_name }
         : null,
+      accountNumber: null,
+      pastDue: null,
+      currentCharges: null,
+      notes: null,
       cancelled: row.status === 'cancelled',
       unseen: !seen.has(`booking:${row.id}`),
     };

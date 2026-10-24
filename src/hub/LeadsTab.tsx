@@ -1,6 +1,16 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Eye, FileText, Mail, MapPin, Phone, RefreshCw } from 'lucide-react';
+import { AlertTriangle, ChevronDown, ChevronUp, Eye, FileText, Mail, MapPin, Phone, RefreshCw, ShieldCheck, Zap } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import {
+  canPreviewObject,
+  customerObjectPath,
+  fillWorkflowTemplate,
+  optionBObjectPath,
+  parseOptionBWorkflow,
+  telHref,
+  type OptionBWorkflow,
+  type WorkflowDocument,
+} from './optionB';
 import type { Lead, LeadFeed } from './useLeadFeed';
 import { Button, Notice, Spinner, cn } from './ui';
 import { formatDateTime } from './time';
@@ -61,6 +71,314 @@ function Fact({ label, children }: { label: string; children: React.ReactNode })
     <div className="min-w-0">
       <dt className="text-[0.72rem] font-semibold uppercase tracking-wide text-[#6B7280]">{label}</dt>
       <dd className="m-0 mt-0.5 break-words text-[0.95rem]">{children}</dd>
+    </div>
+  );
+}
+
+const SIGNED_URL_SECONDS = 120;
+
+function useOptionBWorkflow(lead: Lead): OptionBWorkflow | null {
+  const [workflow, setWorkflow] = useState<OptionBWorkflow | null>(null);
+
+  useEffect(() => {
+    if (lead.source !== 'customer' || !supabase) {
+      setWorkflow(null);
+      return;
+    }
+    const path = optionBObjectPath(lead.id);
+    if (!path) {
+      setWorkflow(null);
+      return;
+    }
+    let cancelled = false;
+    setWorkflow(null);
+    void supabase.storage.from('powergenie').download(path).then(async ({ data, error }) => {
+      if (cancelled || error || !data) return;
+      const text = await data.text();
+      if (cancelled) return;
+      const parsed = parseOptionBWorkflow(text, lead.id);
+      if (parsed) setWorkflow(parsed);
+    }).catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [lead.id, lead.source]);
+
+  return workflow;
+}
+
+function SunrunOptionBWorkflow({ lead }: { lead: Lead }) {
+  const workflow = useOptionBWorkflow(lead);
+  const [open, setOpen] = useState(true);
+  const [previewPath, setPreviewPath] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [fileError, setFileError] = useState<string | null>(null);
+  const storageKey = `pg_workflow_${lead.id}`;
+  const [completed, setCompleted] = useState<Record<string, boolean>>(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem(storageKey) || '{}') as unknown;
+      if (!stored || typeof stored !== 'object' || Array.isArray(stored)) return {};
+      return stored as Record<string, boolean>;
+    } catch {
+      return {};
+    }
+  });
+
+  if (!workflow) return null;
+
+  const sign = async (objectPath: string): Promise<string | null> => {
+    const path = customerObjectPath(lead.id, objectPath);
+    if (!path || !supabase) return null;
+    const { data, error } = await supabase.storage.from('powergenie').createSignedUrl(path, SIGNED_URL_SECONDS);
+    if (error || !data?.signedUrl) return null;
+    return data.signedUrl;
+  };
+
+  const openFile = async (objectPath: string) => {
+    setFileError(null);
+    const url = await sign(objectPath);
+    if (!url) {
+      setFileError("Couldn't open that file. Please try again.");
+      return;
+    }
+    window.open(url, '_blank', 'noopener');
+  };
+
+  const togglePreview = async (document: WorkflowDocument) => {
+    if (!document.preview || !canPreviewObject(document.path)) return;
+    if (previewPath === document.path) {
+      setPreviewPath(null);
+      setPreviewUrl(null);
+      return;
+    }
+    setFileError(null);
+    const url = await sign(document.path);
+    if (!url) {
+      setFileError("Couldn't open that file. Please try again.");
+      return;
+    }
+    setPreviewPath(document.path);
+    setPreviewUrl(url);
+  };
+
+  const toggleStep = (id: string) => {
+    setCompleted((prev) => {
+      const next = { ...prev, [id]: !prev[id] };
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(next));
+      } catch {
+        /* progress is a convenience; the workflow still renders */
+      }
+      return next;
+    });
+  };
+
+  const doneCount = workflow.steps.filter((step) => completed[step.id]).length;
+  const pct = Math.round((doneCount / workflow.steps.length) * 100);
+  const urgentTel = telHref(workflow.urgentPhone);
+  const documentsById = new Map(workflow.documents.map((document) => [document.id, document]));
+
+  return (
+    <div className="mt-4 rounded-2xl border-2 border-[#FF6B00] bg-[#FFFBF7] p-4 text-[#1A1A2E] sm:p-5">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#FFE0CC] pb-3">
+        <div className="flex items-center gap-2">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#FF6B00] text-white">
+            <Zap className="h-4 w-4" />
+          </span>
+          <div>
+            <h3 className="m-0 text-[1.05rem] font-bold text-[#1A1A2E]">{workflow.title}</h3>
+            <p className="m-0 text-[0.78rem] text-[#6B7280]">{fillWorkflowTemplate(workflow.subtitle, lead)}</p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => setOpen(!open)}
+          aria-expanded={open}
+          className="flex items-center gap-1 text-[0.8rem] font-semibold text-[#FF6B00] hover:underline"
+        >
+          {open ? <>Collapse <ChevronUp className="h-4 w-4" /></> : <>Expand <ChevronDown className="h-4 w-4" /></>}
+        </button>
+      </div>
+
+      {open && (
+        <div className="mt-4 space-y-4">
+          {(workflow.urgentTitle || workflow.urgentBody) && (
+            <div className="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-[#FCA5A5] bg-[#FEF2F2] p-3.5">
+              <div className="flex items-start gap-2.5">
+                <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-[#DC2626]" />
+                <div className="text-[0.85rem] leading-relaxed text-[#991B1B]">
+                  {workflow.urgentTitle && <strong className="font-bold">{workflow.urgentTitle}</strong>}
+                  {workflow.urgentBody && <p className="m-0 mt-0.5">{fillWorkflowTemplate(workflow.urgentBody, lead)}</p>}
+                  {workflow.showLeadNotes && lead.notes && <p className="m-0 mt-1">{lead.notes}</p>}
+                  {workflow.showBalances && (
+                    <p className="m-0 mt-1">
+                      Past due: <strong>{formatMoney(lead.pastDue)}</strong>
+                      {' · '}
+                      Current charges: <strong>{formatMoney(lead.currentCharges)}</strong>
+                      {' · '}
+                      Total balance: <strong>{formatMoney(lead.amount)}</strong>
+                    </p>
+                  )}
+                </div>
+              </div>
+              {urgentTel && workflow.urgentActionLabel && (
+                <a
+                  href={urgentTel}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-[#DC2626] px-3.5 py-2 text-[0.82rem] font-bold text-white no-underline shadow hover:bg-[#B91C1C]"
+                >
+                  <Phone className="h-3.5 w-3.5" /> {workflow.urgentActionLabel}
+                </a>
+              )}
+            </div>
+          )}
+
+          {workflow.stats.length > 0 && (
+            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+              {workflow.stats.map((stat) => (
+                <div key={stat.label} className="rounded-xl border border-[#E3E8EF] bg-white p-3">
+                  <span className="block text-[0.68rem] font-bold uppercase text-[#6B7280]">{stat.label}</span>
+                  <strong className="text-[1.1rem] font-extrabold text-[#1A1A2E]">{fillWorkflowTemplate(stat.value, lead)}</strong>
+                  <span className="block text-[0.72rem] text-[#6B7280]">{fillWorkflowTemplate(stat.detail, lead)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div>
+            <div className="flex items-center justify-between text-[0.76rem] font-semibold text-[#4A5568]">
+              <span>Sunrun implementation progress</span>
+              <span>{doneCount} of {workflow.steps.length} completed ({pct}%)</span>
+            </div>
+            <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-[#E5E7EB]">
+              <div className="h-full rounded-full bg-[#FF6B00] transition-all duration-300" style={{ width: `${pct}%` }} />
+            </div>
+          </div>
+
+          {workflow.documents.length > 0 && (
+            <div className="rounded-xl border border-[#CBD5E1] bg-white p-3.5 shadow-sm">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  {workflow.planTitle && <h4 className="m-0 text-[0.92rem] font-bold text-[#1A1A2E]">{workflow.planTitle}</h4>}
+                  {workflow.planDescription && (
+                    <p className="m-0 text-[0.78rem] text-[#6B7280]">{fillWorkflowTemplate(workflow.planDescription, lead)}</p>
+                  )}
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  {workflow.documents.map((document) => (
+                    <button
+                      key={document.id}
+                      type="button"
+                      onClick={() => void openFile(document.path)}
+                      className="inline-flex items-center gap-1 rounded-lg border border-[#0F172A] bg-[#0F172A] px-3 py-1.5 text-[0.78rem] font-bold text-white shadow hover:bg-[#1E293B]"
+                    >
+                      {canPreviewObject(document.path) ? <Eye className="h-3.5 w-3.5" /> : <FileText className="h-3.5 w-3.5" />}
+                      {document.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {workflow.documents.some((document) => document.preview && canPreviewObject(document.path)) && (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {workflow.documents.filter((document) => document.preview && canPreviewObject(document.path)).map((document) => (
+                    <button
+                      key={`preview-${document.id}`}
+                      type="button"
+                      onClick={() => void togglePreview(document)}
+                      className="rounded-lg border border-[#E2E8F0] px-2.5 py-1.5 text-[0.78rem] font-semibold text-[#FF6B00] hover:bg-[#FFF5EC]"
+                    >
+                      {previewPath === document.path ? `Hide ${document.label}` : `Show ${document.label}`}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {previewUrl && (
+                <div className="mt-3 overflow-hidden rounded-lg border border-[#94A3B8] bg-[#001020]">
+                  <img src={previewUrl} alt={workflow.planTitle || 'Customer plan'} className="w-full object-contain" />
+                  <p className="m-0 bg-[#0A192F] p-2 text-center text-[0.72rem] text-[#94A3B8]">
+                    Signed link for this hub session. It expires shortly.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {fileError && <Notice tone="error">{fileError}</Notice>}
+
+          <div className="space-y-2">
+            {workflow.steps.map((step) => {
+              const isDone = !!completed[step.id];
+              const document = step.documentId ? documentsById.get(step.documentId) : undefined;
+              const stepTel = telHref(step.phone);
+              return (
+                <div
+                  key={step.id}
+                  onClick={() => toggleStep(step.id)}
+                  className={cn(
+                    'flex cursor-pointer items-start justify-between gap-3 rounded-xl border p-3 transition-colors',
+                    isDone
+                      ? 'border-[#BFE3C6] bg-[#F3FAF5]'
+                      : step.urgent
+                        ? 'border-[#FCA5A5] bg-white'
+                        : 'border-[#E3E8EF] bg-white hover:border-[#CBD5E1]',
+                  )}
+                >
+                  <div className="flex items-start gap-2.5">
+                    <input
+                      type="checkbox"
+                      checked={isDone}
+                      onChange={() => toggleStep(step.id)}
+                      onClick={(event) => event.stopPropagation()}
+                      aria-label={step.title}
+                      className="mt-1 h-4 w-4 rounded border-gray-300 text-[#FF6B00] focus:ring-[#FF6B00]"
+                    />
+                    <div>
+                      <h4 className={cn('m-0 text-[0.88rem] font-bold', isDone && 'text-[#6B7280] line-through')}>
+                        {step.title}
+                      </h4>
+                      <p className="m-0 mt-0.5 text-[0.8rem] leading-snug text-[#4A5568]">
+                        {fillWorkflowTemplate(step.description, lead)}
+                      </p>
+                    </div>
+                  </div>
+                  {!isDone && document && (
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        void openFile(document.path);
+                      }}
+                      className="inline-flex shrink-0 items-center gap-1 rounded-md border border-[#FF6B00] px-2.5 py-1 text-[0.74rem] font-bold text-[#FF6B00] no-underline hover:bg-[#FFF5EC]"
+                    >
+                      {step.actionLabel || document.label}
+                    </button>
+                  )}
+                  {!isDone && !document && stepTel && step.actionLabel && (
+                    <a
+                      href={stepTel}
+                      onClick={(event) => event.stopPropagation()}
+                      className="inline-flex shrink-0 items-center gap-1 rounded-md border border-[#FF6B00] px-2.5 py-1 text-[0.74rem] font-bold text-[#FF6B00] no-underline hover:bg-[#FFF5EC]"
+                    >
+                      {step.actionLabel}
+                    </a>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {(workflow.footer || workflow.advisor) && (
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[#FFE0CC] pt-3 text-[0.78rem] text-[#6B7280]">
+              {workflow.footer && (
+                <span className="inline-flex items-center gap-1.5">
+                  <ShieldCheck className="h-4 w-4 text-[#1E7B34]" />
+                  {workflow.footer}
+                </span>
+              )}
+              {workflow.advisor && <span>{workflow.advisor}</span>}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -197,6 +515,7 @@ export default function LeadsTab({ feed }: { feed: LeadFeed }) {
                   <Fact label="kWh">{formatKwh(lead.kwh)}</Fact>
                   <Fact label="Bill amount">{formatMoney(lead.amount)}</Fact>
                   <Fact label="Appointment">{formatWhen(lead.appointment)}</Fact>
+                  <Fact label="Account #">{lead.accountNumber || '—'}</Fact>
                   <Fact label="ESI ID">{lead.esiid || '—'}</Fact>
                   <Fact label="Meter">{lead.meterNumber || '—'}</Fact>
                   <Fact label="Average monthly">{lead.avgMonthlyKwh == null ? '—' : formatKwh(lead.avgMonthlyKwh)}</Fact>
@@ -213,6 +532,8 @@ export default function LeadsTab({ feed }: { feed: LeadFeed }) {
                   <p className="m-0 mb-1 text-[0.72rem] font-semibold uppercase tracking-wide text-[#6B7280]">Usage history</p>
                   <UsageHistory points={lead.usageHistory} />
                 </div>
+
+                {lead.source === 'customer' && <SunrunOptionBWorkflow lead={lead} />}
 
                 <div className="mt-3 border-t border-[#EEF1F5] pt-3">
                   {lead.bill ? (
