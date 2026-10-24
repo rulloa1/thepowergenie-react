@@ -26,20 +26,20 @@ const BRAND_LOCKUPS = {
   'celebrity-solar': {
     src: 'assets/brand/celebrity-solar-lockup.webp',
     alt: 'Celebrity Solar',
-    width: 417,
-    height: 244,
+    width: 407,
+    height: 234,
   },
   'hip-hop-solar': {
     src: 'assets/brand/hip-hop-solar-lockup.webp',
     alt: 'Hip-Hop Solar',
-    width: 373,
-    height: 248,
+    width: 363,
+    height: 237,
   },
   'gas-genie': {
     src: 'assets/brand/gas-genie-lockup.webp',
     alt: 'Gas Genie',
-    width: 397,
-    height: 252,
+    width: 387,
+    height: 241,
   },
 } as const
 
@@ -236,8 +236,11 @@ function Header({
 }) {
   const logo = lockup ?? POWER_GENIE_LOCKUP
   return (
-    <header className="flex items-center justify-between gap-5 px-[5vw] py-[18px] border-b border-[#ffffff20] bg-[#071b27]">
-      <button onClick={() => onNavigate('journey')} className="flex items-center gap-[10px] font-semibold text-xl tracking-[-0.6px] bg-transparent border-0 text-inherit p-0 cursor-pointer">
+    <header className={cn(
+      'flex items-center justify-between border-b border-[#ffffff20] bg-[#071b27]',
+      lockup ? 'gap-3 px-4 py-3 sm:gap-5 sm:px-[5vw]' : 'gap-5 px-[5vw] py-[18px]',
+    )}>
+      <button onClick={() => onNavigate('journey')} className="flex shrink-0 items-center gap-[10px] bg-transparent border-0 p-0 font-semibold text-xl tracking-[-0.6px] text-inherit cursor-pointer">
         <img
           src={logo.src}
           alt={logo.alt}
@@ -245,12 +248,15 @@ function Header({
           height={logo.height}
           className={
             lockup
-              ? 'block h-11 w-auto max-w-[150px] shrink-0 object-contain rounded-xl bg-[#071b27] px-2.5 py-1 shadow-[0_4px_12px_rgba(7,27,39,0.18)] max-sm:h-10 max-sm:max-w-[130px]'
+              ? 'block h-20 w-auto shrink-0 object-contain max-sm:h-14'
               : 'h-10 w-auto aspect-[647/180] object-contain max-md:h-8'
           }
         />
       </button>
-      <nav aria-label="Brand navigation" className="flex gap-6 text-sm max-md:gap-3 max-md:text-xs">
+      <nav aria-label="Brand navigation" className={cn(
+        'flex items-center gap-6 text-sm max-md:gap-3 max-md:text-xs',
+        lockup && 'shrink-0 whitespace-nowrap',
+      )}>
         <span
           role="link"
           aria-disabled="true"
