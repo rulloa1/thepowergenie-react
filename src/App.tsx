@@ -137,7 +137,9 @@ export default function App() {
   // down to it. Only mount it once most of the form box is already on screen
   // (or the visitor taps a quote button), so the autofocus has nowhere to jump.
   const formBoxRef = useRef<HTMLDivElement>(null);
+  const quoteRef = useRef<HTMLElement>(null);
   const [formReady, setFormReady] = useState(false);
+  const [quoteInView, setQuoteInView] = useState(false);
   const [toast, setToast] = useState<{ isVisible: boolean; message: string; submessage?: string }>({
     isVisible: false,
     message: '',
@@ -183,6 +185,24 @@ export default function App() {
       window.history.replaceState({}, '', href);
     }
   }, [view]);
+
+  useEffect(() => {
+    const el = quoteRef.current;
+    if (!el || view !== 'journey') {
+      setQuoteInView(false);
+      return;
+    }
+    const io = new IntersectionObserver((entries) => {
+      setQuoteInView(entries.some((entry) => entry.isIntersecting && entry.intersectionRatio >= 0.12));
+    }, { threshold: [0, 0.12, 0.4] });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [view]);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('quote-in-view', quoteInView);
+    return () => document.documentElement.classList.remove('quote-in-view');
+  }, [quoteInView]);
 
   useEffect(() => {
     if (formReady || view !== 'journey') return;
@@ -248,7 +268,8 @@ export default function App() {
         />
       </main>
 
-      {/* Mobile Fixed CTA */}
+      {/* Mobile Fixed CTA. Hidden once the quote is on screen so it does not cover the form. */}
+      {!quoteInView && (
       <div className="sm:hidden fixed z-60 left-4 right-4 bottom-[max(12px,env(safe-area-inset-bottom))] pointer-events-none">
         <a 
           href="#quote" 
@@ -262,6 +283,7 @@ export default function App() {
           Get a Free Quote
         </a>
       </div>
+      )}
 
       <Toast 
         isVisible={toast.isVisible}
@@ -270,7 +292,7 @@ export default function App() {
         submessage={toast.submessage}
       />
 
-      <section className="quote-panel relative z-45 min-h-screen bg-[#F6F7FB] text-[#1A1A2E] p-[calc(clamp(84px,10vw,112px)+env(safe-area-inset-top))_clamp(16px,5vw,64px)_calc(40px+env(safe-area-inset-bottom))]" id="quote" aria-labelledby="quote-title" tabIndex={-1}>
+      <section ref={quoteRef} className="quote-panel relative z-45 min-h-screen bg-[#F6F7FB] text-[#1A1A2E] p-[calc(clamp(84px,10vw,112px)+env(safe-area-inset-top))_clamp(16px,5vw,64px)_calc(40px+env(safe-area-inset-bottom))]" id="quote" aria-labelledby="quote-title" tabIndex={-1}>
         <p className="quote-panel__eyebrow m-0 mb-2 text-[0.74rem] font-semibold tracking-[0.14em] uppercase text-[#FF6B00]">Your free quote</p>
         <h2 id="quote-title" className="m-0 mb-4 text-[#1A1A2E] font-bold text-[clamp(1.7rem,3.6vw,2.6rem)] tracking-tight leading-[1.1]">Let's power your home.</h2>
         <div className="mb-7">

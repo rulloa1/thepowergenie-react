@@ -33,6 +33,7 @@ export default function PowerGenieAssistant() {
         <button
           type="button"
           data-testid="genie-launcher"
+          aria-label="Talk to the Power Genie"
           className="fixed z-[70] right-4 bottom-[calc(78px+env(safe-area-inset-bottom))] sm:bottom-6 sm:right-6 inline-flex items-center gap-2 min-h-12 max-w-[calc(100vw-32px)] rounded-full bg-[#FF6B00] px-4 text-[0.95rem] font-bold text-white shadow-[0_10px_24px_rgba(255,107,0,0.35)] hover:brightness-105"
           onClick={() => {
             setMode('chat')
@@ -41,7 +42,7 @@ export default function PowerGenieAssistant() {
           }}
         >
           <MessageCircle className="h-5 w-5 shrink-0" aria-hidden="true" />
-          Talk to the Power Genie
+          <span className="quote-launcher-label">Talk to the Power Genie</span>
         </button>
       )}
     </>

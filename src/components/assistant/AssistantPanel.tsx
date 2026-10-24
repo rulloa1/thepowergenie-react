@@ -3,6 +3,7 @@ import { useChat } from '@ai-sdk/react'
 import { DefaultChatTransport } from 'ai'
 import { CalendarCheck, Loader2, Upload, X } from 'lucide-react'
 import type { AssistantMode } from '../../lib/openAssistant'
+import { lockPageScroll } from '../../lib/scrollLock'
 import {
   EMPTY_BILL,
   MAX_BILL_BYTES,
@@ -75,8 +76,10 @@ export default function AssistantPanel({ frameClass, mode, nonce, onClose }: Pan
   }, [nonce, mode])
 
   useEffect(() => {
-    const previous = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
+    return lockPageScroll()
+  }, [])
+
+  useEffect(() => {
     const node = panelRef.current
     const focusable = () =>
       node
@@ -104,7 +107,6 @@ export default function AssistantPanel({ frameClass, mode, nonce, onClose }: Pan
     }
     document.addEventListener('keydown', onKey)
     return () => {
-      document.body.style.overflow = previous
       document.removeEventListener('keydown', onKey)
     }
   }, [onClose])
