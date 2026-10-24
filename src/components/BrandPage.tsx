@@ -14,6 +14,35 @@ interface BrandPageProps {
   onQuoteClick?: (msg?: string, sub?: string) => void;
 }
 
+/** Updated Power Genie lockup. The family index keeps this; each brand page uses its own. */
+const POWER_GENIE_LOCKUP = {
+  src: 'assets/brand/power-genie-lockup.webp',
+  alt: 'The Power Genie',
+  width: 647,
+  height: 180,
+} as const
+
+const BRAND_LOCKUPS = {
+  'celebrity-solar': {
+    src: 'assets/brand/celebrity-solar-lockup.webp',
+    alt: 'Celebrity Solar',
+    width: 417,
+    height: 244,
+  },
+  'hip-hop-solar': {
+    src: 'assets/brand/hip-hop-solar-lockup.webp',
+    alt: 'Hip-Hop Solar',
+    width: 373,
+    height: 248,
+  },
+  'gas-genie': {
+    src: 'assets/brand/gas-genie-lockup.webp',
+    alt: 'Gas Genie',
+    width: 397,
+    height: 252,
+  },
+} as const
+
 export default function BrandPage({ id, onNavigate, getSalesforceUrl, onQuoteClick }: BrandPageProps) {
   if (id === 'brands') {
     return (
@@ -114,7 +143,7 @@ export default function BrandPage({ id, onNavigate, getSalesforceUrl, onQuoteCli
 
   return (
     <div className={cn("min-h-screen bg-[#071b27] text-[#f4f8fb] font-sans selection:bg-[#a7e6ff] selection:text-[#071b27]", id)}>
-      <Header onNavigate={onNavigate} />
+      <Header onNavigate={onNavigate} lockup={BRAND_LOCKUPS[id]} />
       <main>
         <section className="relative isolation-auto min-h-[78svh] flex items-end px-[7vw] pt-24 pb-24 overflow-hidden">
           <img className="absolute inset-0 w-full h-full object-cover z-[-2]" src={content.image} alt="" />
@@ -197,11 +226,29 @@ export default function BrandPage({ id, onNavigate, getSalesforceUrl, onQuoteCli
   );
 }
 
-function Header({ onNavigate }: { onNavigate: (v: string) => void }) {
+function Header({
+  onNavigate,
+  lockup,
+}: {
+  onNavigate: (v: string) => void;
+  /** Brand lockup. Omitted on the family index, which keeps the Power Genie logo. */
+  lockup?: (typeof BRAND_LOCKUPS)[keyof typeof BRAND_LOCKUPS];
+}) {
+  const logo = lockup ?? POWER_GENIE_LOCKUP
   return (
     <header className="flex items-center justify-between gap-5 px-[5vw] py-[18px] border-b border-[#ffffff20] bg-[#071b27]">
       <button onClick={() => onNavigate('journey')} className="flex items-center gap-[10px] font-semibold text-xl tracking-[-0.6px] bg-transparent border-0 text-inherit p-0 cursor-pointer">
-        <img src="assets/brand/power-genie-lockup.webp" alt="The Power Genie" className="h-10 w-auto aspect-[647/180] object-contain max-md:h-8" />
+        <img
+          src={logo.src}
+          alt={logo.alt}
+          width={logo.width}
+          height={logo.height}
+          className={
+            lockup
+              ? 'block h-11 w-auto max-w-[150px] shrink-0 object-contain rounded-xl bg-[#071b27] px-2.5 py-1 shadow-[0_4px_12px_rgba(7,27,39,0.18)] max-sm:h-10 max-sm:max-w-[130px]'
+              : 'h-10 w-auto aspect-[647/180] object-contain max-md:h-8'
+          }
+        />
       </button>
       <nav aria-label="Brand navigation" className="flex gap-6 text-sm max-md:gap-3 max-md:text-xs">
         <span
