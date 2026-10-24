@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
+  brandPageFromPath,
+  legacyHtmlBrandSource,
   legacyNodeRedirect,
+  referralBrandFromLocation,
+  marketingViewFromLocation,
+  marketingViewHref,
   normalizePath,
   showMarketingAssistant,
   showRouterLegalFooter,
@@ -27,11 +32,50 @@ describe('public routes', () => {
     expect(sitePage('/homeowner')).toBe('homeowner');
     expect(sitePage('/portal')).toBe('homeowner');
     expect(sitePage('/referrals')).toBe('homeowner');
+    expect(showMarketingAssistant(sitePage('/homeowner'))).toBe(false);
+    expect(showRouterLegalFooter('/homeowner')).toBe(true);
     expect(legacyNodeRedirect(normalizePath('/node/book'))).toBe('/book');
     expect(legacyNodeRedirect(normalizePath('/node/dashboard'))).toBe('/dashboard');
     expect(legacyNodeRedirect(normalizePath('/node/book/'))).toBe('/book');
     expect(legacyNodeRedirect(normalizePath('/node/dashboard/'))).toBe('/dashboard');
     expect(legacyNodeRedirect('/privacy')).toBeNull();
     expect(sitePage('/node/book')).toBe('marketing');
+  });
+
+  it('serves the brand family as marketing pages with their own paths', () => {
+    for (const path of ['/brands', '/celebrity-solar', '/hip-hop-solar', '/gas-genie']) {
+      expect(sitePage(normalizePath(path))).toBe('marketing');
+      expect(showMarketingAssistant(sitePage(path))).toBe(true);
+      expect(showRouterLegalFooter(path)).toBe(false);
+      expect(showRouterLegalFooter(`${path}/`)).toBe(false);
+      expect(brandPageFromPath(path)).toBe(path.slice(1));
+      expect(marketingViewFromLocation(path, '')).toBe(path.slice(1));
+    }
+
+    expect(brandPageFromPath('/')).toBeNull();
+    expect(brandPageFromPath('/privacy')).toBeNull();
+    expect(brandPageFromPath('/celebrity-solar.html')).toBeNull();
+    expect(brandPageFromPath('/homeowner')).toBeNull();
+    expect(marketingViewFromLocation('/celebrity-solar.html', '')).toBe('journey');
+    expect(legacyHtmlBrandSource('/celebrity-solar.html')).toBe('celebrity-solar');
+    expect(legacyHtmlBrandSource('/hip-hop-solar.html')).toBe('hip-hop-solar');
+    expect(legacyHtmlBrandSource('/gas-genie.html')).toBe('gas-genie');
+    expect(legacyHtmlBrandSource('/nested/celebrity-solar.html')).toBe('celebrity-solar');
+    expect(legacyHtmlBrandSource('/celebrity-solar')).toBeNull();
+    expect(legacyHtmlBrandSource('/brands.html')).toBeNull();
+    expect(referralBrandFromLocation('/celebrity-solar')).toBe('celebrity-solar');
+    expect(referralBrandFromLocation('/celebrity-solar.html')).toBe('celebrity-solar');
+    expect(referralBrandFromLocation('/brands')).toBeNull();
+    expect(referralBrandFromLocation('/homeowner')).toBeNull();
+    expect(marketingViewFromLocation('/', '?view=brands')).toBe('brands');
+    expect(marketingViewFromLocation('/', '?view=gas-genie')).toBe('gas-genie');
+    expect(marketingViewFromLocation('/celebrity-solar', '?view=brands')).toBe('celebrity-solar');
+    expect(marketingViewFromLocation('/', '?view=nope')).toBe('journey');
+    expect(marketingViewFromLocation('/book', '')).toBe('journey');
+
+    const branded = new URL('https://thepowergenie.theroyeffect.com/?view=celebrity-solar&source=celebrity-solar');
+    expect(marketingViewHref('celebrity-solar', branded)).toBe('/celebrity-solar?source=celebrity-solar');
+    expect(marketingViewHref('journey', new URL('https://thepowergenie.theroyeffect.com/brands?view=brands'))).toBe('/');
+    expect(marketingViewHref('brands', new URL('https://thepowergenie.theroyeffect.com/gas-genie'))).toBe('/brands');
   });
 });

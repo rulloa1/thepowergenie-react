@@ -1,5 +1,6 @@
 import React from 'react';
 import { openAssistant } from '../lib/openAssistant';
+import { shouldHandleClientNavigation } from '../lib/siteRoutes';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -54,7 +55,7 @@ export default function BrandPage({ id, onNavigate, getSalesforceUrl, onQuoteCli
   if (id === 'brands') {
     return (
       <div className="min-h-screen bg-[#071b27] text-[#f4f8fb] font-sans selection:bg-[#a7e6ff] selection:text-[#071b27]">
-        <Header onNavigate={onNavigate} />
+        <Header onNavigate={onNavigate} brandsCurrent />
         <main>
           <section className="px-[7vw] pt-20 pb-16 max-w-[1100px]">
             <p className="text-[11px] font-bold tracking-[2px] text-[#f6cf85] uppercase">THE POWER GENIE FAMILY</p>
@@ -67,7 +68,7 @@ export default function BrandPage({ id, onNavigate, getSalesforceUrl, onQuoteCli
 
           <section className="grid grid-cols-1 md:grid-cols-3 gap-[18px] px-[7vw]" aria-label="Choose a brand">
             <BrandCard 
-              id="celebrity-solar" 
+              href="/celebrity-solar"
               kicker="01 / THE SPOTLIGHT" 
               title="Celebrity Solar" 
               body="A brighter home deserves the spotlight. Explore solar and battery options through The Power Genie." 
@@ -75,7 +76,7 @@ export default function BrandPage({ id, onNavigate, getSalesforceUrl, onQuoteCli
               onClick={() => onNavigate('celebrity-solar')}
             />
             <BrandCard 
-              id="hip-hop-solar" 
+              href="/hip-hop-solar"
               kicker="02 / THE CULTURE" 
               title="Hip-Hop Solar" 
               body="Bring a new perspective to how you power your home. Discover solar and storage through The Power Genie." 
@@ -83,7 +84,7 @@ export default function BrandPage({ id, onNavigate, getSalesforceUrl, onQuoteCli
               onClick={() => onNavigate('hip-hop-solar')}
             />
             <BrandCard 
-              id="gas-genie" 
+              href="/gas-genie"
               kicker="03 / WHAT’S NEXT" 
               title="Gas Genie" 
               body="A new part of The Power Genie family is taking shape." 
@@ -236,10 +237,12 @@ export default function BrandPage({ id, onNavigate, getSalesforceUrl, onQuoteCli
 function Header({
   onNavigate,
   lockup,
+  brandsCurrent = false,
 }: {
   onNavigate: (v: string) => void;
   /** Brand lockup. Omitted on the family index, which keeps the Power Genie logo. */
   lockup?: (typeof BRAND_LOCKUPS)[keyof typeof BRAND_LOCKUPS];
+  brandsCurrent?: boolean;
 }) {
   const logo = lockup ?? POWER_GENIE_LOCKUP
   return (
@@ -264,28 +267,42 @@ function Header({
         'flex items-center gap-6 text-sm max-md:gap-3 max-md:text-xs',
         lockup && 'shrink-0 whitespace-nowrap',
       )}>
-        <span
-          role="link"
-          aria-disabled="true"
-          className="inline-flex items-center gap-2 min-h-[44px] cursor-not-allowed select-none text-[#8aa0ad]"
+        <a
+          href="/brands"
+          aria-current={brandsCurrent ? 'page' : undefined}
+          onClick={(event) => {
+            if (!shouldHandleClientNavigation(event)) return;
+            event.preventDefault();
+            onNavigate('brands');
+          }}
+          className="inline-flex items-center min-h-[44px] bg-transparent text-inherit no-underline cursor-pointer hover:text-[#f6cf85] transition-colors"
         >
           Our brands
-          <span className="inline-flex shrink-0 items-center rounded-full border border-[#FF6B0055] bg-[#FF6B0018] px-2 py-[3px] text-[0.62rem] font-semibold leading-none tracking-[0.04em] text-[#FFB07A]">
-            Coming soon
-          </span>
-        </span>
+        </a>
         <button onClick={() => onNavigate('journey')} className="md:flex hidden items-center min-h-[44px] bg-transparent border-0 text-inherit p-0 cursor-pointer hover:text-[#f6cf85] transition-colors">Explore solar ↗</button>
       </nav>
     </header>
   );
 }
 
-function BrandCard({ id, kicker, title, body, accent, onClick }: any) {
+function BrandCard({ href, kicker, title, body, accent, onClick }: {
+  href: string;
+  kicker: string;
+  title: string;
+  body: string;
+  accent: string;
+  onClick: () => void;
+}) {
   return (
-    <button 
-      onClick={onClick}
-      className="flex flex-col text-left min-h-[350px] p-8 border border-[#ffffff24] bg-[linear-gradient(145deg,#ffffff08,transparent)] rounded-[22px] transition-all hover:-translate-y-1.25 hover:border-[var(--accent)] cursor-pointer group"
-      style={{ '--accent': accent } as any}
+    <a
+      href={href}
+      onClick={(event) => {
+        if (!shouldHandleClientNavigation(event)) return;
+        event.preventDefault();
+        onClick();
+      }}
+      className="flex flex-col text-left text-inherit no-underline min-h-[350px] p-8 border border-[#ffffff24] bg-[linear-gradient(145deg,#ffffff08,transparent)] rounded-[22px] transition-all hover:-translate-y-1.25 hover:border-[var(--accent)] cursor-pointer group"
+      style={{ '--accent': accent } as React.CSSProperties}
     >
       <span className="text-[11px] font-bold tracking-[2px] text-[var(--accent)] uppercase">{kicker}</span>
       <h2 className="mt-10 mb-2.5 text-[clamp(28px,3.3vw,46px)] leading-[1.12] tracking-[-0.045em] font-semibold text-[var(--accent)] group-hover:brightness-110">{title}</h2>
@@ -293,7 +310,7 @@ function BrandCard({ id, kicker, title, body, accent, onClick }: any) {
       <span className="flex justify-between mt-auto text-sm">
         Explore {title} <span aria-hidden="true">↗</span>
       </span>
-    </button>
+    </a>
   );
 }
 
