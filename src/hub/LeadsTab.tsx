@@ -106,6 +106,8 @@ const WORKFLOW_STEPS = [
     title: '4. CAD Plan Set & Montgomery County Permitting',
     desc: 'Engineering stamps, wind/structural load calculations, and 36-inch fire ridge setback drawings submitted to Montgomery County.',
     urgent: false,
+    actionUrl: '/assets/plans/patricia-ferrell-solar-plan.jpg',
+    actionLabel: 'View CAD Blueprint',
   },
   {
     id: 'step-5',
@@ -129,6 +131,7 @@ const WORKFLOW_STEPS = [
 
 function SunrunOptionBWorkflow({ lead }: { lead: Lead }) {
   const [open, setOpen] = useState(true);
+  const [showPlan, setShowPlan] = useState(false);
   const storageKey = `pg_workflow_${lead.id}`;
   const [completed, setCompleted] = useState<Record<string, boolean>>(() => {
     try {
@@ -233,6 +236,51 @@ function SunrunOptionBWorkflow({ lead }: { lead: Lead }) {
                 style={{ width: `${pct}%` }}
               />
             </div>
+          </div>
+
+          {/* Engineering CAD Blueprint Card */}
+          <div className="rounded-xl border border-[#CBD5E1] bg-white p-3.5 shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <h4 className="m-0 text-[0.92rem] font-bold text-[#1A1A2E]">
+                  Roof Layout & Electrical Engineering Plan (CAD Blueprint)
+                </h4>
+                <p className="m-0 text-[0.78rem] text-[#6B7280]">
+                  36× 410W Monocrystalline Panels (14.76 kW) · 36" Fire Setbacks · Tesla Powerwall 3 & Entergy Meter
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <a
+                  href="/assets/plans/patricia-ferrell-solar-plan.jpg"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 rounded-lg border border-[#0F172A] bg-[#0F172A] px-3 py-1.5 text-[0.78rem] font-bold text-white shadow hover:bg-[#1E293B] no-underline"
+                >
+                  <Eye className="h-3.5 w-3.5" /> Full Size Blueprint
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setShowPlan(!showPlan)}
+                  className="rounded-lg border border-[#E2E8F0] px-2.5 py-1.5 text-[0.78rem] font-semibold text-[#FF6B00] hover:bg-[#FFF5EC]"
+                >
+                  {showPlan ? 'Hide Drawing' : 'Show Drawing'}
+                </button>
+              </div>
+            </div>
+            {showPlan && (
+              <div className="mt-3 overflow-hidden rounded-lg border border-[#94A3B8] bg-[#001020]">
+                <a href="/assets/plans/patricia-ferrell-solar-plan.jpg" target="_blank" rel="noopener noreferrer">
+                  <img
+                    src="/assets/plans/patricia-ferrell-solar-plan.jpg"
+                    alt="Sunrun Option B CAD Solar Plan for Patricia Ferrell"
+                    className="w-full object-contain"
+                  />
+                </a>
+                <p className="m-0 bg-[#0A192F] p-2 text-center text-[0.72rem] text-[#94A3B8]">
+                  Click blueprint image to expand in full high-resolution tab.
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Step by Step Checklist */}
