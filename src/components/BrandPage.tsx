@@ -14,6 +14,12 @@ interface BrandPageProps {
   onQuoteClick?: (msg?: string, sub?: string) => void;
 }
 
+/** Public file URL, prefixed with Vite's base (usually "/"). */
+function publicPath(path: string) {
+  const base = import.meta.env.BASE_URL || '/'
+  return `${base}${path.replace(/^\//, '')}`
+}
+
 /** Updated Power Genie lockup. The family index keeps this; each brand page uses its own. */
 const POWER_GENIE_LOCKUP = {
   src: 'assets/brand/power-genie-lockup.webp',
@@ -22,21 +28,22 @@ const POWER_GENIE_LOCKUP = {
   height: 180,
 } as const
 
+// These live outside /assets/brand so the dashboard rewrite for that folder does not 404 them.
 const BRAND_LOCKUPS = {
   'celebrity-solar': {
-    src: 'assets/brand/celebrity-solar-lockup.webp',
+    src: publicPath('brand-lockups/celebrity-solar-lockup.webp'),
     alt: 'Celebrity Solar',
     width: 407,
     height: 234,
   },
   'hip-hop-solar': {
-    src: 'assets/brand/hip-hop-solar-lockup.webp',
+    src: publicPath('brand-lockups/hip-hop-solar-lockup.webp'),
     alt: 'Hip-Hop Solar',
     width: 363,
     height: 237,
   },
   'gas-genie': {
-    src: 'assets/brand/gas-genie-lockup.webp',
+    src: publicPath('brand-lockups/gas-genie-lockup.webp'),
     alt: 'Gas Genie',
     width: 387,
     height: 241,
