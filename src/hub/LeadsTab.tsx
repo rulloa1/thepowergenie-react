@@ -89,11 +89,11 @@ const WORKFLOW_STEPS = [
   },
   {
     id: 'step-2',
-    title: '2. Sunrun Brightbox Agreement (Option B Ownership)',
-    desc: 'Horace Lawrence generates DocuSign agreement for 14.76 kW (36x 410W panels) + Tesla Powerwall 3 ($198/mo fixed loan, $0 down) via srep=/powergenie.',
+    title: '2. Sunrun Brightbox Agreement & Proposal (Option B Ownership)',
+    desc: 'Horace Lawrence sends proposal package and DocuSign agreement for 14.76 kW + Tesla Powerwall 3 ($198/mo fixed loan, $0 down) via srep=/powergenie.',
     urgent: false,
-    actionUrl: 'https://sunrun.my.salesforce-sites.com/purl/?srep=/powergenie',
-    actionLabel: 'Sunrun Portal',
+    actionUrl: '/documents/patricia-ferrell-sunrun-proposal.html',
+    actionLabel: 'View Proposal Package',
   },
   {
     id: 'step-3',
@@ -249,7 +249,15 @@ function SunrunOptionBWorkflow({ lead }: { lead: Lead }) {
                   36× 410W Monocrystalline Panels (14.76 kW) · 36" Fire Setbacks · Tesla Powerwall 3 & Entergy Meter
                 </p>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <a
+                  href="/documents/patricia-ferrell-sunrun-proposal.html"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 rounded-lg border border-[#FF6B00] bg-[#FF6B00] px-3 py-1.5 text-[0.78rem] font-bold text-white shadow hover:bg-[#E05E00] no-underline"
+                >
+                  <FileText className="h-3.5 w-3.5" /> Proposal Document (PDF)
+                </a>
                 <a
                   href="/assets/plans/patricia-ferrell-solar-plan.jpg"
                   target="_blank"
