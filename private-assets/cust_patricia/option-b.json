@@ -1,0 +1,89 @@
+{
+  "title": "Sunrun Option B: Brightbox Ownership Workflow",
+  "subtitle": "14.76 kW Solar + Tesla Powerwall 3 (13.5 kWh) · 25-Year Fixed Loan at $198/mo",
+  "urgentTitle": "Urgent action: utility disconnect notice",
+  "urgentBody": "Call the utility and request a 14-day hold pending solar installation.",
+  "urgentPhone": "800-368-3749",
+  "urgentActionLabel": "Call Entergy (800-368-3749)",
+  "showLeadNotes": true,
+  "showBalances": true,
+  "planTitle": "Roof layout and electrical engineering plan",
+  "planDescription": "36× 410W monocrystalline panels (14.76 kW) · 36 inch fire setbacks · Tesla Powerwall 3 and utility meter",
+  "footer": "Texas Tax Code § 11.27 guarantees 100% property tax exemption on solar valuation.",
+  "advisor": "Advisor Rep: Horace Lawrence (srep=/powergenie)",
+  "stats": [
+    { "label": "System Size", "value": "14.76 kW DC", "detail": "36× 410W Tier-1 Panels" },
+    { "label": "Storage Battery", "value": "Tesla Powerwall 3", "detail": "13.5 kWh LFP Backup" },
+    { "label": "New Monthly Cost", "value": "$198 / mo", "detail": "Compared with {{currentCharges}} on the current bill" },
+    { "label": "30% Federal ITC", "value": "$14,170 Credit", "detail": "IRC Section 25D Tax Credit" }
+  ],
+  "documents": [
+    {
+      "id": "proposal",
+      "label": "Proposal document",
+      "path": "customers/cust_patricia/sunrun-proposal.html"
+    },
+    {
+      "id": "solar-plan",
+      "label": "Full size blueprint",
+      "path": "customers/cust_patricia/solar-plan.jpg",
+      "preview": true
+    },
+    {
+      "id": "footprint",
+      "label": "Property footprint plan",
+      "path": "customers/cust_patricia/footprint-plan.jpg",
+      "preview": true
+    },
+    {
+      "id": "bill",
+      "label": "Entergy bill",
+      "path": "customers/cust_patricia/entergy-bill.png",
+      "preview": true
+    }
+  ],
+  "steps": [
+    {
+      "id": "step-1",
+      "title": "1. Emergency utility disconnect delay (immediate)",
+      "description": "Call the utility at the number on this step with account {{accountNumber}}. Request a 14-day extension on the {{pastDue}} past-due balance pending solar installation.",
+      "urgent": true,
+      "phone": "800-368-3749",
+      "actionLabel": "Call Entergy (800-368-3749)"
+    },
+    {
+      "id": "step-2",
+      "title": "2. Sunrun Brightbox agreement and proposal (Option B ownership)",
+      "description": "Horace Lawrence sends the proposal package and DocuSign agreement for 14.76 kW + Tesla Powerwall 3 ($198/mo fixed loan, $0 down) via srep=/powergenie.",
+      "documentId": "proposal",
+      "actionLabel": "View proposal package"
+    },
+    {
+      "id": "step-3",
+      "title": "3. Site assessment and 200A busbar check",
+      "description": "Sunrun technician 3D drone roof mapping and electrical service panel inspection at {{address}}."
+    },
+    {
+      "id": "step-4",
+      "title": "4. CAD plan set and county permitting",
+      "description": "Engineering stamps, wind and structural load calculations, and 36-inch fire ridge setback drawings submitted for permit.",
+      "documentId": "solar-plan",
+      "actionLabel": "View CAD blueprint"
+    },
+    {
+      "id": "step-5",
+      "title": "5. Utility interconnection application",
+      "description": "Submit the single-line diagram to the utility portal. Specify an exterior, lockable, utility-accessible manual AC disconnect switch."
+    },
+    {
+      "id": "step-6",
+      "title": "6. Professional installation (1-day build)",
+      "description": "Mount 36 tier-1 monocrystalline panels, Tesla Powerwall 3 (13.5 kWh LFP), and Tesla Backup Gateway 2."
+    },
+    {
+      "id": "step-7",
+      "title": "7. Final inspection and meter swap (PTO)",
+      "description": "Final electrical sign-off, then the utility installs a bi-directional net generation meter. System energized for 96.5% bill offset."
+    }
+  ]
+}

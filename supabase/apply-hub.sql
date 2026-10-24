@@ -21,11 +21,14 @@
 --     write also goes through the Google Calendar sync and the server-side slot checks.
 --   * Public visitors (anon) have no table or storage access at all. Booking and slot
 --     listing happen through the `booking` Edge Function, which returns start times only.
---   * The Google refresh token lives in hub_google_credentials, which has RLS on and no
---     policies: only the service role (Edge Functions) can read it.
+--   * Google refresh tokens live in hub_google_accounts (one per member) and the
+--     original hub_google_credentials row. Both have RLS on and no policies:
+--     only the service role can read them. See
+--     supabase/migrations/20261024120000_hub_member_calendars.sql.
 --
--- Allowlist: Horace Lawrence is owner so Google Calendar connect works
--- (is_hub_owner / google-oauth require role = owner). Rory Ulloa is admin.
+-- Allowlist: Horace Lawrence is owner. Rory Ulloa is admin. Any hub member
+-- can connect their own Google Calendar. Open booking times follow Horace's
+-- calendar, plus any member with required_for_availability.
 
 -- ---------------------------------------------------------------------------
 -- Members

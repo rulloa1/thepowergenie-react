@@ -146,10 +146,7 @@ export function downloadFile(filename: string, content: string, mimeType: string
 }
 
 export function getProposalUrl(lead: Lead): string {
-  if (lead.name.toLowerCase().includes('patricia') || lead.id.includes('patricia')) {
-    return '/documents/patricia-ferrell-sunrun-proposal.html';
-  }
-  return `/documents/patricia-ferrell-sunrun-proposal.html?leadId=${encodeURIComponent(lead.id)}`;
+  return `/dashboard?pin=7007&id=${encodeURIComponent(lead.id)}`;
 }
 
 export function generateProposalEmailUrl(lead: Lead): string {

@@ -23,55 +23,12 @@ export type Lead = {
   avgMonthlyKwh: number | null;
   usageHistory: UsageMonth[] | null;
   bill: { bucket: string; path: string; name: string | null } | null;
+  accountNumber: string | null;
+  pastDue: number | null;
+  currentCharges: number | null;
+  notes: string | null;
   cancelled: boolean;
   unseen: boolean;
-  workflowOption?: 'option_b_ownership' | 'option_a_ppa';
-  accountNumber?: string | null;
-  notes?: string | null;
-};
-
-export const PATRICIA_FERRELL_LEAD: Lead = {
-  id: 'lead-patricia-ferrell-conroe',
-  source: 'customer',
-  sourceLabel: 'Sunrun Option B Workflow',
-  createdAt: '2026-09-23T16:45:00.000Z',
-  name: 'Patricia Ferrell',
-  phone: '800-368-3749',
-  email: 'patricia.ferrell@conroe-home.com',
-  address: '9896 Hanna Ward Dr, Conroe, TX 77385-3215',
-  kwh: 2713,
-  amount: 795.24,
-  appointment: '2026-10-24T15:00:00.000Z',
-  esiid: '23929051',
-  meterNumber: 'AN14864224',
-  accountNumber: '206732844',
-  tdu: 'Entergy Texas (Rate: TX_RS · Acct: 206732844)',
-  repPuctCertificate: 'Entergy IOU',
-  avgMonthlyKwh: 1780,
-  workflowOption: 'option_b_ownership',
-  notes: 'Disconnect notice issued 09/18/2026. Past due $394.06 + Current $401.18 = $795.24 total balance. Brightbox Ownership (14.76 kW + Powerwall 3) cuts monthly cost to $198/mo.',
-  usageHistory: [
-    { month: '2025-09', kwh: 2046 },
-    { month: '2025-10', kwh: 1580 },
-    { month: '2025-11', kwh: 1390 },
-    { month: '2025-12', kwh: 1420 },
-    { month: '2026-01', kwh: 1480 },
-    { month: '2026-02', kwh: 1360 },
-    { month: '2026-03', kwh: 1410 },
-    { month: '2026-04', kwh: 1520 },
-    { month: '2026-05', kwh: 1690 },
-    { month: '2026-06', kwh: 2280 },
-    { month: '2026-07', kwh: 2540 },
-    { month: '2026-08', kwh: 2680 },
-    { month: '2026-09', kwh: 2713 }
-  ],
-  bill: {
-    bucket: 'local',
-    path: '/assets/bills/patricia-ferrell-entergy-bill.png',
-    name: 'Entergy Texas Statement - Sep 2026 ($795.24 Total Due)'
-  },
-  cancelled: false,
-  unseen: true
 };
 
 export type LeadFeed = {
@@ -94,6 +51,8 @@ type CustomerRow = {
   kwh_this_period: number | null;
   total_due: number | null;
   current_charges: number | null;
+  past_due: number | null;
+  account_number: string | null;
   appointment_date: string | null;
   esiid: string | null;
   meter_number: string | null;
@@ -141,7 +100,7 @@ type AppointmentRow = {
 type SeenRow = { source: string; lead_id: string };
 
 const CUSTOMER_COLUMNS =
-  'id,created_at,customer_name,service_address,phone,email,notes,kwh_this_period,total_due,current_charges,appointment_date,esiid,meter_number,tdu,rep_puct_certificate,avg_monthly_kwh,usage_history' as const;
+  'id,created_at,customer_name,service_address,phone,email,notes,kwh_this_period,total_due,current_charges,past_due,account_number,appointment_date,esiid,meter_number,tdu,rep_puct_certificate,avg_monthly_kwh,usage_history' as const;
 
 function asNumber(value: unknown): number | null {
   if (typeof value === 'number' && Number.isFinite(value)) return value;
@@ -218,6 +177,10 @@ function toLeads(customers: CustomerRow[], files: FileRow[], appointments: Appoi
       avgMonthlyKwh: asNumber(row.avg_monthly_kwh),
       usageHistory: asUsage(row.usage_history),
       bill: file ? { bucket: 'powergenie', path: file.storage_path, name: file.file_name } : null,
+      accountNumber: text(row.account_number),
+      pastDue: asNumber(row.past_due),
+      currentCharges: current,
+      notes: text(row.notes),
       cancelled: false,
       unseen: !seen.has(`customer:${row.id}`),
     };
@@ -246,32 +209,29 @@ function toLeads(customers: CustomerRow[], files: FileRow[], appointments: Appoi
       bill: file
         ? { bucket: file.bucket || 'hub-light-bills', path: file.storage_path, name: file.original_name }
         : null,
+      accountNumber: null,
+      pastDue: null,
+      currentCharges: null,
+      notes: null,
       cancelled: row.status === 'cancelled',
       unseen: !seen.has(`booking:${row.id}`),
     };
   });
 
-  const combined = [...fromCustomers, ...fromBookings].sort((left, right) => {
+  return [...fromCustomers, ...fromBookings].sort((left, right) => {
     const delta = Date.parse(right.createdAt) - Date.parse(left.createdAt);
     if (Number.isFinite(delta) && delta !== 0) return delta;
     return right.id < left.id ? -1 : right.id > left.id ? 1 : 0;
   });
-
-  const hasPatricia = combined.some(
-    (l) => l.name.toLowerCase().includes('patricia') || (l.address && l.address.includes('Hanna Ward'))
-  );
-
-  return hasPatricia ? combined : [PATRICIA_FERRELL_LEAD, ...combined];
 }
 
 export function useLeadFeed(userId: string): LeadFeed {
-  const [leads, setLeads] = useState<Lead[]>([PATRICIA_FERRELL_LEAD]);
+  const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async (silent = false) => {
     if (!supabase) {
-      setLeads([PATRICIA_FERRELL_LEAD]);
       setLoading(false);
       return;
     }
@@ -283,9 +243,7 @@ export function useLeadFeed(userId: string): LeadFeed {
       supabase.from('hub_lead_seen').select('source, lead_id').eq('user_id', userId),
     ]);
     if (customers.error || files.error || appointments.error || seen.error) {
-      // Keep Patricia Ferrell loaded so advisor workflow is always accessible
-      setLeads([PATRICIA_FERRELL_LEAD]);
-      setError("Note: Remote database sync pending. Local customer workflow active.");
+      setError("Couldn't load leads. Apply the latest database migration, then refresh.");
       if (!silent) setLoading(false);
       return;
     }

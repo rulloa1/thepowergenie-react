@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   AlertTriangle,
   Check,
@@ -14,12 +15,25 @@ import {
   Mail,
   MapPin,
   Phone,
+  Printer,
   RefreshCw,
   Share2,
   ShieldCheck,
+  X,
   Zap,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { HTML_PREVIEW_SANDBOX, isHtmlObjectPath, openHtmlBlob, readSignedHtml } from './htmlDocument';
+import {
+  canPreviewObject,
+  customerObjectPath,
+  fillWorkflowTemplate,
+  optionBObjectPath,
+  parseOptionBWorkflow,
+  telHref,
+  type OptionBWorkflow,
+  type WorkflowDocument,
+} from './optionB';
 import type { Lead, LeadFeed } from './useLeadFeed';
 import { Button, Notice, Spinner, cn } from './ui';
 import { formatDateTime } from './time';
@@ -93,101 +107,144 @@ function Fact({ label, children }: { label: string; children: React.ReactNode })
   );
 }
 
-const WORKFLOW_STEPS = [
-  {
-    id: 'step-1',
-    title: '1. Emergency Entergy Disconnect Delay (Immediate)',
-    desc: 'Call Entergy Texas (800-368-3749) with Acct # 206732844. Request 14-day extension on $394.06 past-due balance pending solar installation.',
-    urgent: true,
-    actionUrl: 'tel:18003683749',
-    actionLabel: 'Call Entergy (800-368-3749)',
-  },
-  {
-    id: 'step-2',
-    title: '2. Sunrun Brightbox Agreement & Proposal (Option B Ownership)',
-    desc: 'Horace Lawrence sends proposal package and DocuSign agreement for 14.76 kW + Tesla Powerwall 3 ($198/mo fixed loan, $0 down) via srep=/powergenie.',
-    urgent: false,
-    actionUrl: '/documents/patricia-ferrell-sunrun-proposal.html',
-    actionLabel: 'View Proposal Package',
-  },
-  {
-    id: 'step-3',
-    title: '3. Site Assessment & 200A Busbar Check',
-    desc: 'Sunrun technician 3D drone roof mapping & electrical service panel inspection at 9896 Hanna Ward Dr, Conroe, TX.',
-    urgent: false,
-  },
-  {
-    id: 'step-4',
-    title: '4. CAD Plan Set & Montgomery County Permitting',
-    desc: 'Engineering stamps, wind/structural load calculations, and 36-inch fire ridge setback drawings submitted to Montgomery County.',
-    urgent: false,
-    actionUrl: '/assets/plans/patricia-ferrell-solar-plan.jpg',
-    actionLabel: 'View CAD Blueprint',
-  },
-  {
-    id: 'step-5',
-    title: '5. Entergy Schedule IPODG Interconnection Application',
-    desc: 'Submit single-line diagram (SLD) to Entergy portal; specify exterior, lockable, utility-accessible manual AC disconnect switch.',
-    urgent: false,
-  },
-  {
-    id: 'step-6',
-    title: '6. Professional Installation (1-Day Build)',
-    desc: 'Mount 36 tier-1 monocrystalline panels, Tesla Powerwall 3 (13.5 kWh LFP), and Tesla Backup Gateway 2.',
-    urgent: false,
-  },
-  {
-    id: 'step-7',
-    title: '7. Final City Inspection & Entergy Meter Swap (PTO)',
-    desc: 'Montgomery County final electrical sign-off; Entergy installs bi-directional net generation meter. System energized for 96.5% bill offset.',
-    urgent: false,
-  },
-];
+const SIGNED_URL_SECONDS = 120;
+
+function useOptionBWorkflow(lead: Lead): OptionBWorkflow | null {
+  const [workflow, setWorkflow] = useState<OptionBWorkflow | null>(null);
+
+  useEffect(() => {
+    if (lead.source !== 'customer' || !supabase) {
+      setWorkflow(null);
+      return;
+    }
+    const path = optionBObjectPath(lead.id);
+    if (!path) {
+      setWorkflow(null);
+      return;
+    }
+    let cancelled = false;
+    setWorkflow(null);
+    void supabase.storage.from('powergenie').download(path).then(async ({ data, error }) => {
+      if (cancelled || error || !data) return;
+      const text = await data.text();
+      if (cancelled) return;
+      const parsed = parseOptionBWorkflow(text, lead.id);
+      if (parsed) setWorkflow(parsed);
+    }).catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [lead.id, lead.source]);
+
+  return workflow;
+}
 
 function SunrunOptionBWorkflow({ lead }: { lead: Lead }) {
+  const workflow = useOptionBWorkflow(lead);
   const [open, setOpen] = useState(true);
-  const [showPlan, setShowPlan] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [previewPath, setPreviewPath] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [fileError, setFileError] = useState<string | null>(null);
+  const [htmlView, setHtmlView] = useState<{ label: string; html: string } | null>(null);
+  const [htmlBusy, setHtmlBusy] = useState(false);
+  const dialogRef = useRef<HTMLDivElement>(null);
   const storageKey = `pg_workflow_${lead.id}`;
   const [completed, setCompleted] = useState<Record<string, boolean>>(() => {
     try {
-      return JSON.parse(localStorage.getItem(storageKey) || '{}');
+      const stored = JSON.parse(localStorage.getItem(storageKey) || '{}') as unknown;
+      if (!stored || typeof stored !== 'object' || Array.isArray(stored)) return {};
+      return stored as Record<string, boolean>;
     } catch {
       return {};
     }
   });
 
-  const toggle = (id: string) => {
+  useEffect(() => {
+    if (!htmlView) return;
+    dialogRef.current?.focus();
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setHtmlView(null);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [htmlView]);
+
+  if (!workflow) return null;
+
+  const sign = async (objectPath: string): Promise<string | null> => {
+    const path = customerObjectPath(lead.id, objectPath);
+    if (!path || !supabase) return null;
+    const { data, error } = await supabase.storage.from('powergenie').createSignedUrl(path, SIGNED_URL_SECONDS);
+    if (error || !data?.signedUrl) return null;
+    return data.signedUrl;
+  };
+
+  const openFile = async (objectPath: string) => {
+    setFileError(null);
+    const path = customerObjectPath(lead.id, objectPath);
+    const url = path ? await sign(path) : null;
+    if (!path || !url) {
+      setFileError("Couldn't open that file. Please try again.");
+      return;
+    }
+    if (!isHtmlObjectPath(path)) {
+      window.open(url, '_blank', 'noopener');
+      return;
+    }
+    setHtmlBusy(true);
+    const html = await readSignedHtml(url);
+    setHtmlBusy(false);
+    if (!html) {
+      setFileError("Couldn't open that file. Please try again.");
+      return;
+    }
+    const label = workflow.documents.find((document) => document.path === path)?.label || 'Document';
+    setHtmlView({ label, html });
+  };
+
+  const openHtml = (print: boolean) => {
+    if (!htmlView) return;
+    if (!openHtmlBlob(htmlView.html, print)) {
+      setFileError('Allow pop-ups to open or print this document.');
+    }
+  };
+
+  const togglePreview = async (document: WorkflowDocument) => {
+    if (!document.preview || !canPreviewObject(document.path)) return;
+    if (previewPath === document.path) {
+      setPreviewPath(null);
+      setPreviewUrl(null);
+      return;
+    }
+    setFileError(null);
+    const url = await sign(document.path);
+    if (!url) {
+      setFileError("Couldn't open that file. Please try again.");
+      return;
+    }
+    setPreviewPath(document.path);
+    setPreviewUrl(url);
+  };
+
+  const toggleStep = (id: string) => {
     setCompleted((prev) => {
       const next = { ...prev, [id]: !prev[id] };
       try {
         localStorage.setItem(storageKey, JSON.stringify(next));
-      } catch {}
+      } catch {
+        /* progress is a convenience; the workflow still renders */
+      }
       return next;
     });
   };
 
-  const handleCopyLink = async () => {
-    const url = typeof window !== 'undefined'
-      ? `${window.location.origin}${getProposalUrl(lead)}`
-      : `https://thepowergenie.com${getProposalUrl(lead)}`;
-    try {
-      await navigator.clipboard.writeText(url);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2500);
-    } catch {}
-  };
-
-  const handleDownloadSchedule = () => {
-    const csv = solarProposalScheduleToCsv(lead);
-    const fname = `${lead.name.toLowerCase().replace(/\s+/g, '-')}-sunrun-25yr-schedule.csv`;
-    downloadFile(fname, csv, 'text/csv;charset=utf-8;');
-  };
-
-  const doneCount = WORKFLOW_STEPS.filter((s) => completed[s.id]).length;
-  const pct = Math.round((doneCount / WORKFLOW_STEPS.length) * 100);
+  const doneCount = workflow.steps.filter((step) => completed[step.id]).length;
+  const pct = Math.round((doneCount / workflow.steps.length) * 100);
+  const urgentTel = telHref(workflow.urgentPhone);
+  const documentsById = new Map(workflow.documents.map((document) => [document.id, document]));
 
   return (
+    <>
     <div className="mt-4 rounded-2xl border-2 border-[#FF6B00] bg-[#FFFBF7] p-4 text-[#1A1A2E] sm:p-5">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#FFE0CC] pb-3">
         <div className="flex items-center gap-2">
@@ -195,15 +252,14 @@ function SunrunOptionBWorkflow({ lead }: { lead: Lead }) {
             <Zap className="h-4 w-4" />
           </span>
           <div>
-            <h3 className="m-0 text-[1.05rem] font-bold text-[#1A1A2E]">Sunrun Option B: Brightbox Ownership Workflow</h3>
-            <p className="m-0 text-[0.78rem] text-[#6B7280]">
-              14.76 kW Solar + Tesla Powerwall 3 (13.5 kWh) · 25-Year Fixed Loan at $198/mo
-            </p>
+            <h3 className="m-0 text-[1.05rem] font-bold text-[#1A1A2E]">{workflow.title}</h3>
+            <p className="m-0 text-[0.78rem] text-[#6B7280]">{fillWorkflowTemplate(workflow.subtitle, lead)}</p>
           </div>
         </div>
         <button
           type="button"
           onClick={() => setOpen(!open)}
+          aria-expanded={open}
           className="flex items-center gap-1 text-[0.8rem] font-semibold text-[#FF6B00] hover:underline"
         >
           {open ? <>Collapse <ChevronUp className="h-4 w-4" /></> : <>Expand <ChevronDown className="h-4 w-4" /></>}
@@ -212,232 +268,164 @@ function SunrunOptionBWorkflow({ lead }: { lead: Lead }) {
 
       {open && (
         <div className="mt-4 space-y-4">
-          {/* Urgent Disconnect Warning */}
-          <div className="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-[#FCA5A5] bg-[#FEF2F2] p-3.5">
-            <div className="flex items-start gap-2.5">
-              <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-[#DC2626]" />
-              <div className="text-[0.85rem] leading-relaxed text-[#991B1B]">
-                <strong className="font-bold">Urgent Action: Entergy Disconnect Notice Issued (09/18/2026)</strong>
-                <p className="m-0 mt-0.5">
-                  Past due: <strong>$394.06</strong> · Current charges: <strong>$401.18</strong> · Total balance: <strong>$795.24</strong>
-                  <br />
-                  Call Entergy Customer Care to request a 14-day hold pending solar installation.
-                </p>
+          {(workflow.urgentTitle || workflow.urgentBody) && (
+            <div className="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-[#FCA5A5] bg-[#FEF2F2] p-3.5">
+              <div className="flex items-start gap-2.5">
+                <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-[#DC2626]" />
+                <div className="text-[0.85rem] leading-relaxed text-[#991B1B]">
+                  {workflow.urgentTitle && <strong className="font-bold">{workflow.urgentTitle}</strong>}
+                  {workflow.urgentBody && <p className="m-0 mt-0.5">{fillWorkflowTemplate(workflow.urgentBody, lead)}</p>}
+                  {workflow.showLeadNotes && lead.notes && <p className="m-0 mt-1">{lead.notes}</p>}
+                  {workflow.showBalances && (
+                    <p className="m-0 mt-1">
+                      Past due: <strong>{formatMoney(lead.pastDue)}</strong>
+                      {' · '}
+                      Current charges: <strong>{formatMoney(lead.currentCharges)}</strong>
+                      {' · '}
+                      Total balance: <strong>{formatMoney(lead.amount)}</strong>
+                    </p>
+                  )}
+                </div>
               </div>
-            </div>
-            <a
-              href="tel:18003683749"
-              className="inline-flex items-center gap-1.5 rounded-lg bg-[#DC2626] px-3.5 py-2 text-[0.82rem] font-bold text-white shadow hover:bg-[#B91C1C] no-underline"
-            >
-              <Phone className="h-3.5 w-3.5" /> Call Entergy (800-368-3749)
-            </a>
-          </div>
-
-          {/* System & Financial Snapshot */}
-          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-            <div className="rounded-xl border border-[#E3E8EF] bg-white p-3">
-              <span className="block text-[0.68rem] font-bold uppercase text-[#6B7280]">System Size</span>
-              <strong className="text-[1.1rem] font-extrabold text-[#1A1A2E]">14.76 kW DC</strong>
-              <span className="block text-[0.72rem] text-[#6B7280]">36× 410W Tier-1 Panels</span>
-            </div>
-            <div className="rounded-xl border border-[#E3E8EF] bg-white p-3">
-              <span className="block text-[0.68rem] font-bold uppercase text-[#6B7280]">Storage Battery</span>
-              <strong className="text-[1.1rem] font-extrabold text-[#1A1A2E]">Tesla Powerwall 3</strong>
-              <span className="block text-[0.72rem] text-[#6B7280]">13.5 kWh LFP Backup</span>
-            </div>
-            <div className="rounded-xl border border-[#E3E8EF] bg-white p-3">
-              <span className="block text-[0.68rem] font-bold uppercase text-[#6B7280]">New Monthly Cost</span>
-              <strong className="text-[1.1rem] font-extrabold text-[#1E7B34]">$198 / mo</strong>
-              <span className="block text-[0.72rem] text-[#1E7B34]">Saves $181/mo vs $401</span>
-            </div>
-            <div className="rounded-xl border border-[#E3E8EF] bg-white p-3">
-              <span className="block text-[0.68rem] font-bold uppercase text-[#6B7280]">30% Federal ITC</span>
-              <strong className="text-[1.1rem] font-extrabold text-[#FF6B00]">$14,170 Credit</strong>
-              <span className="block text-[0.72rem] text-[#6B7280]">IRC Section 25D Tax Credit</span>
-            </div>
-          </div>
-
-          {/* Proposal & Export Command Center */}
-          <div className="rounded-xl border border-[#FFD0B0] bg-white p-3.5 shadow-sm">
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#F1F5F9] pb-2.5">
-              <div>
-                <h4 className="m-0 text-[0.92rem] font-bold text-[#1A1A2E]">
-                  Proposal Package & Export Center
-                </h4>
-                <p className="m-0 text-[0.76rem] text-[#6B7280]">
-                  Printable Sunrun proposal, 25-yr financial schedule, share links & DocuSign contract
-                </p>
-              </div>
-              <span className="rounded-full bg-[#FFF5EC] px-2.5 py-0.5 text-[0.72rem] font-bold uppercase text-[#C2410C]">
-                Option B Package
-              </span>
-            </div>
-
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              <a
-                href={getProposalUrl(lead)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 rounded-lg border border-[#FF6B00] bg-[#FF6B00] px-3 py-1.5 text-[0.78rem] font-bold text-white shadow-sm hover:bg-[#E05E00] no-underline"
-              >
-                <FileText className="h-3.5 w-3.5" /> View / Print Proposal (PDF)
-              </a>
-
-              <button
-                type="button"
-                onClick={handleDownloadSchedule}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-[#CBD5E1] bg-white px-3 py-1.5 text-[0.78rem] font-bold text-[#1E7B34] shadow-sm hover:bg-[#F3FAF5]"
-                title="Download 25-year financial breakdown & solar output in CSV format"
-              >
-                <FileSpreadsheet className="h-3.5 w-3.5" /> 25-Yr Schedule (CSV)
-              </button>
-
-              <button
-                type="button"
-                onClick={handleCopyLink}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-[#CBD5E1] bg-white px-3 py-1.5 text-[0.78rem] font-bold text-[#334155] shadow-sm hover:bg-[#F8FAFC]"
-              >
-                {copied ? <Check className="h-3.5 w-3.5 text-[#1E7B34]" /> : <Copy className="h-3.5 w-3.5 text-[#6B7280]" />}
-                {copied ? 'Link Copied!' : 'Copy Proposal Link'}
-              </button>
-
-              <a
-                href={generateProposalEmailUrl(lead)}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-[#CBD5E1] bg-white px-3 py-1.5 text-[0.78rem] font-bold text-[#334155] shadow-sm hover:bg-[#F8FAFC] no-underline"
-              >
-                <Mail className="h-3.5 w-3.5 text-[#3B82F6]" /> Email Proposal
-              </a>
-
-              {lead.phone && (
+              {urgentTel && workflow.urgentActionLabel && (
                 <a
-                  href={generateProposalSmsUrl(lead)}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-[#CBD5E1] bg-white px-3 py-1.5 text-[0.78rem] font-bold text-[#334155] shadow-sm hover:bg-[#F8FAFC] no-underline"
+                  href={urgentTel}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-[#DC2626] px-3.5 py-2 text-[0.82rem] font-bold text-white no-underline shadow hover:bg-[#B91C1C]"
                 >
-                  <Share2 className="h-3.5 w-3.5 text-[#10B981]" /> SMS Link
+                  <Phone className="h-3.5 w-3.5" /> {workflow.urgentActionLabel}
                 </a>
               )}
-
-              <a
-                href="https://sunrun.my.salesforce-sites.com/purl/?srep=/powergenie"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 rounded-lg border border-[#1A1A2E] bg-[#1A1A2E] px-3 py-1.5 text-[0.78rem] font-bold text-white shadow-sm hover:bg-[#2E2E48] no-underline"
-              >
-                <ExternalLink className="h-3.5 w-3.5 text-[#FF6B00]" /> DocuSign Portal
-              </a>
             </div>
-          </div>
+          )}
 
-          {/* Progress Bar */}
+          {workflow.stats.length > 0 && (
+            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+              {workflow.stats.map((stat) => (
+                <div key={stat.label} className="rounded-xl border border-[#E3E8EF] bg-white p-3">
+                  <span className="block text-[0.68rem] font-bold uppercase text-[#6B7280]">{stat.label}</span>
+                  <strong className="text-[1.1rem] font-extrabold text-[#1A1A2E]">{fillWorkflowTemplate(stat.value, lead)}</strong>
+                  <span className="block text-[0.72rem] text-[#6B7280]">{fillWorkflowTemplate(stat.detail, lead)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
           <div>
             <div className="flex items-center justify-between text-[0.76rem] font-semibold text-[#4A5568]">
-              <span>Sunrun Implementation Progress</span>
-              <span>{doneCount} of {WORKFLOW_STEPS.length} Completed ({pct}%)</span>
+              <span>Sunrun implementation progress</span>
+              <span>{doneCount} of {workflow.steps.length} completed ({pct}%)</span>
             </div>
             <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-[#E5E7EB]">
-              <div
-                className="h-full rounded-full bg-[#FF6B00] transition-all duration-300"
-                style={{ width: `${pct}%` }}
-              />
+              <div className="h-full rounded-full bg-[#FF6B00] transition-all duration-300" style={{ width: `${pct}%` }} />
             </div>
           </div>
 
-          {/* Engineering CAD Blueprint Card */}
-          <div className="rounded-xl border border-[#CBD5E1] bg-white p-3.5 shadow-sm">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div>
-                <h4 className="m-0 text-[0.92rem] font-bold text-[#1A1A2E]">
-                  Roof Layout & Electrical Engineering Plan (CAD Blueprint)
-                </h4>
-                <p className="m-0 text-[0.78rem] text-[#6B7280]">
-                  36× 410W Monocrystalline Panels (14.76 kW) · 36" Fire Setbacks · Tesla Powerwall 3 & Entergy Meter
-                </p>
+          {workflow.documents.length > 0 && (
+            <div className="rounded-xl border border-[#CBD5E1] bg-white p-3.5 shadow-sm">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  {workflow.planTitle && <h4 className="m-0 text-[0.92rem] font-bold text-[#1A1A2E]">{workflow.planTitle}</h4>}
+                  {workflow.planDescription && (
+                    <p className="m-0 text-[0.78rem] text-[#6B7280]">{fillWorkflowTemplate(workflow.planDescription, lead)}</p>
+                  )}
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  {workflow.documents.map((document) => (
+                    <button
+                      key={document.id}
+                      type="button"
+                      onClick={() => void openFile(document.path)}
+                      className="inline-flex items-center gap-1 rounded-lg border border-[#0F172A] bg-[#0F172A] px-3 py-1.5 text-[0.78rem] font-bold text-white shadow hover:bg-[#1E293B]"
+                    >
+                      {canPreviewObject(document.path) ? <Eye className="h-3.5 w-3.5" /> : <FileText className="h-3.5 w-3.5" />}
+                      {document.label}
+                    </button>
+                  ))}
+                </div>
               </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <a
-                  href="/documents/patricia-ferrell-sunrun-proposal.html"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 rounded-lg border border-[#FF6B00] bg-[#FF6B00] px-3 py-1.5 text-[0.78rem] font-bold text-white shadow hover:bg-[#E05E00] no-underline"
-                >
-                  <FileText className="h-3.5 w-3.5" /> Proposal Document (PDF)
-                </a>
-                <a
-                  href="/assets/plans/patricia-ferrell-solar-plan.jpg"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 rounded-lg border border-[#0F172A] bg-[#0F172A] px-3 py-1.5 text-[0.78rem] font-bold text-white shadow hover:bg-[#1E293B] no-underline"
-                >
-                  <Eye className="h-3.5 w-3.5" /> Full Size Blueprint
-                </a>
-                <button
-                  type="button"
-                  onClick={() => setShowPlan(!showPlan)}
-                  className="rounded-lg border border-[#E2E8F0] px-2.5 py-1.5 text-[0.78rem] font-semibold text-[#FF6B00] hover:bg-[#FFF5EC]"
-                >
-                  {showPlan ? 'Hide Drawing' : 'Show Drawing'}
-                </button>
-              </div>
+              {workflow.documents.some((document) => document.preview && canPreviewObject(document.path)) && (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {workflow.documents.filter((document) => document.preview && canPreviewObject(document.path)).map((document) => (
+                    <button
+                      key={`preview-${document.id}`}
+                      type="button"
+                      onClick={() => void togglePreview(document)}
+                      className="rounded-lg border border-[#E2E8F0] px-2.5 py-1.5 text-[0.78rem] font-semibold text-[#FF6B00] hover:bg-[#FFF5EC]"
+                    >
+                      {previewPath === document.path ? `Hide ${document.label}` : `Show ${document.label}`}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {previewUrl && (
+                <div className="mt-3 overflow-hidden rounded-lg border border-[#94A3B8] bg-[#001020]">
+                  <img src={previewUrl} alt={workflow.planTitle || 'Customer plan'} className="w-full object-contain" />
+                  <p className="m-0 bg-[#0A192F] p-2 text-center text-[0.72rem] text-[#94A3B8]">
+                    Signed link for this hub session. It expires shortly.
+                  </p>
+                </div>
+              )}
             </div>
-            {showPlan && (
-              <div className="mt-3 overflow-hidden rounded-lg border border-[#94A3B8] bg-[#001020]">
-                <a href="/assets/plans/patricia-ferrell-solar-plan.jpg" target="_blank" rel="noopener noreferrer">
-                  <img
-                    src="/assets/plans/patricia-ferrell-solar-plan.jpg"
-                    alt="Sunrun Option B CAD Solar Plan for Patricia Ferrell"
-                    className="w-full object-contain"
-                  />
-                </a>
-                <p className="m-0 bg-[#0A192F] p-2 text-center text-[0.72rem] text-[#94A3B8]">
-                  Click blueprint image to expand in full high-resolution tab.
-                </p>
-              </div>
-            )}
-          </div>
+          )}
 
-          {/* Step by Step Checklist */}
+          {htmlBusy && <p className="m-0 text-[0.84rem] text-[#6B7280]">Opening document…</p>}
+          {fileError && <Notice tone="error">{fileError}</Notice>}
+
           <div className="space-y-2">
-            {WORKFLOW_STEPS.map((step) => {
+            {workflow.steps.map((step) => {
               const isDone = !!completed[step.id];
+              const document = step.documentId ? documentsById.get(step.documentId) : undefined;
+              const stepTel = telHref(step.phone);
               return (
                 <div
                   key={step.id}
-                  onClick={() => toggle(step.id)}
+                  onClick={() => toggleStep(step.id)}
                   className={cn(
                     'flex cursor-pointer items-start justify-between gap-3 rounded-xl border p-3 transition-colors',
                     isDone
                       ? 'border-[#BFE3C6] bg-[#F3FAF5]'
                       : step.urgent
-                      ? 'border-[#FCA5A5] bg-white'
-                      : 'border-[#E3E8EF] bg-white hover:border-[#CBD5E1]'
+                        ? 'border-[#FCA5A5] bg-white'
+                        : 'border-[#E3E8EF] bg-white hover:border-[#CBD5E1]',
                   )}
                 >
                   <div className="flex items-start gap-2.5">
                     <input
                       type="checkbox"
                       checked={isDone}
-                      onChange={() => toggle(step.id)}
-                      onClick={(e) => e.stopPropagation()}
+                      onChange={() => toggleStep(step.id)}
+                      onClick={(event) => event.stopPropagation()}
+                      aria-label={step.title}
                       className="mt-1 h-4 w-4 rounded border-gray-300 text-[#FF6B00] focus:ring-[#FF6B00]"
                     />
                     <div>
-                      <h4 className={cn('m-0 text-[0.88rem] font-bold', isDone && 'line-through text-[#6B7280]')}>
+                      <h4 className={cn('m-0 text-[0.88rem] font-bold', isDone && 'text-[#6B7280] line-through')}>
                         {step.title}
                       </h4>
                       <p className="m-0 mt-0.5 text-[0.8rem] leading-snug text-[#4A5568]">
-                        {step.desc}
+                        {fillWorkflowTemplate(step.description, lead)}
                       </p>
                     </div>
                   </div>
-                  {step.actionUrl && !isDone && (
-                    <a
-                      href={step.actionUrl}
-                      target={step.actionUrl.startsWith('http') ? '_blank' : undefined}
-                      rel="noopener noreferrer"
-                      onClick={(e) => e.stopPropagation()}
-                      className="inline-flex shrink-0 items-center gap-1 rounded-md border border-[#FF6B00] px-2.5 py-1 text-[0.74rem] font-bold text-[#FF6B00] hover:bg-[#FFF5EC] no-underline"
+                  {!isDone && document && (
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        void openFile(document.path);
+                      }}
+                      className="inline-flex shrink-0 items-center gap-1 rounded-md border border-[#FF6B00] px-2.5 py-1 text-[0.74rem] font-bold text-[#FF6B00] no-underline hover:bg-[#FFF5EC]"
                     >
-                      {step.actionLabel || 'Action'}
+                      {step.actionLabel || document.label}
+                    </button>
+                  )}
+                  {!isDone && !document && stepTel && step.actionLabel && (
+                    <a
+                      href={stepTel}
+                      onClick={(event) => event.stopPropagation()}
+                      className="inline-flex shrink-0 items-center gap-1 rounded-md border border-[#FF6B00] px-2.5 py-1 text-[0.74rem] font-bold text-[#FF6B00] no-underline hover:bg-[#FFF5EC]"
+                    >
+                      {step.actionLabel}
                     </a>
                   )}
                 </div>
@@ -445,16 +433,66 @@ function SunrunOptionBWorkflow({ lead }: { lead: Lead }) {
             })}
           </div>
 
-          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[#FFE0CC] pt-3 text-[0.78rem] text-[#6B7280]">
-            <span className="inline-flex items-center gap-1.5">
-              <ShieldCheck className="h-4 w-4 text-[#1E7B34]" />
-              Texas Tax Code § 11.27 guarantees 100% property tax exemption on solar valuation.
-            </span>
-            <span>Advisor Rep: Horace Lawrence (srep=/powergenie)</span>
-          </div>
+          {(workflow.footer || workflow.advisor) && (
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[#FFE0CC] pt-3 text-[0.78rem] text-[#6B7280]">
+              {workflow.footer && (
+                <span className="inline-flex items-center gap-1.5">
+                  <ShieldCheck className="h-4 w-4 text-[#1E7B34]" />
+                  {workflow.footer}
+                </span>
+              )}
+              {workflow.advisor && <span>{workflow.advisor}</span>}
+            </div>
+          )}
         </div>
       )}
     </div>
+    {htmlView && createPortal(
+      <div
+        className="fixed inset-0 z-[80] flex items-stretch justify-center bg-[#0A1220]/70 p-2 sm:p-4"
+        onClick={() => setHtmlView(null)}
+      >
+        <div
+          ref={dialogRef}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="html-doc-title"
+          tabIndex={-1}
+          onClick={(event) => event.stopPropagation()}
+          className="flex h-full w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl outline-none"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#E3E8EF] px-4 py-3">
+            <h2 id="html-doc-title" className="m-0 text-base font-bold text-[#1A1A2E]">{htmlView.label}</h2>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button type="button" variant="ghost" className="min-h-[36px] px-3 text-[0.84rem]" onClick={() => openHtml(true)}>
+                <Printer className="h-4 w-4" /> Print / Save as PDF
+              </Button>
+              <Button type="button" variant="ghost" className="min-h-[36px] px-3 text-[0.84rem]" onClick={() => openHtml(false)}>
+                Open in new tab
+              </Button>
+              <button
+                type="button"
+                onClick={() => setHtmlView(null)}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#E3E8EF] text-[#1A1A2E] hover:border-[#1A1A2E]"
+                aria-label="Close document"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+          {fileError && <p className="m-0 border-b border-[#F3C2BB] bg-[#FFF0EE] px-4 py-2 text-[0.84rem] text-[#8A1F11]" role="alert">{fileError}</p>}
+          <iframe
+            title={htmlView.label}
+            sandbox={HTML_PREVIEW_SANDBOX}
+            referrerPolicy="no-referrer"
+            srcDoc={htmlView.html}
+            className="min-h-0 w-full flex-1 border-0 bg-white"
+          />
+        </div>
+      </div>,
+      document.body,
+    )}
+    </>
   );
 }
 
@@ -612,6 +650,7 @@ export default function LeadsTab({ feed }: { feed: LeadFeed }) {
                   <Fact label="kWh">{formatKwh(lead.kwh)}</Fact>
                   <Fact label="Bill amount">{formatMoney(lead.amount)}</Fact>
                   <Fact label="Appointment">{formatWhen(lead.appointment)}</Fact>
+                  <Fact label="Account #">{lead.accountNumber || '—'}</Fact>
                   <Fact label="ESI ID">{lead.esiid || '—'}</Fact>
                   <Fact label="Meter">{lead.meterNumber || '—'}</Fact>
                   <Fact label="Average monthly">{lead.avgMonthlyKwh == null ? '—' : formatKwh(lead.avgMonthlyKwh)}</Fact>
@@ -629,8 +668,8 @@ export default function LeadsTab({ feed }: { feed: LeadFeed }) {
                   <UsageHistory points={lead.usageHistory} />
                 </div>
 
-                {/* Sunrun Option B Workflow Integration for Patricia Ferrell & Option B Leads */}
-                {(lead.workflowOption === 'option_b_ownership' || lead.name.toLowerCase().includes('patricia')) && (
+                {/* Sunrun Option B Workflow Integration for Option B Leads */}
+                {(lead.source === 'customer' || lead.workflowOption === 'option_b_ownership') && (
                   <SunrunOptionBWorkflow lead={lead} />
                 )}
 
@@ -653,7 +692,6 @@ export default function LeadsTab({ feed }: { feed: LeadFeed }) {
                       <Download className="h-3 w-3 text-[#FF6B00]" /> Lead JSON
                     </button>
                   </div>
-
                   {lead.bill ? (
                     <div className="flex flex-wrap items-center gap-2 rounded-xl border border-[#BFE3C6] bg-[#EEF9F0] px-3 py-1.5">
                       <span className="inline-flex min-w-0 items-center gap-1.5 text-[0.84rem]">

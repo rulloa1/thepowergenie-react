@@ -183,8 +183,8 @@ export function isBookableSlot(
 
 /**
  * Website-assistant consults stored as a start time. Each one blocks
- * `durationMinutes` (the assistant slot length, 120 by default) so a
- * one-hour /book slot that falls inside that window is hidden.
+ * `durationMinutes` (the assistant slot length, 60 by default) so a
+ * /book slot that falls inside that window is hidden.
  */
 export function leadIntervals(
   appointmentDates: Array<string | null | undefined>,
