@@ -27,7 +27,7 @@ export default function LegalDocument({ title, children }: { title: string; chil
           {' · '}
           <a className={linkClass} href={SITE_URL}>{SITE_URL.replace('https://', '')}</a>
         </p>
-        <div className="mt-8 grid gap-8 text-[1.02rem] leading-relaxed">{children}</div>
+        <div className="mt-8 grid gap-8 text-[1.02rem] leading-relaxed [overflow-wrap:anywhere]">{children}</div>
         <p className="m-0 mt-10 text-sm text-[#4A5568]">
           Questions:{' '}
           <a className={linkClass} href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>
