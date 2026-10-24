@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { AlertTriangle, ChevronDown, ChevronUp, Eye, FileText, Mail, MapPin, Phone, RefreshCw, ShieldCheck, Zap } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { AlertTriangle, ChevronDown, ChevronUp, Eye, FileText, Mail, MapPin, Phone, Printer, RefreshCw, ShieldCheck, X, Zap } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { HTML_PREVIEW_SANDBOX, isHtmlObjectPath, openHtmlBlob, readSignedHtml } from './htmlDocument';
 import {
   canPreviewObject,
   customerObjectPath,
@@ -113,6 +115,9 @@ function SunrunOptionBWorkflow({ lead }: { lead: Lead }) {
   const [previewPath, setPreviewPath] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
+  const [htmlView, setHtmlView] = useState<{ label: string; html: string } | null>(null);
+  const [htmlBusy, setHtmlBusy] = useState(false);
+  const dialogRef = useRef<HTMLDivElement>(null);
   const storageKey = `pg_workflow_${lead.id}`;
   const [completed, setCompleted] = useState<Record<string, boolean>>(() => {
     try {
@@ -123,6 +128,16 @@ function SunrunOptionBWorkflow({ lead }: { lead: Lead }) {
       return {};
     }
   });
+
+  useEffect(() => {
+    if (!htmlView) return;
+    dialogRef.current?.focus();
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setHtmlView(null);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [htmlView]);
 
   if (!workflow) return null;
 
@@ -136,12 +151,32 @@ function SunrunOptionBWorkflow({ lead }: { lead: Lead }) {
 
   const openFile = async (objectPath: string) => {
     setFileError(null);
-    const url = await sign(objectPath);
-    if (!url) {
+    const path = customerObjectPath(lead.id, objectPath);
+    const url = path ? await sign(path) : null;
+    if (!path || !url) {
       setFileError("Couldn't open that file. Please try again.");
       return;
     }
-    window.open(url, '_blank', 'noopener');
+    if (!isHtmlObjectPath(path)) {
+      window.open(url, '_blank', 'noopener');
+      return;
+    }
+    setHtmlBusy(true);
+    const html = await readSignedHtml(url);
+    setHtmlBusy(false);
+    if (!html) {
+      setFileError("Couldn't open that file. Please try again.");
+      return;
+    }
+    const label = workflow.documents.find((document) => document.path === path)?.label || 'Document';
+    setHtmlView({ label, html });
+  };
+
+  const openHtml = (print: boolean) => {
+    if (!htmlView) return;
+    if (!openHtmlBlob(htmlView.html, print)) {
+      setFileError('Allow pop-ups to open or print this document.');
+    }
   };
 
   const togglePreview = async (document: WorkflowDocument) => {
@@ -179,6 +214,7 @@ function SunrunOptionBWorkflow({ lead }: { lead: Lead }) {
   const documentsById = new Map(workflow.documents.map((document) => [document.id, document]));
 
   return (
+    <>
     <div className="mt-4 rounded-2xl border-2 border-[#FF6B00] bg-[#FFFBF7] p-4 text-[#1A1A2E] sm:p-5">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#FFE0CC] pb-3">
         <div className="flex items-center gap-2">
@@ -302,6 +338,7 @@ function SunrunOptionBWorkflow({ lead }: { lead: Lead }) {
             </div>
           )}
 
+          {htmlBusy && <p className="m-0 text-[0.84rem] text-[#6B7280]">Opening document…</p>}
           {fileError && <Notice tone="error">{fileError}</Notice>}
 
           <div className="space-y-2">
@@ -380,6 +417,52 @@ function SunrunOptionBWorkflow({ lead }: { lead: Lead }) {
         </div>
       )}
     </div>
+    {htmlView && createPortal(
+      <div
+        className="fixed inset-0 z-[80] flex items-stretch justify-center bg-[#0A1220]/70 p-2 sm:p-4"
+        onClick={() => setHtmlView(null)}
+      >
+        <div
+          ref={dialogRef}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="html-doc-title"
+          tabIndex={-1}
+          onClick={(event) => event.stopPropagation()}
+          className="flex h-full w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl outline-none"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#E3E8EF] px-4 py-3">
+            <h2 id="html-doc-title" className="m-0 text-base font-bold text-[#1A1A2E]">{htmlView.label}</h2>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button type="button" variant="ghost" className="min-h-[36px] px-3 text-[0.84rem]" onClick={() => openHtml(true)}>
+                <Printer className="h-4 w-4" /> Print / Save as PDF
+              </Button>
+              <Button type="button" variant="ghost" className="min-h-[36px] px-3 text-[0.84rem]" onClick={() => openHtml(false)}>
+                Open in new tab
+              </Button>
+              <button
+                type="button"
+                onClick={() => setHtmlView(null)}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#E3E8EF] text-[#1A1A2E] hover:border-[#1A1A2E]"
+                aria-label="Close document"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+          {fileError && <p className="m-0 border-b border-[#F3C2BB] bg-[#FFF0EE] px-4 py-2 text-[0.84rem] text-[#8A1F11]" role="alert">{fileError}</p>}
+          <iframe
+            title={htmlView.label}
+            sandbox={HTML_PREVIEW_SANDBOX}
+            referrerPolicy="no-referrer"
+            srcDoc={htmlView.html}
+            className="min-h-0 w-full flex-1 border-0 bg-white"
+          />
+        </div>
+      </div>,
+      document.body,
+    )}
+    </>
   );
 }
 
