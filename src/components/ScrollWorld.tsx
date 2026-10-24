@@ -1,6 +1,7 @@
 import React, { useEffect, useLayoutEffect, useRef, useState, useCallback } from 'react';
 import { Config, Section, Segment } from '../types';
 import { openAssistant } from '../lib/openAssistant';
+import { shouldHandleClientNavigation } from '../lib/siteRoutes';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -98,9 +99,23 @@ function sequentialCopyOpacity(
 interface ScrollWorldProps {
   config: Config;
   onQuoteClick?: () => void;
+  onNavigateBrands?: () => void;
 }
 
-export default function ScrollWorld({ config, onQuoteClick }: ScrollWorldProps) {
+const navLinkClass = 'sw-nav__item whitespace-nowrap font-inherit text-[0.82rem] no-underline border-0 bg-transparent cursor-pointer px-3.5 py-1.5 rounded-full transition-colors duration-200 text-[var(--sw-ink-soft)] hover:text-[var(--sw-ink)]';
+
+function followBrands(
+  event: React.MouseEvent<HTMLAnchorElement>,
+  onNavigateBrands?: () => void,
+) {
+  if (!onNavigateBrands || !shouldHandleClientNavigation(event)) return;
+  event.preventDefault();
+  onNavigateBrands();
+  const details = event.currentTarget.closest('details');
+  if (details) details.open = false;
+}
+
+export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: ScrollWorldProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const copylayerRef = useRef<HTMLDivElement>(null);
@@ -654,15 +669,6 @@ export default function ScrollWorld({ config, onQuoteClick }: ScrollWorldProps) 
         )}
         
         <div className="flex items-center gap-6">
-          <span
-            role="link"
-            aria-disabled="true"
-            className="hidden 2xl:inline-flex items-center gap-2 whitespace-nowrap cursor-not-allowed select-none"
-          >
-            <span className="text-[0.82rem] font-semibold text-[#5A636E]">Our brands</span>
-            <ComingSoonPill />
-          </span>
-          
           {config.nav !== false && (
             <>
               {/* Desktop Nav */}
@@ -681,6 +687,13 @@ export default function ScrollWorld({ config, onQuoteClick }: ScrollWorldProps) 
                     {s.label}
                   </button>
                 ))}
+                <a
+                  href="/brands"
+                  onClick={(event) => followBrands(event, onNavigateBrands)}
+                  className={navLinkClass}
+                >
+                  Our brands
+                </a>
               </nav>
 
               {/* Mobile Menu */}
@@ -709,14 +722,13 @@ export default function ScrollWorld({ config, onQuoteClick }: ScrollWorldProps) 
                     </button>
                   ))}
                   <div className="h-px bg-gray-100 my-1" />
-                  <span
-                    role="link"
-                    aria-disabled="true"
-                    className="flex w-full cursor-not-allowed select-none flex-col items-start gap-1.5 px-5 py-3 text-left"
+                  <a
+                    href="/brands"
+                    onClick={(event) => followBrands(event, onNavigateBrands)}
+                    className="block w-full px-5 py-3 text-left text-[0.9rem] font-medium text-[var(--sw-ink)] no-underline active:bg-gray-50"
                   >
-                    <span className="text-[0.9rem] font-medium text-[#5A636E]">Our brands</span>
-                    <ComingSoonPill />
-                  </span>
+                    Our brands
+                  </a>
                 </nav>
               </details>
             </>
@@ -937,14 +949,6 @@ export default function ScrollWorld({ config, onQuoteClick }: ScrollWorldProps) 
         }
       ` }} />
     </div>
-  );
-}
-
-function ComingSoonPill() {
-  return (
-    <span className="inline-flex shrink-0 items-center whitespace-nowrap rounded-full border border-[color-mix(in_srgb,#FF6B00_45%,transparent)] bg-[color-mix(in_srgb,#FF6B00_14%,#fff)] px-2.5 py-1 text-[0.68rem] font-semibold leading-none text-[#9A3412]">
-      Coming soon
-    </span>
   );
 }
 

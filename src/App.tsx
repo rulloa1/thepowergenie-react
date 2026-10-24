@@ -6,6 +6,13 @@ import Toast from './components/Toast';
 import { Config } from './types';
 import LegalFooter from './components/LegalFooter';
 import { openAssistant } from './lib/openAssistant';
+import {
+  brandPageFromPath,
+  isBrandPage,
+  marketingViewFromLocation,
+  marketingViewHref,
+  type MarketingView,
+} from './lib/siteRoutes';
 
 const config: Config = {
   brand: { name: 'The Power Genie', href: '#top', logo: 'assets/brand/power-genie-lockup.webp' },
@@ -123,7 +130,9 @@ const config: Config = {
 // Main application component
 export default function App() {
   const [source, setSource] = useState<string | null>(null);
-  const [view, setView] = useState<string>('journey');
+  const [view, setView] = useState<MarketingView>(() =>
+    marketingViewFromLocation(window.location.pathname, window.location.search),
+  );
   // The Salesforce form autofocuses a field on load, which scrolls the whole page
   // down to it. Only mount it once most of the form box is already on screen
   // (or the visitor taps a quote button), so the autofocus has nowhere to jump.
@@ -139,11 +148,9 @@ export default function App() {
     const allowed = new Set(['celebrity-solar', 'hip-hop-solar', 'gas-genie']);
     const params = new URLSearchParams(window.location.search);
     const incoming = params.get('source');
-    
-    // Also check if the URL path implies a brand (for legacy support if needed)
-    const pageBrand = window.location.pathname.split('/').pop()?.replace('.html', '') || '';
-    
-    let currentSource = allowed.has(incoming || '') ? incoming : allowed.has(pageBrand) ? pageBrand : null;
+    const pageBrand = brandPageFromPath(window.location.pathname);
+
+    let currentSource = allowed.has(incoming || '') ? incoming : pageBrand && allowed.has(pageBrand) ? pageBrand : null;
     
     try {
       if (currentSource) {
@@ -158,13 +165,24 @@ export default function App() {
     if (currentSource && allowed.has(currentSource)) {
       setSource(currentSource);
     }
-
-    // Simple routing based on hash or search param
-    const viewParam = params.get('view');
-    if (viewParam && ['brands', 'celebrity-solar', 'hip-hop-solar', 'gas-genie'].includes(viewParam)) {
-      setView(viewParam);
-    }
   }, []);
+
+  useEffect(() => {
+    const syncView = () => {
+      setView(marketingViewFromLocation(window.location.pathname, window.location.search));
+    };
+    window.addEventListener('popstate', syncView);
+    return () => window.removeEventListener('popstate', syncView);
+  }, []);
+
+  useEffect(() => {
+    const href = marketingViewHref(view, new URL(window.location.href));
+    const current = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+    const legacyQuery = new URLSearchParams(window.location.search).has('view');
+    if ((view !== 'journey' || legacyQuery) && current !== href) {
+      window.history.replaceState({}, '', href);
+    }
+  }, [view]);
 
   useEffect(() => {
     if (formReady || view !== 'journey') return;
@@ -198,24 +216,19 @@ export default function App() {
   };
 
   const handleNavigate = (newView: string) => {
-    setView(newView);
+    const next: MarketingView = newView === 'journey' || isBrandPage(newView) ? newView : 'journey';
+    const href = marketingViewHref(next, new URL(window.location.href));
+    const current = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+    setView(next);
     window.scrollTo(0, 0);
-    
-    // Update URL without reload
-    const url = new URL(window.location.href);
-    if (newView === 'journey') {
-      url.searchParams.delete('view');
-    } else {
-      url.searchParams.set('view', newView);
-    }
-    window.history.pushState({}, '', url);
+    if (current !== href) window.history.pushState({}, '', href);
   };
 
   if (view !== 'journey') {
     return (
       <>
-        <BrandPage 
-          id={view as any} 
+        <BrandPage
+          id={view}
           onNavigate={handleNavigate} 
           getSalesforceUrl={getSalesforceUrl} 
           onQuoteClick={triggerToast}
@@ -228,12 +241,10 @@ export default function App() {
   return (
     <div className="relative">
       <main id="world">
-        <ScrollWorld 
-          config={{
-            ...config,
-            onNavigateBrands: () => handleNavigate('brands')
-          } as any} 
+        <ScrollWorld
+          config={config}
           onQuoteClick={() => triggerToast()}
+          onNavigateBrands={() => handleNavigate('brands')}
         />
       </main>
 

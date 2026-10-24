@@ -34,6 +34,11 @@ test('the Vercel SPA rewrite serves /privacy and /terms', () => {
   assert.equal(pattern.test('/privacy'), true)
   assert.equal(pattern.test('/terms'), true)
   assert.equal(pattern.test('/book'), true)
+  assert.equal(pattern.test('/brands'), true)
+  assert.equal(pattern.test('/brands/'), true)
+  assert.equal(pattern.test('/celebrity-solar'), true)
+  assert.equal(pattern.test('/hip-hop-solar'), true)
+  assert.equal(pattern.test('/gas-genie'), true)
   assert.equal(pattern.test('/api/book'), false)
   assert.equal(pattern.test('/api/google/callback'), false)
   assert.equal(pattern.test('/brand-lockups/celebrity-solar-lockup.webp'), false)
@@ -57,7 +62,22 @@ test('the Vercel SPA rewrite serves /privacy and /terms', () => {
 
   const brands = readFileSync('src/components/BrandPage.tsx', 'utf8')
   assert.match(brands, /Our brands/)
-  assert.match(brands, /Coming soon/)
+  assert.match(brands, /status: 'Coming soon'/)
+  assert.match(brands, /href="\/brands"/)
+  assert.match(brands, /href="\/celebrity-solar"/)
+  assert.match(brands, /href="\/hip-hop-solar"/)
+  assert.match(brands, /href="\/gas-genie"/)
+  assert.doesNotMatch(brands, /aria-disabled/)
+  assert.doesNotMatch(brands, /cursor-not-allowed/)
+
+  const scroll = readFileSync('src/components/ScrollWorld.tsx', 'utf8')
+  assert.match(scroll, /href="\/brands"/)
+  assert.doesNotMatch(scroll, /Coming soon/)
+  assert.doesNotMatch(scroll, /aria-disabled/)
+  assert.doesNotMatch(scroll, /cursor-not-allowed/)
+
+  assert.match(app, /marketingViewFromLocation/)
+  assert.match(app, /onNavigateBrands/)
 
   const privacy = readFileSync('src/pages/PrivacyPage.tsx', 'utf8')
   for (const name of [
