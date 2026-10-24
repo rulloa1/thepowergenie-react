@@ -45,13 +45,13 @@ function assistantSlotMinutes() {
  * website-assistant consults. A failure throws so /book does not offer a
  * slot it could not check.
  */
-export async function bookedIntervals(admin: Admin, timeMin: string, timeMax: string) {
+export async function bookedIntervals(admin: Admin, timeMin: string, timeMax: string, exceptAppointmentId?: string) {
   const minDay = new Date(Date.parse(timeMin) - 3 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
   const maxDay = new Date(Date.parse(timeMax) + 2 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
   const [hub, leads] = await Promise.all([
     admin
       .from('hub_appointments')
-      .select('starts_at, ends_at')
+      .select('id, starts_at, ends_at')
       .eq('status', 'booked')
       .lt('starts_at', timeMax)
       .gt('ends_at', timeMin),
@@ -64,7 +64,9 @@ export async function bookedIntervals(admin: Admin, timeMin: string, timeMax: st
   ]);
   if (hub.error) throw hub.error;
   if (leads.error) throw leads.error;
-  const appointments = (hub.data ?? []).map((r) => ({ start: r.starts_at as string, end: r.ends_at as string }));
+  const appointments = (hub.data ?? [])
+    .filter((r) => r.id !== exceptAppointmentId)
+    .map((r) => ({ start: r.starts_at as string, end: r.ends_at as string }));
   const assistant = leadIntervals(
     (leads.data ?? []).map((row) => row.appointment_date as string | null),
     timeMin,

@@ -11,15 +11,7 @@ import { adminClient, bookedIntervals, type Admin } from '../_shared/db.ts';
 import { fail, json, notConfigured, preflight, serviceKey, env } from '../_shared/http.ts';
 import { dashboardLeadUrl, sendLeadAlert, siteOrigin } from '../_shared/notify.ts';
 import { readUploadedBill } from '../_shared/read-bill.ts';
-import {
-  createEvent,
-  deleteEvent,
-  freeBusy,
-  GoogleError,
-  googleConfigured,
-  loadConnection,
-  type Connection,
-} from '../_shared/google.ts';
+import { availabilityBusy, googleConfigured, syncHubAppointment } from '../_shared/google.ts';
 import { bookingWindow, DEFAULT_RULES, generateSlots, isBookableSlot, SLOT_TIME_ZONE } from '../_shared/slots.ts';
 
 const MAX_BILL_BYTES = 10 * 1024 * 1024;
@@ -62,11 +54,11 @@ async function abuseCheck(admin: Admin, ipKey: string, email: string) {
   return null;
 }
 
-/** All busy time in the booking window: booked appointments + Google busy. */
-async function busyTime(admin: Admin, conn: Connection | null, now: Date) {
+/** All busy time in the booking window: booked appointments + required Google calendars. */
+async function busyTime(admin: Admin, now: Date) {
   const { timeMin, timeMax } = bookingWindow(now);
   const busy = await bookedIntervals(admin, timeMin, timeMax);
-  if (conn && googleConfigured()) busy.push(...(await freeBusy(conn, timeMin, timeMax)));
+  if (googleConfigured()) busy.push(...(await availabilityBusy(admin, timeMin, timeMax)));
   return busy;
 }
 
@@ -109,14 +101,12 @@ async function checkBill(file: File): Promise<{ kind: BillKind; bytes: Uint8Arra
 
 async function listSlots(admin: Admin) {
   const now = new Date();
-  let conn: Connection | null = null;
   try {
-    conn = googleConfigured() ? await loadConnection(admin) : null;
-    const busy = await busyTime(admin, conn, now);
+    const busy = await busyTime(admin, now);
     return json({ timeZone: SLOT_TIME_ZONE, slotMinutes: DEFAULT_RULES.slotMinutes, slots: generateSlots(now, busy) });
   } catch (e) {
     console.error('[booking:list]', e);
-    // Fail closed: if Google can't confirm Horace is free, don't offer times.
+    // Fail closed: if a required calendar can't confirm it is free, don't offer times.
     return fail(503, 'calendar_unavailable', "Online booking is temporarily unavailable. Please call or try again shortly.");
   }
 }
@@ -179,10 +169,8 @@ async function book(admin: Admin, req: Request) {
 
   // Re-check the slot against the rules, the database (including website consults) and Google — right now.
   const now = new Date();
-  let conn: Connection | null = null;
   try {
-    conn = googleConfigured() ? await loadConnection(admin) : null;
-    const busy = await busyTime(admin, conn, now);
+    const busy = await busyTime(admin, now);
     if (!isBookableSlot(startDate, now, busy)) {
       return fail(409, 'slot_unavailable', 'Sorry — that time was just taken or is no longer available. Please pick another.');
     }
@@ -254,36 +242,20 @@ async function book(admin: Admin, req: Request) {
     if (error) console.error('[booking:file-row]', error);
   }
 
-  // Put it on Horace's phone. A Google hiccup must not lose the booking — it's saved and
-  // flagged in the dashboard so it can be re-synced.
-  if (conn) {
-    try {
-      const eventId = await createEvent(conn, {
-        appointmentId: appt.id,
-        start: startDate.toISOString(),
-        end: endDate.toISOString(),
-        customerName: name,
-        phone,
-        email,
-        address,
-        note,
-        hasLightBill: !!bill,
-        source: 'public',
-      });
-      const { error: linkError } = await admin.from('hub_appointments').update({ google_event_id: eventId }).eq('id', appt.id);
-      if (linkError) {
-        // Without the stored id a later "Sync now" would create a duplicate, so undo the event.
-        await deleteEvent(conn, eventId).catch(() => {});
-        throw new GoogleError(`could not save Google event id: ${linkError.message}`);
-      }
-    } catch (e) {
-      console.error('[booking:google]', e);
-      await admin
-        .from('hub_appointments')
-        .update({ google_sync_error: e instanceof GoogleError ? e.message : 'Google Calendar sync failed' })
-        .eq('id', appt.id);
-    }
-  }
+  // Put it on every connected member's calendar. A Google hiccup must not lose the
+  // booking — it's saved, and a failed member is flagged for Sync now.
+  await syncHubAppointment(admin, {
+    id: appt.id,
+    starts_at: startDate.toISOString(),
+    ends_at: endDate.toISOString(),
+    source: 'public',
+    customer_name: name,
+    phone,
+    email,
+    address,
+    note: note || null,
+    google_event_id: null,
+  }, { hasLightBill: !!bill });
 
   await sendLeadAlert({
     id: appt.id,

@@ -17,7 +17,7 @@ import {
 import { callFunction, supabase } from '../lib/supabase';
 import type { Profile } from './Dashboard';
 import { Button, Notice, Spinner, cn, inputClass, labelClass } from './ui';
-import { centralDateKey, centralToIso, formatBytes, formatDay, formatTime, todayCentralKey } from './time';
+import { centralDateKey, centralTimeValue, centralToIso, formatBytes, formatDay, formatTime, todayCentralKey } from './time';
 
 interface BillFile {
   id: string;
@@ -44,6 +44,21 @@ interface Appointment {
   hub_appointment_files: BillFile[];
 }
 
+interface CalendarEventRow {
+  appointment_id: string | null;
+  customer_id: string | null;
+  user_id: string;
+  google_event_id: string | null;
+  sync_error: string | null;
+}
+
+interface GoogleMember {
+  userId: string;
+  fullName: string | null;
+  role: 'owner' | 'admin';
+  requiredForAvailability: boolean;
+}
+
 interface GoogleStatus {
   configured: boolean;
   connected: boolean;
@@ -61,7 +76,8 @@ const GOOGLE_MESSAGES: Record<string, { tone: 'success' | 'error' | 'warn'; text
   connected: { tone: 'success', text: 'Google Calendar connected. New bookings will appear on your phone.' },
   denied: { tone: 'warn', text: 'Google Calendar was not connected (access was declined).' },
   expired: { tone: 'warn', text: 'That connection link expired. Tap “Connect Google Calendar” again.' },
-  forbidden: { tone: 'error', text: 'Only the owner can connect Google Calendar.' },
+  forbidden: { tone: 'error', text: 'That Google account can’t be connected to this dashboard.' },
+  not_ready: { tone: 'warn', text: 'Calendar accounts are not set up yet. Apply the hub calendar migration, then connect again.' },
   no_refresh_token: {
     tone: 'error',
     text: 'Google did not grant offline access. Remove “The Power Genie” at myaccount.google.com/permissions, then connect again.',
@@ -75,6 +91,8 @@ export default function ScheduleTab({ profile }: { profile: Profile }) {
   const isOwner = profile.role === 'owner';
   const [appts, setAppts] = useState<Appointment[]>([]);
   const [google, setGoogle] = useState<GoogleStatus | null>(null);
+  const [members, setMembers] = useState<GoogleMember[]>([]);
+  const [eventRows, setEventRows] = useState<CalendarEventRow[]>([]);
   const [busy, setBusy] = useState<{ start: string; end: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -99,24 +117,32 @@ export default function ScheduleTab({ profile }: { profile: Profile }) {
     setLoading(true);
     setError(null);
     const since = new Date(Date.now() - 2 * 3600_000).toISOString();
-    const [apptRes, statusRes] = await Promise.all([
+    const [apptRes, statusRes, eventRes] = await Promise.all([
       supabase!
         .from('hub_appointments')
         .select('*, hub_appointment_files(*)')
         .gte('ends_at', since)
         .order('starts_at', { ascending: true })
         .limit(500),
-      callFunction<{ google: GoogleStatus; busy: { start: string; end: string }[] }>('schedule', { body: { action: 'status' } }),
+      callFunction<{ google: GoogleStatus; members?: GoogleMember[]; busy: { start: string; end: string }[] }>('schedule', { body: { action: 'status' } }),
+      supabase!
+        .from('hub_calendar_events')
+        .select('appointment_id, customer_id, user_id, google_event_id, sync_error')
+        .order('updated_at', { ascending: false })
+        .limit(1000),
     ]);
     if (apptRes.error) setError("Couldn't load appointments. Has the database been set up?");
     setAppts((apptRes.data as Appointment[]) ?? []);
+    setEventRows(eventRes.error ? [] : ((eventRes.data as CalendarEventRow[]) ?? []));
     if (statusRes.error) {
       setFunctionsReady(statusRes.error.code !== 'not_configured' && statusRes.error.status !== 404);
       setGoogle(null);
+      setMembers([]);
       setBusy([]);
     } else {
       setFunctionsReady(true);
       setGoogle(statusRes.data!.google);
+      setMembers(statusRes.data!.members ?? []);
       setBusy(statusRes.data!.busy ?? []);
     }
     setLoading(false);
@@ -170,9 +196,19 @@ export default function ScheduleTab({ profile }: { profile: Profile }) {
 
   const resync = async (a: Appointment) => {
     const { error } = await callFunction('schedule', { body: { action: 'resync', id: a.id } });
-    setNotice(error ? { tone: 'error', text: error.message } : { tone: 'success', text: 'Added to Google Calendar.' });
+    setNotice(error ? { tone: 'error', text: error.message } : { tone: 'success', text: 'Updated on every connected Google Calendar.' });
     load();
   };
+
+  const resyncCustomer = async (customerId: string) => {
+    const { error } = await callFunction('schedule', { body: { action: 'resync_customer', id: customerId } });
+    setNotice(error ? { tone: 'error', text: error.message } : { tone: 'success', text: 'Updated on every connected Google Calendar.' });
+    load();
+  };
+
+  const memberName = (userId: string) => members.find((member) => member.userId === userId)?.fullName || 'A team member';
+  const rowsFor = (appointmentId: string) => eventRows.filter((row) => row.appointment_id === appointmentId);
+  const customerFailures = eventRows.filter((row) => row.customer_id && row.sync_error);
 
   const today = todayCentralKey();
 
@@ -182,8 +218,8 @@ export default function ScheduleTab({ profile }: { profile: Profile }) {
 
       <GoogleCard
         google={google}
+        members={members}
         functionsReady={functionsReady}
-        isOwner={isOwner}
         onConnect={connect}
         onDisconnect={disconnect}
       />
@@ -218,6 +254,23 @@ export default function ScheduleTab({ profile }: { profile: Profile }) {
 
         {error && <div className="mt-4"><Notice tone="error">{error}</Notice></div>}
 
+        {customerFailures.length > 0 && (
+          <div className="mt-4">
+            <Notice tone="warn">
+              <span className="grid gap-2">
+                {customerFailures.map((row) => (
+                  <span key={`${row.customer_id}-${row.user_id}`} className="flex flex-wrap items-center gap-2">
+                    <span>{memberName(row.user_id)} didn’t get a website consult on Google Calendar.</span>
+                    <Button variant="ghost" className="min-h-[36px] px-3 text-[0.84rem]" onClick={() => resyncCustomer(row.customer_id!)}>
+                      <RefreshCw className="h-4 w-4" /> Retry
+                    </Button>
+                  </span>
+                ))}
+              </span>
+            </Notice>
+          </div>
+        )}
+
         <label className="mt-4 inline-flex cursor-pointer items-center gap-2 text-[0.86rem] text-[#4A5568]">
           <input type="checkbox" checked={showCancelled} onChange={(e) => setShowCancelled(e.target.checked)} className="h-4 w-4 accent-[#FF6B00]" />
           Show cancelled
@@ -243,7 +296,19 @@ export default function ScheduleTab({ profile }: { profile: Profile }) {
                         Busy (Google Calendar)
                       </li>
                     ) : (
-                      <AppointmentCard key={it.appt.id} appt={it.appt} isOwner={isOwner} googleConnected={!!google?.connected} onCancel={cancel} onResync={resync} />
+                      <AppointmentCard
+                        key={it.appt.id}
+                        appt={it.appt}
+                        isOwner={isOwner}
+                        members={members}
+                        events={rowsFor(it.appt.id)}
+                        onCancel={cancel}
+                        onResync={resync}
+                        onRescheduled={(warning) => {
+                          setNotice(warning ? { tone: 'warn', text: warning } : { tone: 'success', text: 'Appointment moved on every connected calendar.' });
+                          load();
+                        }}
+                      />
                     ),
                   )}
                 </ul>
@@ -258,17 +323,18 @@ export default function ScheduleTab({ profile }: { profile: Profile }) {
 
 function GoogleCard({
   google,
+  members,
   functionsReady,
-  isOwner,
   onConnect,
   onDisconnect,
 }: {
   google: GoogleStatus | null;
+  members: GoogleMember[];
   functionsReady: boolean;
-  isOwner: boolean;
   onConnect: () => void;
   onDisconnect: () => void;
 }) {
+  const extraRequired = members.some((member) => member.role !== 'owner' && member.requiredForAvailability);
   let body: React.ReactNode;
   if (!functionsReady) {
     body = <span>The scheduling server isn't set up yet, so Google Calendar sync is off for now.</span>;
@@ -279,13 +345,13 @@ function GoogleCard({
   } else if (!google.connected) {
     body = (
       <span>
-        Not connected. {isOwner ? 'Connect once and every booking shows up on your phone, and your phone events block those times.' : 'Horace needs to connect his Google Calendar.'}
+        Not connected. Connect your calendar and new bookings are added to it. Members who skip this are left off the event. Open times follow Horace’s calendar.{extraRequired ? ' Calendars marked required block open times too.' : ''}
       </span>
     );
   } else {
     body = (
       <span>
-        Connected{google.email ? <> as <span className="font-semibold">{google.email}</span></> : ''}. Bookings sync to your phone; your phone events block those times.
+        Connected{google.email ? <> as <span className="font-semibold">{google.email}</span></> : ''}. Bookings are added to your calendar and every other connected member’s calendar. Open times follow Horace’s calendar.{extraRequired ? ' Calendars marked required block open times too.' : ''}
         {google.error && (
           <span className="mt-1 block font-semibold text-[#B42318]">
             {google.needsReconnect ? 'Google access expired — please reconnect.' : google.error}
@@ -295,7 +361,7 @@ function GoogleCard({
     );
   }
 
-  const canConnect = isOwner && functionsReady && google?.configured;
+  const canConnect = functionsReady && !!google?.configured;
   return (
     <section className="flex flex-col gap-3 rounded-3xl bg-white p-4 shadow-[0_10px_30px_rgba(10,20,40,0.06)] sm:flex-row sm:items-center sm:justify-between sm:p-5" aria-label="Google Calendar">
       <div className="flex gap-3">
@@ -322,21 +388,47 @@ function GoogleCard({
   );
 }
 
+function syncLine(appt: Appointment, members: GoogleMember[], events: CalendarEventRow[]) {
+  const failed = events.filter((row) => row.sync_error);
+  const synced = events.filter((row) => row.google_event_id);
+  if (failed.length) {
+    const names = failed.map((row) => members.find((member) => member.userId === row.user_id)?.fullName || 'A team member');
+    return { tone: 'bad' as const, text: `Not on ${names.join(' and ')}’s calendar yet` };
+  }
+  if (synced.length) {
+    return { tone: 'ok' as const, text: synced.length === 1 ? 'On Google Calendar' : `On ${synced.length} Google Calendars` };
+  }
+  if (appt.google_event_id) return { tone: 'ok' as const, text: 'On Google Calendar' };
+  if (appt.google_sync_error) return { tone: 'bad' as const, text: 'Not on Google Calendar yet' };
+  if (members.length) return { tone: 'muted' as const, text: 'Not synced' };
+  return { tone: 'muted' as const, text: 'Google Calendar not connected' };
+}
+
 function AppointmentCard({
   appt: a,
   isOwner,
-  googleConnected,
+  members,
+  events,
   onCancel,
   onResync,
+  onRescheduled,
 }: {
   appt: Appointment;
   isOwner: boolean;
-  googleConnected: boolean;
+  members: GoogleMember[];
+  events: CalendarEventRow[];
   onCancel: (a: Appointment) => void;
   onResync: (a: Appointment) => void;
+  onRescheduled: (warning: string | null) => void;
 }) {
   const [opening, setOpening] = useState<string | null>(null);
+  const [moving, setMoving] = useState(false);
   const cancelled = a.status === 'cancelled';
+  const sync = syncLine(a, members, events);
+  const needsSync = !cancelled && members.length > 0 && (
+    !!a.google_sync_error
+    || members.some((member) => !events.some((row) => row.user_id === member.userId && row.google_event_id && !row.sync_error))
+  );
 
   const openBill = async (f: BillFile, download: boolean) => {
     setOpening(f.id + download);
@@ -401,29 +493,114 @@ function AppointmentCard({
       {!cancelled && (
         <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-[#EEF1F5] pt-3">
           <span className="text-[0.8rem] text-[#6B7280]">
-            {a.google_event_id ? (
-              <span className="inline-flex items-center gap-1 text-[#1E7B34]"><CheckCircle2 className="h-4 w-4" /> On Google Calendar</span>
-            ) : a.google_sync_error ? (
-              <span className="inline-flex items-center gap-1 text-[#B42318]"><AlertTriangle className="h-4 w-4" /> Not on Google Calendar yet</span>
-            ) : googleConnected ? (
-              'Not synced'
+            {sync.tone === 'ok' ? (
+              <span className="inline-flex items-center gap-1 text-[#1E7B34]"><CheckCircle2 className="h-4 w-4" /> {sync.text}</span>
+            ) : sync.tone === 'bad' ? (
+              <span className="inline-flex items-center gap-1 text-[#B42318]"><AlertTriangle className="h-4 w-4" /> {sync.text}</span>
             ) : (
-              'Google Calendar not connected'
+              sync.text
+            )}
+            {a.google_sync_error && sync.tone === 'bad' && <span className="mt-1 block">{a.google_sync_error}</span>}
+          </span>
+          <span className="flex flex-wrap gap-2">
+            {needsSync && members.length > 0 && (
+              <Button variant="ghost" className="min-h-[36px] px-3 text-[0.84rem]" onClick={() => onResync(a)}>
+                <RefreshCw className="h-4 w-4" /> Sync now
+              </Button>
+            )}
+            {isOwner && (
+              <>
+                <Button variant="ghost" className="min-h-[36px] px-3 text-[0.84rem]" onClick={() => setMoving((open) => !open)}>
+                  {moving ? 'Close' : 'Change time'}
+                </Button>
+                <Button variant="danger" className="min-h-[36px] px-3 text-[0.84rem]" onClick={() => onCancel(a)}>Cancel</Button>
+              </>
             )}
           </span>
-          {isOwner && (
-            <span className="flex gap-2">
-              {!a.google_event_id && googleConnected && (
-                <Button variant="ghost" className="min-h-[36px] px-3 text-[0.84rem]" onClick={() => onResync(a)}>
-                  <RefreshCw className="h-4 w-4" /> Sync now
-                </Button>
-              )}
-              <Button variant="danger" className="min-h-[36px] px-3 text-[0.84rem]" onClick={() => onCancel(a)}>Cancel</Button>
-            </span>
-          )}
         </div>
       )}
+      {moving && isOwner && (
+        <RescheduleForm
+          appt={a}
+          onDone={(warning) => {
+            setMoving(false);
+            onRescheduled(warning);
+          }}
+        />
+      )}
     </li>
+  );
+}
+
+function RescheduleForm({ appt, onDone }: { appt: Appointment; onDone: (warning: string | null) => void }) {
+  const [date, setDate] = useState(centralDateKey(appt.starts_at));
+  const [time, setTime] = useState(centralTimeValue(appt.starts_at));
+  const [duration, setDuration] = useState(() => {
+    const minutes = Math.round((new Date(appt.ends_at).getTime() - new Date(appt.starts_at).getTime()) / 60000);
+    return [30, 60, 90, 120].includes(minutes) ? minutes : 60;
+  });
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [googleConflict, setGoogleConflict] = useState(false);
+  const times = useMemo(() => {
+    const out: string[] = [];
+    for (let h = 7; h <= 21; h++) for (const m of [0, 15, 30, 45]) out.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
+    return out;
+  }, []);
+
+  const submit = async (ignoreGoogleBusy = false) => {
+    setBusy(true);
+    setError(null);
+    const { data, error: saveError } = await callFunction<{ warning?: string | null }>('schedule', {
+      body: { action: 'reschedule', id: appt.id, start: centralToIso(date, time), durationMinutes: duration, ignoreGoogleBusy },
+    });
+    setBusy(false);
+    if (saveError) {
+      setGoogleConflict(saveError.code === 'google_busy');
+      setError(saveError.message);
+      return;
+    }
+    onDone(data?.warning ?? null);
+  };
+
+  return (
+    <form
+      className="mt-3 grid gap-3 rounded-2xl border border-[#E3E8EF] bg-[#FAFBFD] p-3"
+      onSubmit={(event) => {
+        event.preventDefault();
+        void submit(false);
+      }}
+    >
+      <div className="grid gap-3 sm:grid-cols-3">
+        <div>
+          <label htmlFor={`move-date-${appt.id}`} className={labelClass}>Date</label>
+          <input id={`move-date-${appt.id}`} type="date" required value={date} min={todayCentralKey()} onChange={(event) => setDate(event.target.value)} className={inputClass} />
+        </div>
+        <div>
+          <label htmlFor={`move-time-${appt.id}`} className={labelClass}>Start (Central)</label>
+          <select id={`move-time-${appt.id}`} value={time} onChange={(event) => setTime(event.target.value)} className={inputClass}>
+            {times.map((value) => {
+              const [hour, minute] = value.split(':').map(Number);
+              const label = `${((hour + 11) % 12) + 1}:${String(minute).padStart(2, '0')} ${hour < 12 ? 'AM' : 'PM'}`;
+              return <option key={value} value={value}>{label}</option>;
+            })}
+          </select>
+        </div>
+        <div>
+          <label htmlFor={`move-dur-${appt.id}`} className={labelClass}>Length</label>
+          <select id={`move-dur-${appt.id}`} value={duration} onChange={(event) => setDuration(Number(event.target.value))} className={inputClass}>
+            {[30, 60, 90, 120].map((value) => <option key={value} value={value}>{value < 60 ? `${value} min` : `${value / 60} hr${value > 60 ? 's' : ''}`}</option>)}
+          </select>
+        </div>
+      </div>
+      {error && <Notice tone={googleConflict ? 'warn' : 'error'}>{error}</Notice>}
+      <div className="flex flex-wrap gap-2">
+        <Button type="submit" disabled={busy}>{busy ? <Spinner className="h-4 w-4" /> : 'Save new time'}</Button>
+        {googleConflict && (
+          <Button type="button" variant="ghost" disabled={busy} onClick={() => void submit(true)}>Move anyway</Button>
+        )}
+      </div>
+    </form>
   );
 }
 
@@ -446,7 +623,7 @@ function AddAppointment({ onDone }: { onDone: (msg: string) => void }) {
     const fd = new FormData(e.currentTarget);
     setBusy(true);
     setError(null);
-    const { error } = await callFunction('schedule', {
+    const { data, error } = await callFunction<{ warning?: string | null }>('schedule', {
       body: {
         action: 'create',
         start: centralToIso(date, time),
@@ -464,7 +641,7 @@ function AddAppointment({ onDone }: { onDone: (msg: string) => void }) {
       setGoogleConflict(error.code === 'google_busy');
       return setError(error.message);
     }
-    onDone('Appointment added' + ' and sent to Google Calendar if connected.');
+    onDone(data?.warning ? `Appointment saved. ${data.warning}` : 'Appointment added on every connected Google Calendar.');
   };
 
   const label = (t: string) => {

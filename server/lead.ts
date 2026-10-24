@@ -6,6 +6,7 @@ import { notifyNewLead } from './notify.js'
 import { loadSlotRules } from './slot-rules.js'
 import { chicagoDate, listSlots, overlapsSlot } from './slots.js'
 import { assertBillBytes } from './files.js'
+import { assistantAvailabilityBusy, syncAssistantConsult } from './google-calendar.js'
 import { insertRow, downloadObject, moveObject, takenAppointments, hubBusyIntervals } from './supabase.js'
 import { openReceipt, type UploadReceipt } from './receipt.js'
 
@@ -297,6 +298,11 @@ export async function saveLead(body: unknown, now = new Date()): Promise<Confirm
   if (overlapsSlot(slotStart, rules.durationMinutes, hubBusy)) {
     throw new HttpError(409, 'That time was just taken. Please pick another.')
   }
+  const slotEnd = new Date(Date.parse(slotStart) + rules.durationMinutes * 60_000).toISOString()
+  const googleBusy = await assistantAvailabilityBusy(slotStart, slotEnd)
+  if (overlapsSlot(slotStart, rules.durationMinutes, googleBusy)) {
+    throw new HttpError(409, 'That time was just taken. Please pick another.')
+  }
   if (prepared.pendingPath && prepared.finalPath && prepared.file) {
     prepared.file.size_bytes = await placeBill(prepared.pendingPath, prepared.finalPath, String(prepared.file.mime_type))
   }
@@ -304,6 +310,16 @@ export async function saveLead(body: unknown, now = new Date()): Promise<Confirm
   if (prepared.file) await insertRow('powergenie_files', prepared.file)
   await insertRow('powergenie_activity', prepared.activity)
   if (customerWrite === 'created') {
+    await syncAssistantConsult({
+      id: prepared.confirmation.id,
+      customerName: prepared.confirmation.name,
+      phone: prepared.confirmation.phone,
+      email: prepared.confirmation.email,
+      address: String(prepared.customer.service_address || ''),
+      notes: String(prepared.customer.notes || ''),
+      appointmentDate: slotStart,
+      durationMinutes: rules.durationMinutes,
+    })
     const kwh = prepared.customer.kwh_this_period
     await notifyNewLead({
       id: prepared.confirmation.id,
