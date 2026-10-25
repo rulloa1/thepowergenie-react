@@ -198,7 +198,6 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
     segmentsRef.current.forEach((s, i) => {
       if (s.video) syncFrame(s);
       if (!s.ready || !s.video || !s.visible) return;
-      if (s.video.seeking || s.video.readyState < 1) return;
       
       if (i === 0 && stateRef.current.idleActive) {
         if (window.scrollY > 2) {
@@ -212,8 +211,13 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
       
       if (Math.abs((s.cur || 0) - (s.target || 0)) > 0.002) moving = true;
 
+      if (s.video.seeking || s.video.readyState < 1) {
+        moving = true;
+        return;
+      }
+
       const handoff = i === 0 && config.idle !== false && Math.abs((s.target || 0) - (s.cur || 0)) > 0.03;
-      const lerp = (isMobile && !handoff) ? 1 : (stateRef.current.idleActive && i === 0 ? 1 : 0.18);
+      const lerp = (isMobile && !handoff) ? 1 : (stateRef.current.idleActive && i === 0 ? 1 : 0.28);
       s.cur = (s.cur || 0) + ((s.target || 0) - (s.cur || 0)) * lerp;
       
       const dur = s.video.duration || 1;
@@ -238,8 +242,6 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
         s.preloadMode = preload;
         s.video.preload = preload;
         s.video.setAttribute('preload', preload);
-        // Chrome ignores a preload upgrade after the resource has been selected.
-        // Restart only when we still have no frame, so a visible frame is not discarded.
         if (preload === 'auto' && previous !== 'auto' && s.video.readyState < 2) {
           try { s.video.load(); } catch (e) {}
         }
@@ -278,15 +280,11 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
       if (stateRef.current.userReady) primeVideo(v);
       onFrameMaybe();
     });
-    v.addEventListener('seeking', () => syncFrame(s));
-    v.addEventListener('waiting', () => syncFrame(s));
-    v.addEventListener('stalled', () => syncFrame(s));
-    v.addEventListener('emptied', () => {
-      s.sawFrame = false;
-      syncFrame(s);
-    });
 
-    v.addEventListener('canplay', wake);
+    v.addEventListener('canplay', () => {
+      onFrameMaybe();
+      wake();
+    });
     v.addEventListener('progress', wake);
     v.addEventListener('error', () => {
       s.failed = true;
@@ -302,7 +300,21 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
 
     s.el.appendChild(v);
     s.video = v;
-    v.src = url;
+
+    // Use blob URL where available for instant keyframe scrubbing, with fallback to direct url
+    fetch(url)
+      .then((r) => (r.ok ? r.blob() : Promise.reject(new Error(`HTTP ${r.status}`))))
+      .then((blob) => {
+        if (!v.isConnected) return;
+        const blobUrl = URL.createObjectURL(blob);
+        (s as any).blobUrl = blobUrl;
+        v.src = blobUrl;
+      })
+      .catch(() => {
+        if (v.isConnected) {
+          v.src = url;
+        }
+      });
   }, [readingMode, isMobile, primeVideo, wake]);
 
   const read = useCallback(() => {
