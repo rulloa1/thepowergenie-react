@@ -77,23 +77,23 @@ function monthLabel(month: string, withYear: boolean): string {
 }
 
 function UsageHistory({ points }: { points: Lead['usageHistory'] }) {
-  if (!points?.length) return <p className="m-0 text-[0.86rem] text-[#6B7280]">No usage history on the bill.</p>;
+  if (!points?.length) return <p className="m-0 text-[0.86rem] text-hub-soft">No usage history on the bill.</p>;
   const max = Math.max(...points.map((point) => point.kwh), 1);
   const years = new Set(points.map((point) => point.month.slice(0, 4)));
   const withYear = years.size > 1;
   const summary = points.map((point) => `${point.month} ${Math.round(point.kwh).toLocaleString('en-US')} kWh`).join(', ');
   return (
-    <div className="rounded-xl border border-[#EEF2F6] bg-[#F8FAFC]/70 p-2.5">
+    <div className="rounded-xl border border-hub-line bg-hub-muted p-2.5">
       <div className="overflow-x-auto" role="img" aria-label={`Monthly usage: ${summary}`}>
         <div className="flex h-24 items-end gap-1.5" style={{ minWidth: Math.max(points.length * 34, 160) }}>
           {points.map((point) => (
             <div key={point.month} className="group flex min-w-7 flex-1 flex-col items-center justify-end gap-1" title={`${point.month}: ${point.kwh} kWh`}>
-              <span className="text-[0.62rem] font-bold text-[#475569] transition-colors group-hover:text-[#FF6B00]">{Math.round(point.kwh)}</span>
+              <span className="text-[0.62rem] font-bold text-hub-soft transition-colors group-hover:text-hub-accent-ink">{Math.round(point.kwh)}</span>
               <div
-                className="w-full rounded-t-md bg-gradient-to-t from-[#FF6B00] to-[#FFA25B] shadow-sm transition-all group-hover:brightness-110"
+                className="w-full rounded-t-md bg-gradient-to-t from-hub-chart to-hub-chart-top shadow-sm transition-all group-hover:brightness-95"
                 style={{ height: `${Math.max(8, (point.kwh / max) * 52)}px` }}
               />
-              <span className="text-[0.62rem] font-medium text-[#64748B]">{monthLabel(point.month, withYear)}</span>
+              <span className="text-[0.62rem] font-medium text-hub-soft">{monthLabel(point.month, withYear)}</span>
             </div>
           ))}
         </div>
@@ -104,9 +104,9 @@ function UsageHistory({ points }: { points: Lead['usageHistory'] }) {
 
 function Fact({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="min-w-0 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-2.5 transition-colors hover:border-[#CBD5E1]">
-      <dt className="text-[0.68rem] font-bold uppercase tracking-wider text-[#64748B]">{label}</dt>
-      <dd className="m-0 mt-0.5 break-words text-[0.92rem] font-bold text-[#0F172A]">{children}</dd>
+    <div className="min-w-0 rounded-xl border border-hub-line bg-hub-muted p-2.5 transition-colors hover:border-hub-line-strong">
+      <dt className="text-[0.68rem] font-bold uppercase tracking-wider text-hub-soft">{label}</dt>
+      <dd className="m-0 mt-0.5 break-words text-[0.92rem] font-bold text-hub-ink">{children}</dd>
     </div>
   );
 }
@@ -165,15 +165,15 @@ function TwoStepOutreachBar({ lead }: { lead: Lead }) {
   };
 
   return (
-    <div className="mt-2.5 flex flex-wrap items-center gap-2 rounded-xl border border-[#FFE0CC] bg-[#FFFBF7] p-2.5 text-[0.8rem]">
-      <span className="text-[0.72rem] font-bold uppercase tracking-wider text-[#C2410C]">
+    <div className="mt-2.5 flex flex-wrap items-center gap-2 rounded-xl border border-hub-accent-line bg-hub-accent-soft p-2.5 text-[0.8rem]">
+      <span className="text-[0.72rem] font-bold uppercase tracking-wider text-hub-accent-ink">
         2-Step Review Request:
       </span>
       {lead.phone && (
         <a
           href={generateTwoStepReviewSmsUrl(lead)}
           onClick={(e) => e.stopPropagation()}
-          className="inline-flex items-center gap-1 rounded-md bg-[#FF6B00] px-2.5 py-1 text-[0.74rem] font-bold text-white no-underline shadow-sm hover:bg-[#E65100]"
+          className="inline-flex items-center gap-1 rounded-md bg-hub-accent-fill px-2.5 py-1 text-[0.74rem] font-bold text-hub-on-accent no-underline shadow-sm hover:bg-hub-accent-fill-hover"
           title="Open SMS app with 2-step review request"
         >
           <Phone className="h-3 w-3" /> Text 2 Steps
@@ -182,10 +182,10 @@ function TwoStepOutreachBar({ lead }: { lead: Lead }) {
       <button
         type="button"
         onClick={handleCopyText}
-        className="inline-flex items-center gap-1 rounded-md border border-[#E3E8EF] bg-white px-2 py-1 text-[0.74rem] font-medium text-[#4A5568] hover:bg-[#F8FAFC]"
+        className="inline-flex items-center gap-1 rounded-md border border-hub-control bg-hub-surface px-2 py-1 text-[0.74rem] font-medium text-hub-soft hover:bg-hub-muted"
         title="Copy SMS text to clipboard"
       >
-        {copiedType === 'text' ? <Check className="h-3 w-3 text-[#1E7B34]" /> : <Copy className="h-3 w-3" />}
+        {copiedType === 'text' ? <Check className="h-3 w-3 text-hub-success-ink" /> : <Copy className="h-3 w-3" />}
         {copiedType === 'text' ? 'Copied Text!' : 'Copy Text'}
       </button>
 
@@ -193,7 +193,7 @@ function TwoStepOutreachBar({ lead }: { lead: Lead }) {
         <a
           href={generateTwoStepReviewEmailUrl(lead)}
           onClick={(e) => e.stopPropagation()}
-          className="inline-flex items-center gap-1 rounded-md border border-[#0F2942] bg-[#0F2942] px-2.5 py-1 text-[0.74rem] font-bold text-[#64B5F6] no-underline shadow-sm hover:bg-[#1A3E5E]"
+          className="inline-flex items-center gap-1 rounded-md border border-hub-on-primary bg-hub-primary px-2.5 py-1 text-[0.74rem] font-bold text-hub-on-primary no-underline shadow-sm hover:bg-hub-primary-hover"
           title="Open email client with 2-step review request"
         >
           <Mail className="h-3 w-3" /> Email 2 Steps
@@ -202,10 +202,10 @@ function TwoStepOutreachBar({ lead }: { lead: Lead }) {
       <button
         type="button"
         onClick={handleCopyEmail}
-        className="inline-flex items-center gap-1 rounded-md border border-[#E3E8EF] bg-white px-2 py-1 text-[0.74rem] font-medium text-[#4A5568] hover:bg-[#F8FAFC]"
+        className="inline-flex items-center gap-1 rounded-md border border-hub-control bg-hub-surface px-2 py-1 text-[0.74rem] font-medium text-hub-soft hover:bg-hub-muted"
         title="Copy email body to clipboard"
       >
-        {copiedType === 'email' ? <Check className="h-3 w-3 text-[#1E7B34]" /> : <Copy className="h-3 w-3" />}
+        {copiedType === 'email' ? <Check className="h-3 w-3 text-hub-success-ink" /> : <Copy className="h-3 w-3" />}
         {copiedType === 'email' ? 'Copied Email!' : 'Copy Email'}
       </button>
     </div>
@@ -318,22 +318,22 @@ function SunrunOptionBWorkflow({ lead }: { lead: Lead }) {
 
   return (
     <>
-    <div className="mt-4 rounded-2xl border-2 border-[#FF6B00] bg-[#FFFBF7] p-4 text-[#1A1A2E] sm:p-5">
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#FFE0CC] pb-3">
+    <div className="mt-4 rounded-2xl border-2 border-hub-accent-ink bg-hub-accent-soft p-4 text-hub-ink sm:p-5">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-hub-accent-line pb-3">
         <div className="flex items-center gap-2">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#FF6B00] text-white">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-hub-accent-fill text-hub-on-accent">
             <Zap className="h-4 w-4" />
           </span>
           <div>
-            <h3 className="m-0 text-[1.05rem] font-bold text-[#1A1A2E]">{workflow.title}</h3>
-            <p className="m-0 text-[0.78rem] text-[#6B7280]">{fillWorkflowTemplate(workflow.subtitle, lead)}</p>
+            <h3 className="m-0 text-[1.05rem] font-bold text-hub-ink">{workflow.title}</h3>
+            <p className="m-0 text-[0.78rem] text-hub-soft">{fillWorkflowTemplate(workflow.subtitle, lead)}</p>
           </div>
         </div>
         <button
           type="button"
           onClick={() => setOpen(!open)}
           aria-expanded={open}
-          className="flex items-center gap-1 text-[0.8rem] font-semibold text-[#FF6B00] hover:underline"
+          className="flex items-center gap-1 text-[0.8rem] font-semibold text-hub-accent-ink hover:underline"
         >
           {open ? <>Collapse <ChevronUp className="h-4 w-4" /></> : <>Expand <ChevronDown className="h-4 w-4" /></>}
         </button>
@@ -342,10 +342,10 @@ function SunrunOptionBWorkflow({ lead }: { lead: Lead }) {
       {open && (
         <div className="mt-4 space-y-4">
           {(workflow.urgentTitle || workflow.urgentBody) && (
-            <div className="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-[#FCA5A5] bg-[#FEF2F2] p-3.5">
+            <div className="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-hub-danger-line bg-hub-danger-soft p-3.5">
               <div className="flex items-start gap-2.5">
-                <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-[#DC2626]" />
-                <div className="text-[0.85rem] leading-relaxed text-[#991B1B]">
+                <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-hub-danger" />
+                <div className="text-[0.85rem] leading-relaxed text-hub-danger-ink">
                   {workflow.urgentTitle && <strong className="font-bold">{workflow.urgentTitle}</strong>}
                   {workflow.urgentBody && <p className="m-0 mt-0.5">{fillWorkflowTemplate(workflow.urgentBody, lead)}</p>}
                   {workflow.showLeadNotes && lead.notes && <p className="m-0 mt-1">{lead.notes}</p>}
@@ -363,7 +363,7 @@ function SunrunOptionBWorkflow({ lead }: { lead: Lead }) {
               {urgentTel && workflow.urgentActionLabel && (
                 <a
                   href={urgentTel}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-[#DC2626] px-3.5 py-2 text-[0.82rem] font-bold text-white no-underline shadow hover:bg-[#B91C1C]"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-hub-danger-fill px-3.5 py-2 text-[0.82rem] font-bold text-white no-underline shadow hover:bg-hub-danger-fill-hover"
                 >
                   <Phone className="h-3.5 w-3.5" /> {workflow.urgentActionLabel}
                 </a>
@@ -374,32 +374,32 @@ function SunrunOptionBWorkflow({ lead }: { lead: Lead }) {
           {workflow.stats.length > 0 && (
             <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
               {workflow.stats.map((stat) => (
-                <div key={stat.label} className="rounded-xl border border-[#E3E8EF] bg-white p-3">
-                  <span className="block text-[0.68rem] font-bold uppercase text-[#6B7280]">{stat.label}</span>
-                  <strong className="text-[1.1rem] font-extrabold text-[#1A1A2E]">{fillWorkflowTemplate(stat.value, lead)}</strong>
-                  <span className="block text-[0.72rem] text-[#6B7280]">{fillWorkflowTemplate(stat.detail, lead)}</span>
+                <div key={stat.label} className="rounded-xl border border-hub-line bg-hub-surface p-3">
+                  <span className="block text-[0.68rem] font-bold uppercase text-hub-soft">{stat.label}</span>
+                  <strong className="text-[1.1rem] font-extrabold text-hub-ink">{fillWorkflowTemplate(stat.value, lead)}</strong>
+                  <span className="block text-[0.72rem] text-hub-soft">{fillWorkflowTemplate(stat.detail, lead)}</span>
                 </div>
               ))}
             </div>
           )}
 
           <div>
-            <div className="flex items-center justify-between text-[0.76rem] font-semibold text-[#4A5568]">
+            <div className="flex items-center justify-between text-[0.76rem] font-semibold text-hub-soft">
               <span>Sunrun implementation progress</span>
               <span>{doneCount} of {workflow.steps.length} completed ({pct}%)</span>
             </div>
-            <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-[#E5E7EB]">
-              <div className="h-full rounded-full bg-[#FF6B00] transition-all duration-300" style={{ width: `${pct}%` }} />
+            <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-hub-line">
+              <div className="h-full rounded-full bg-hub-accent-fill transition-all duration-300" style={{ width: `${pct}%` }} />
             </div>
           </div>
 
           {workflow.documents.length > 0 && (
-            <div className="rounded-xl border border-[#CBD5E1] bg-white p-3.5 shadow-sm">
+            <div className="rounded-xl border border-hub-line-strong bg-hub-surface p-3.5 shadow-sm">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
-                  {workflow.planTitle && <h4 className="m-0 text-[0.92rem] font-bold text-[#1A1A2E]">{workflow.planTitle}</h4>}
+                  {workflow.planTitle && <h4 className="m-0 text-[0.92rem] font-bold text-hub-ink">{workflow.planTitle}</h4>}
                   {workflow.planDescription && (
-                    <p className="m-0 text-[0.78rem] text-[#6B7280]">{fillWorkflowTemplate(workflow.planDescription, lead)}</p>
+                    <p className="m-0 text-[0.78rem] text-hub-soft">{fillWorkflowTemplate(workflow.planDescription, lead)}</p>
                   )}
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
@@ -408,7 +408,7 @@ function SunrunOptionBWorkflow({ lead }: { lead: Lead }) {
                       key={document.id}
                       type="button"
                       onClick={() => void openFile(document.path)}
-                      className="inline-flex items-center gap-1 rounded-lg border border-[#0F172A] bg-[#0F172A] px-3 py-1.5 text-[0.78rem] font-bold text-white shadow hover:bg-[#1E293B]"
+                      className="inline-flex items-center gap-1 rounded-lg border border-hub-on-primary bg-hub-primary px-3 py-1.5 text-[0.78rem] font-bold text-hub-on-primary shadow hover:bg-hub-primary-hover"
                     >
                       {canPreviewObject(document.path) ? <Eye className="h-3.5 w-3.5" /> : <FileText className="h-3.5 w-3.5" />}
                       {document.label}
@@ -423,7 +423,7 @@ function SunrunOptionBWorkflow({ lead }: { lead: Lead }) {
                       key={`preview-${document.id}`}
                       type="button"
                       onClick={() => void togglePreview(document)}
-                      className="rounded-lg border border-[#E2E8F0] px-2.5 py-1.5 text-[0.78rem] font-semibold text-[#FF6B00] hover:bg-[#FFF5EC]"
+                      className="rounded-lg border border-hub-line px-2.5 py-1.5 text-[0.78rem] font-semibold text-hub-accent-ink hover:bg-hub-accent-soft"
                     >
                       {previewPath === document.path ? `Hide ${document.label}` : `Show ${document.label}`}
                     </button>
@@ -431,9 +431,9 @@ function SunrunOptionBWorkflow({ lead }: { lead: Lead }) {
                 </div>
               )}
               {previewUrl && (
-                <div className="mt-3 overflow-hidden rounded-lg border border-[#94A3B8] bg-[#001020]">
+                <div className="mt-3 overflow-hidden rounded-lg border border-white/30 bg-hub-navy">
                   <img src={previewUrl} alt={workflow.planTitle || 'Customer plan'} className="w-full object-contain" />
-                  <p className="m-0 bg-[#0A192F] p-2 text-center text-[0.72rem] text-[#94A3B8]">
+                  <p className="m-0 bg-hub-navy p-2 text-center text-[0.72rem] text-hub-on-navy">
                     Signed link for this hub session. It expires shortly.
                   </p>
                 </div>
@@ -441,7 +441,7 @@ function SunrunOptionBWorkflow({ lead }: { lead: Lead }) {
             </div>
           )}
 
-          {htmlBusy && <p className="m-0 text-[0.84rem] text-[#6B7280]">Opening document…</p>}
+          {htmlBusy && <p className="m-0 text-[0.84rem] text-hub-soft">Opening document…</p>}
           {fileError && <Notice tone="error">{fileError}</Notice>}
 
           <div className="space-y-2">
@@ -456,10 +456,10 @@ function SunrunOptionBWorkflow({ lead }: { lead: Lead }) {
                   className={cn(
                     'flex cursor-pointer items-start justify-between gap-3 rounded-xl border p-3 transition-colors',
                     isDone
-                      ? 'border-[#BFE3C6] bg-[#F3FAF5]'
+                      ? 'border-hub-success-line bg-hub-success'
                       : step.urgent
-                        ? 'border-[#FCA5A5] bg-white'
-                        : 'border-[#E3E8EF] bg-white hover:border-[#CBD5E1]',
+                        ? 'border-hub-danger-line bg-hub-surface'
+                        : 'border-hub-line bg-hub-surface hover:border-hub-line-strong',
                   )}
                 >
                   <div className="flex items-start gap-2.5">
@@ -469,13 +469,13 @@ function SunrunOptionBWorkflow({ lead }: { lead: Lead }) {
                       onChange={() => toggleStep(step.id)}
                       onClick={(event) => event.stopPropagation()}
                       aria-label={step.title}
-                      className="mt-1 h-4 w-4 rounded border-gray-300 text-[#FF6B00] focus:ring-[#FF6B00]"
+                      className="mt-1 h-4 w-4 rounded accent-hub-accent-ink focus:ring-hub-focus"
                     />
                     <div>
-                      <h4 className={cn('m-0 text-[0.88rem] font-bold', isDone && 'text-[#6B7280] line-through')}>
+                      <h4 className={cn('m-0 text-[0.88rem] font-bold', isDone && 'text-hub-soft line-through')}>
                         {step.title}
                       </h4>
-                      <p className="m-0 mt-0.5 text-[0.8rem] leading-snug text-[#4A5568]">
+                      <p className="m-0 mt-0.5 text-[0.8rem] leading-snug text-hub-soft">
                         {fillWorkflowTemplate(step.description, lead)}
                       </p>
                     </div>
@@ -487,7 +487,7 @@ function SunrunOptionBWorkflow({ lead }: { lead: Lead }) {
                         event.stopPropagation();
                         void openFile(document.path);
                       }}
-                      className="inline-flex shrink-0 items-center gap-1 rounded-md border border-[#FF6B00] px-2.5 py-1 text-[0.74rem] font-bold text-[#FF6B00] no-underline hover:bg-[#FFF5EC]"
+                      className="inline-flex shrink-0 items-center gap-1 rounded-md border border-hub-accent-ink px-2.5 py-1 text-[0.74rem] font-bold text-hub-accent-ink no-underline hover:bg-hub-accent-soft"
                     >
                       {step.actionLabel || document.label}
                     </button>
@@ -496,7 +496,7 @@ function SunrunOptionBWorkflow({ lead }: { lead: Lead }) {
                     <a
                       href={stepTel}
                       onClick={(event) => event.stopPropagation()}
-                      className="inline-flex shrink-0 items-center gap-1 rounded-md border border-[#FF6B00] px-2.5 py-1 text-[0.74rem] font-bold text-[#FF6B00] no-underline hover:bg-[#FFF5EC]"
+                      className="inline-flex shrink-0 items-center gap-1 rounded-md border border-hub-accent-ink px-2.5 py-1 text-[0.74rem] font-bold text-hub-accent-ink no-underline hover:bg-hub-accent-soft"
                     >
                       {step.actionLabel}
                     </a>
@@ -507,10 +507,10 @@ function SunrunOptionBWorkflow({ lead }: { lead: Lead }) {
           </div>
 
           {(workflow.footer || workflow.advisor) && (
-            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[#FFE0CC] pt-3 text-[0.78rem] text-[#6B7280]">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-hub-accent-line pt-3 text-[0.78rem] text-hub-soft">
               {workflow.footer && (
                 <span className="inline-flex items-center gap-1.5">
-                  <ShieldCheck className="h-4 w-4 text-[#1E7B34]" />
+                  <ShieldCheck className="h-4 w-4 text-hub-success-ink" />
                   {workflow.footer}
                 </span>
               )}
@@ -522,7 +522,7 @@ function SunrunOptionBWorkflow({ lead }: { lead: Lead }) {
     </div>
     {htmlView && createPortal(
       <div
-        className="fixed inset-0 z-[80] flex items-stretch justify-center bg-[#0A1220]/70 p-2 sm:p-4"
+        className="fixed inset-0 z-[80] flex items-stretch justify-center bg-hub-scrim p-2 sm:p-4"
         onClick={() => setHtmlView(null)}
       >
         <div
@@ -532,10 +532,10 @@ function SunrunOptionBWorkflow({ lead }: { lead: Lead }) {
           aria-labelledby="html-doc-title"
           tabIndex={-1}
           onClick={(event) => event.stopPropagation()}
-          className="flex h-full w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl outline-none"
+          className="flex h-full w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-hub-surface shadow-2xl outline-none"
         >
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#E3E8EF] px-4 py-3">
-            <h2 id="html-doc-title" className="m-0 text-base font-bold text-[#1A1A2E]">{htmlView.label}</h2>
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-hub-line px-4 py-3">
+            <h2 id="html-doc-title" className="m-0 text-base font-bold text-hub-ink">{htmlView.label}</h2>
             <div className="flex flex-wrap items-center gap-2">
               <Button type="button" variant="ghost" className="min-h-[36px] px-3 text-[0.84rem]" onClick={() => openHtml(true)}>
                 <Printer className="h-4 w-4" /> Print / Save as PDF
@@ -546,20 +546,20 @@ function SunrunOptionBWorkflow({ lead }: { lead: Lead }) {
               <button
                 type="button"
                 onClick={() => setHtmlView(null)}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#E3E8EF] text-[#1A1A2E] hover:border-[#1A1A2E]"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-hub-line text-hub-ink hover:border-hub-ink"
                 aria-label="Close document"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
           </div>
-          {fileError && <p className="m-0 border-b border-[#F3C2BB] bg-[#FFF0EE] px-4 py-2 text-[0.84rem] text-[#8A1F11]" role="alert">{fileError}</p>}
+          {fileError && <p className="m-0 border-b border-hub-error-line bg-hub-error px-4 py-2 text-[0.84rem] text-hub-error-ink" role="alert">{fileError}</p>}
           <iframe
             title={htmlView.label}
             sandbox={HTML_PREVIEW_SANDBOX}
             referrerPolicy="no-referrer"
             srcDoc={htmlView.html}
-            className="min-h-0 w-full flex-1 border-0 bg-white"
+            className="min-h-0 w-full flex-1 border-0 bg-hub-surface"
           />
         </div>
       </div>,
@@ -618,11 +618,11 @@ export default function LeadsTab({ feed }: { feed: LeadFeed }) {
   const missing = !feed.loading && !!openId && feed.leads.every((lead) => lead.id !== openId);
 
   return (
-    <section aria-label="Leads" className="rounded-3xl bg-white p-4 shadow-[0_10px_30px_rgba(10,20,40,0.06)] sm:p-6">
+    <section aria-label="Leads" className="rounded-3xl bg-hub-surface p-4 shadow-[0_10px_30px_rgba(10,20,40,0.06)] sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="m-0 text-lg font-bold">Leads</h2>
-          <p className="m-0 text-[0.86rem] text-[#6B7280]">Website assistant and booking page, newest first</p>
+          <p className="m-0 text-[0.86rem] text-hub-soft">Website assistant and booking page, newest first</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {feed.leads.length > 0 && (
@@ -630,24 +630,24 @@ export default function LeadsTab({ feed }: { feed: LeadFeed }) {
               <button
                 type="button"
                 onClick={() => downloadFile('powergenie-all-leads.csv', leadsToCsvString(feed.leads), 'text/csv;charset=utf-8;')}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-[#E3E8EF] bg-white px-3 py-1.5 text-[0.78rem] font-semibold text-[#1A1A2E] shadow-sm hover:border-[#CBD5E1] hover:bg-[#F8FAFC]"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-hub-line bg-hub-surface px-3 py-1.5 text-[0.78rem] font-semibold text-hub-ink shadow-sm hover:border-hub-line-strong hover:bg-hub-muted"
                 title="Download all leads in CSV format"
               >
-                <FileSpreadsheet className="h-3.5 w-3.5 text-[#1E7B34]" /> Export CSV
+                <FileSpreadsheet className="h-3.5 w-3.5 text-hub-success-ink" /> Export CSV
               </button>
               <button
                 type="button"
                 onClick={() => downloadFile('powergenie-all-leads.json', leadsToJsonString(feed.leads), 'application/json')}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-[#E3E8EF] bg-white px-3 py-1.5 text-[0.78rem] font-semibold text-[#1A1A2E] shadow-sm hover:border-[#CBD5E1] hover:bg-[#F8FAFC]"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-hub-line bg-hub-surface px-3 py-1.5 text-[0.78rem] font-semibold text-hub-ink shadow-sm hover:border-hub-line-strong hover:bg-hub-muted"
                 title="Download all leads in JSON format"
               >
-                <Download className="h-3.5 w-3.5 text-[#FF6B00]" /> Export JSON
+                <Download className="h-3.5 w-3.5 text-hub-accent-ink" /> Export JSON
               </button>
             </>
           )}
           <button
             onClick={feed.refresh}
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-[#E3E8EF] hover:border-[#1A1A2E]"
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-hub-line hover:border-hub-ink"
             aria-label="Refresh leads"
           >
             <RefreshCw className={cn('h-4 w-4', feed.loading && 'animate-spin')} />
@@ -664,9 +664,9 @@ export default function LeadsTab({ feed }: { feed: LeadFeed }) {
       )}
 
       {feed.loading && !feed.leads.length ? (
-        <div className="py-10 text-center text-[#6B7280]"><Spinner /></div>
+        <div className="py-10 text-center text-hub-soft"><Spinner /></div>
       ) : feed.leads.length === 0 && !feed.error ? (
-        <p className="py-10 text-center text-[#6B7280]">No leads yet. A website consult or a /book appointment will show up here.</p>
+        <p className="py-10 text-center text-hub-soft">No leads yet. A website consult or a /book appointment will show up here.</p>
       ) : (
         <ul className="m-0 mt-4 grid list-none gap-3 p-0">
           {feed.leads.map((lead) => {
@@ -678,33 +678,33 @@ export default function LeadsTab({ feed }: { feed: LeadFeed }) {
                 data-lead-id={lead.id}
                 className={cn(
                   'scroll-mt-24 rounded-2xl border px-4 py-3.5',
-                  lead.cancelled ? 'border-[#EEF1F5] bg-[#FAFBFD] opacity-70' : 'border-[#E3E8EF] bg-white',
-                  selected && 'ring-2 ring-[#FF6B00]',
+                  lead.cancelled ? 'border-hub-line bg-hub-muted opacity-70' : 'border-hub-line bg-hub-surface',
+                  selected && 'ring-2 ring-hub-focus',
                 )}
               >
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <button type="button" onClick={() => select(lead)} className="min-w-0 flex-1 text-left">
                     <span className="flex flex-wrap items-center gap-2">
                       {lead.unseen && (
-                        <span className="rounded-full bg-[#FF6B00] px-2 py-0.5 text-[0.68rem] font-bold uppercase tracking-wide text-white">New</span>
+                        <span className="rounded-full border border-hub-on-accent bg-hub-accent-fill px-2 py-0.5 text-[0.68rem] font-bold uppercase tracking-wide text-hub-on-accent">New</span>
                       )}
-                      <span className="rounded-full bg-[#FFF5EC] px-2 py-0.5 text-[0.72rem] font-semibold text-[#C2410C]">{lead.sourceLabel}</span>
-                      {lead.cancelled && <span className="rounded-full bg-[#F1F3F7] px-2 py-0.5 text-[0.72rem] font-semibold text-[#4A5568]">Cancelled</span>}
+                      <span className="rounded-full bg-hub-accent-soft px-2 py-0.5 text-[0.72rem] font-semibold text-hub-accent-ink">{lead.sourceLabel}</span>
+                      {lead.cancelled && <span className="rounded-full bg-hub-muted px-2 py-0.5 text-[0.72rem] font-semibold text-hub-soft">Cancelled</span>}
                     </span>
                     <span className={cn('mt-1 block text-[1.05rem] font-bold', lead.cancelled && 'line-through')}>{lead.name}</span>
                   </button>
-                  <span className="text-[0.78rem] text-[#6B7280]">{formatWhen(lead.createdAt)}</span>
+                  <span className="text-[0.78rem] text-hub-soft">{formatWhen(lead.createdAt)}</span>
                 </div>
 
-                <div className="mt-2 grid gap-1 text-[0.9rem] text-[#334155]">
+                <div className="mt-2 grid gap-1 text-[0.9rem] text-hub-ink">
                   {lead.phone && (
-                    <a href={`tel:${lead.phone}`} className="inline-flex items-center gap-2 text-inherit no-underline">
-                      <Phone className="h-4 w-4 text-[#8A94A3]" />{lead.phone}
+                    <a href={`tel:${lead.phone}`} className="inline-flex items-center gap-2 text-hub-link no-underline">
+                      <Phone className="h-4 w-4 text-hub-soft" />{lead.phone}
                     </a>
                   )}
                   {lead.email && (
-                    <a href={`mailto:${lead.email}`} className="inline-flex min-w-0 items-center gap-2 break-all text-inherit no-underline">
-                      <Mail className="h-4 w-4 shrink-0 text-[#8A94A3]" />{lead.email}
+                    <a href={`mailto:${lead.email}`} className="inline-flex min-w-0 items-center gap-2 break-all text-hub-link no-underline">
+                      <Mail className="h-4 w-4 shrink-0 text-hub-soft" />{lead.email}
                     </a>
                   )}
                   {lead.address && (
@@ -712,9 +712,9 @@ export default function LeadsTab({ feed }: { feed: LeadFeed }) {
                       href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(lead.address)}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 text-inherit no-underline"
+                      className="inline-flex items-center gap-2 text-hub-link no-underline"
                     >
-                      <MapPin className="h-4 w-4 shrink-0 text-[#8A94A3]" />{lead.address}
+                      <MapPin className="h-4 w-4 shrink-0 text-hub-soft" />{lead.address}
                     </a>
                   )}
                 </div>
@@ -731,7 +731,7 @@ export default function LeadsTab({ feed }: { feed: LeadFeed }) {
                   <Fact label="Average monthly">{lead.avgMonthlyKwh == null ? '—' : formatKwh(lead.avgMonthlyKwh)}</Fact>
                 </dl>
                 {(lead.tdu || lead.repPuctCertificate) && (
-                  <p className="m-0 mt-2 text-[0.82rem] text-[#4A5568]">
+                  <p className="m-0 mt-2 text-[0.82rem] text-hub-soft">
                     {lead.tdu ? <>TDU {lead.tdu}</> : null}
                     {lead.tdu && lead.repPuctCertificate ? ' · ' : null}
                     {lead.repPuctCertificate ? <>PUCT {lead.repPuctCertificate}</> : null}
@@ -739,7 +739,7 @@ export default function LeadsTab({ feed }: { feed: LeadFeed }) {
                 )}
 
                 <div className="mt-3">
-                  <p className="m-0 mb-1 text-[0.72rem] font-semibold uppercase tracking-wide text-[#6B7280]">Usage history</p>
+                  <p className="m-0 mb-1 text-[0.72rem] font-semibold uppercase tracking-wide text-hub-soft">Usage history</p>
                   <UsageHistory points={lead.usageHistory} />
                 </div>
 
@@ -748,29 +748,29 @@ export default function LeadsTab({ feed }: { feed: LeadFeed }) {
                   <SunrunOptionBWorkflow lead={lead} />
                 )}
 
-                <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-[#EEF1F5] pt-3">
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-hub-line pt-3">
                   <div className="flex flex-wrap items-center gap-1.5">
                     <button
                       type="button"
                       onClick={() => downloadFile(`${lead.name.toLowerCase().replace(/\s+/g, '-')}-lead.csv`, leadsToCsvString([lead]), 'text/csv;charset=utf-8;')}
-                      className="inline-flex items-center gap-1 rounded-lg border border-[#E3E8EF] bg-white px-2 py-1 text-[0.74rem] font-medium text-[#4A5568] hover:bg-[#F8FAFC]"
+                      className="inline-flex items-center gap-1 rounded-lg border border-hub-line bg-hub-surface px-2 py-1 text-[0.74rem] font-medium text-hub-soft hover:bg-hub-muted"
                       title="Export this lead as CSV"
                     >
-                      <FileSpreadsheet className="h-3 w-3 text-[#1E7B34]" /> Lead CSV
+                      <FileSpreadsheet className="h-3 w-3 text-hub-success-ink" /> Lead CSV
                     </button>
                     <button
                       type="button"
                       onClick={() => downloadFile(`${lead.name.toLowerCase().replace(/\s+/g, '-')}-lead.json`, leadsToJsonString([lead]), 'application/json')}
-                      className="inline-flex items-center gap-1 rounded-lg border border-[#E3E8EF] bg-white px-2 py-1 text-[0.74rem] font-medium text-[#4A5568] hover:bg-[#F8FAFC]"
+                      className="inline-flex items-center gap-1 rounded-lg border border-hub-line bg-hub-surface px-2 py-1 text-[0.74rem] font-medium text-hub-soft hover:bg-hub-muted"
                       title="Export this lead as JSON"
                     >
-                      <Download className="h-3 w-3 text-[#FF6B00]" /> Lead JSON
+                      <Download className="h-3 w-3 text-hub-accent-ink" /> Lead JSON
                     </button>
                   </div>
                   {lead.bill ? (
-                    <div className="flex flex-wrap items-center gap-2 rounded-xl border border-[#BFE3C6] bg-[#EEF9F0] px-3 py-1.5">
+                    <div className="flex flex-wrap items-center gap-2 rounded-xl border border-hub-success-line bg-hub-success px-3 py-1.5">
                       <span className="inline-flex min-w-0 items-center gap-1.5 text-[0.84rem]">
-                        <FileText className="h-3.5 w-3.5 shrink-0 text-[#1E7B34]" />
+                        <FileText className="h-3.5 w-3.5 shrink-0 text-hub-success-ink" />
                         <span className="max-w-[200px] truncate">{lead.bill.name || 'Light bill'}</span>
                       </span>
                       <Button
@@ -783,7 +783,7 @@ export default function LeadsTab({ feed }: { feed: LeadFeed }) {
                       </Button>
                     </div>
                   ) : (
-                    <span className="text-[0.8rem] text-[#6B7280]">No bill attached.</span>
+                    <span className="text-[0.8rem] text-hub-soft">No bill attached.</span>
                   )}
                 </div>
               </li>
