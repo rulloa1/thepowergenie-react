@@ -1,16 +1,18 @@
 import urllib.request
 import re
 
-build_id = "zCtt6ab6_2C4_gwALn6GS"
-# Try hyphen vs underscore
-for bid in ["zCtt6ab6_2C4_gwALn6GS", "zCtt6ab6_2C4-gwALn6GS"]:
-    for path in [f"/_next/static/{bid}/_buildManifest.js", f"/_next/static/{bid}/_ssgManifest.js"]:
-        url = f"https://power-genie-hub.vercel.app{path}"
-        try:
-            req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-            with urllib.request.urlopen(req) as resp:
-                content = resp.read().decode('utf-8', errors='ignore')
-                print(f"=== {url} ===")
-                print(content[:500])
-        except Exception as e:
-            print(f"Failed {url}: {e}")
+url = "https://power-genie-hub.vercel.app/_next/static/chunks/webpack-869b3914144ed837.js"
+req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+with urllib.request.urlopen(req) as resp:
+    code = resp.read().decode('utf-8', errors='ignore')
+
+# Next.js webpack defines chunk ids and hashes: e.g. e.u = function(e) { return "static/chunks/" + ... }
+print("Webpack snippet:")
+matches = re.findall(r'(\d+:\s*"[a-f0-9]+")', code)
+print(f"Found {len(matches)} chunk mappings")
+print(matches[:20])
+
+# Find all chunk names referenced
+names = re.findall(r'"([a-zA-Z0-9_\-\./]+)"', code)
+static_chunks = [n for n in names if 'static/' in n or 'chunks/' in n]
+print("Static chunk references:", set(static_chunks))
