@@ -10,8 +10,9 @@ interface Slot {
 }
 
 const MAX_BILL = 10 * 1024 * 1024;
-const BILL_ACCEPT = '.pdf,.jpg,.jpeg,.png,.heic,.heif,application/pdf,image/jpeg,image/png,image/heic,image/heif';
-const BILL_EXT = /\.(pdf|jpe?g|png|heic|heif)$/i;
+const BILL_ACCEPT = '.pdf,.jpg,.jpeg,.png,.webp,.heic,.heif,application/pdf,image/jpeg,image/png,image/webp,image/heic,image/heif';
+const BILL_EXT = /\.(pdf|jpe?g|png|webp|heic|heif)$/i;
+const BILL_TYPES = new Set(['application/pdf', 'image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif']);
 
 type LoadState = 'loading' | 'ready' | 'not_configured' | 'unavailable' | 'error';
 
@@ -68,9 +69,9 @@ export default function BookingPage() {
   const pickFile = (file: File | null) => {
     setFileError(null);
     if (!file) return setBill(null);
-    if (!BILL_EXT.test(file.name)) {
+    if (!BILL_EXT.test(file.name) && !BILL_TYPES.has(file.type.toLowerCase())) {
       setBill(null);
-      return setFileError('Please choose a PDF, JPG, PNG or HEIC file.');
+      return setFileError('Please choose a PDF, JPG, PNG, WEBP, or HEIC file.');
     }
     if (file.size > MAX_BILL) {
       setBill(null);
@@ -117,7 +118,7 @@ export default function BookingPage() {
 
   if (state === 'not_configured') return <NotConfigured what="Online booking" />;
 
-  return (    <div className="min-h-screen bg-gradient-to-b from-[#F8FAFC] via-[#F8FAFC] to-[#F1F5F9] text-[#1A1A2E]">
+  return (    <div className="book-page min-h-screen bg-gradient-to-b from-[#F8FAFC] via-[#F8FAFC] to-[#F1F5F9] text-[#1A1A2E]">
       <header className="sticky top-0 z-20 border-b border-[#E2E8F0] bg-white/90 shadow-[0_1px_8px_rgba(0,0,0,0.02)] backdrop-blur-md">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-2.5 sm:px-6">
           <a href="/" aria-label="The Power Genie home" className="transition hover:opacity-90">
@@ -383,6 +384,7 @@ export default function BookingPage() {
                           <span className="rounded bg-white px-1.5 py-0.5 border border-[#E2E8F0]">PDF</span>
                           <span className="rounded bg-white px-1.5 py-0.5 border border-[#E2E8F0]">JPG</span>
                           <span className="rounded bg-white px-1.5 py-0.5 border border-[#E2E8F0]">PNG</span>
+                          <span className="rounded bg-white px-1.5 py-0.5 border border-[#E2E8F0]">WEBP</span>
                           <span className="rounded bg-white px-1.5 py-0.5 border border-[#E2E8F0]">HEIC</span>
                           <span>· Up to 10 MB</span>
                         </div>

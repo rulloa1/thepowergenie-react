@@ -103,7 +103,8 @@ const PENDING_BILL = /^pending\/[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][
  * Authorization must be EXTRACT_SHARED_SECRET or, as a fallback, this server's
  * SUPABASE_SERVICE_ROLE_KEY. Callers without one of those secrets are rejected.
  * The caller uploads into powergenie/pending and passes that path.
- * This is the same extractor the assistant uses. The temp object is deleted here.
+ * This is the same extractor the assistant uses. HEIC/HEIF is converted to JPEG
+ * for the model only. The temp object is deleted here; the caller's original is not.
  */
 export async function handleExtract(request: Request): Promise<Response> {
   if (!serviceBearerAuthorized(request)) throw new HttpError(401, 'Unauthorized.')
@@ -116,7 +117,7 @@ export async function handleExtract(request: Request): Promise<Response> {
   try {
     const bytes = await downloadObject(path)
     const sniffed = sniffMedia(bytes)
-    if (!sniffed || sniffed === 'image/heic') return json({ fields: EMPTY_BILL, warning: 'unreadable' })
+    if (!sniffed) return json({ fields: EMPTY_BILL, warning: 'unreadable' })
     assertBillBytes(bytes, sniffed)
     const fields = await extractBill(bytes, sniffed)
     const warning = isBlankBill(fields)

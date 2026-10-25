@@ -92,7 +92,7 @@ export default function LeadForm({
   const title = mode === 'create' ? 'Add a lead' : 'Edit lead';
 
   return createPortal(
-    <div className="fixed inset-0 z-[90] flex items-end justify-center bg-[#0A1220]/60 sm:items-center" onClick={() => { if (!busy) onClose(); }}>
+    <div className="fixed inset-0 z-[90] flex items-end justify-center bg-hub-scrim sm:items-center" onClick={() => { if (!busy) onClose(); }}>
       <div
         ref={dialogRef}
         role="dialog"
@@ -100,18 +100,18 @@ export default function LeadForm({
         aria-labelledby={titleId}
         tabIndex={-1}
         onClick={(event) => event.stopPropagation()}
-        className="flex max-h-[100dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl outline-none sm:max-h-[92dvh] sm:rounded-3xl"
+        className="flex max-h-[100dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl bg-hub-surface text-hub-ink shadow-2xl outline-none sm:max-h-[92dvh] sm:rounded-3xl"
       >
-        <div className="flex items-start justify-between gap-3 border-b border-[#E3E8EF] px-4 py-3">
+        <div className="flex items-start justify-between gap-3 border-b border-hub-line px-4 py-3">
           <div>
-            <h2 id={titleId} className="m-0 text-lg font-bold text-[#1A1A2E]">{title}</h2>
-            <p className="m-0 text-[0.8rem] text-[#6B7280]">Saved on the customer list. Booking appointments stay on the schedule.</p>
+            <h2 id={titleId} className="m-0 text-lg font-bold text-hub-ink">{title}</h2>
+            <p className="m-0 text-[0.8rem] text-hub-soft">Saved on the customer list. Booking appointments stay on the schedule.</p>
           </div>
           <button
             type="button"
             onClick={onClose}
             disabled={busy}
-            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#E3E8EF] text-[#1A1A2E]"
+            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-hub-line text-hub-ink hover:border-hub-ink"
             aria-label="Close"
           >
             <X className="h-4 w-4" />
@@ -203,16 +203,16 @@ export default function LeadForm({
               <textarea id="lead-notes" rows={4} value={draft.notes} onChange={set('notes')} className={inputClass} />
             </Field>
             <Field id="lead-bill" label="Light bill">
-              <input id="lead-bill" type="file" accept={ACCEPT} onChange={(event) => void onFile(event)} className={inputClass} />
+              <input id="lead-bill" type="file" accept={ACCEPT} onChange={(event) => void onFile(event)} className={`${inputClass} file:mr-3 file:rounded-lg file:border-0 file:bg-hub-muted file:px-3 file:py-2 file:text-[0.84rem] file:font-semibold file:text-hub-ink`} />
             </Field>
-            {reading && <p className="m-0 text-[0.86rem] text-[#6B7280]">Reading the bill…</p>}
+            {reading && <p className="m-0 text-[0.86rem] text-hub-soft">Reading the bill…</p>}
             {billNote && <Notice tone={billNote.startsWith('Numbers filled') ? 'success' : 'warn'}>{billNote}</Notice>}
             {draft.usageHistory && draft.usageHistory.length > 0 && (
-              <p className="m-0 text-[0.82rem] text-[#4A5568]">{draft.usageHistory.length} months of usage history will be saved with this lead.</p>
+              <p className="m-0 text-[0.82rem] text-hub-soft">{draft.usageHistory.length} months of usage history will be saved with this lead.</p>
             )}
             {error && <Notice tone="error">{error}</Notice>}
           </div>
-          <div className="flex flex-col gap-2 border-t border-[#E3E8EF] bg-white px-4 py-3 sm:flex-row sm:justify-end">
+          <div className="flex flex-col gap-2 border-t border-hub-line bg-hub-muted px-4 py-3 sm:flex-row sm:justify-end">
             <Button type="button" variant="ghost" onClick={onClose} disabled={busy} className="w-full sm:w-auto">Cancel</Button>
             <Button type="submit" variant="accent" disabled={busy || reading} className="w-full sm:w-auto">
               {busy ? <Spinner className="h-4 w-4" /> : mode === 'create' ? 'Save lead' : 'Save changes'}

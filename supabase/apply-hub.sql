@@ -260,7 +260,7 @@ insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_typ
   ('hub-files',        'hub-files',        false, 52428800, null),
   ('hub-chat',         'hub-chat',         false, 26214400, null),
   ('hub-light-bills',  'hub-light-bills',  false, 10485760,
-     array['application/pdf', 'image/jpeg', 'image/png', 'image/heic', 'image/heif'])
+     array['application/pdf', 'image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'])
 on conflict (id) do update set
   public = false,
   file_size_limit = excluded.file_size_limit,

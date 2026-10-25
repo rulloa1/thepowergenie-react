@@ -3,6 +3,10 @@ import {
   generate25YearSolarSchedule,
   generateProposalEmailUrl,
   generateProposalSmsUrl,
+  generateTwoStepReviewEmail,
+  generateTwoStepReviewEmailUrl,
+  generateTwoStepReviewSmsText,
+  generateTwoStepReviewSmsUrl,
   leadsToCsvString,
   leadsToJsonString,
   solarProposalScheduleToCsv,
@@ -95,5 +99,33 @@ describe('leadExports', () => {
     const smsUrl = generateProposalSmsUrl(MOCK_SOLAR_LEAD);
     expect(smsUrl).toContain('sms:8005550199');
     expect(smsUrl).toContain('Sunrun');
+  });
+
+  it('generates two-step review SMS text and URL asking for electric bill and Smart Meter Texas', () => {
+    const text = generateTwoStepReviewSmsText('Alex Morgan');
+    expect(text).toContain("Hey Alex Morgan, it's Rory with The Power Genie by Sunrun.");
+    expect(text).toContain('1) send me a photo or PDF of a recent electric bill');
+    expect(text).toContain('2) approve the Smart Meter Texas request');
+    expect(text).toContain('Horace can build your exact numbers');
+    expect(text).toContain('Reply STOP to opt out.');
+
+    const smsUrl = generateTwoStepReviewSmsUrl(MOCK_SOLAR_LEAD);
+    expect(smsUrl).toContain('sms:8005550199?body=');
+    expect(decodeURIComponent(smsUrl)).toContain("Hey Alex Morgan, it's Rory with The Power Genie by Sunrun.");
+  });
+
+  it('generates two-step review Email subject, body, and mailto URL', () => {
+    const { subject, body } = generateTwoStepReviewEmail('Alex Morgan');
+    expect(subject).toBe('2 quick steps to finish your solar savings review');
+    expect(body).toContain("Hi Alex Morgan, you're almost there!");
+    expect(body).toContain('1. **Your electric bill:**');
+    expect(body).toContain('2. **Smart Meter Texas approval:**');
+    expect(body).toContain('Horace Lawrence from Sunrun and I can walk you through your numbers with no pressure.');
+    expect(body).toContain('Questions? Call or text me at 281-323-0450.');
+    expect(body).toContain('Rory Ulloa, The Power Genie by Sunrun');
+
+    const emailUrl = generateTwoStepReviewEmailUrl(MOCK_SOLAR_LEAD);
+    expect(emailUrl).toContain('mailto:alex.morgan@example.com?subject=');
+    expect(decodeURIComponent(emailUrl)).toContain('Subject=2 quick steps to finish your solar savings review'.toLowerCase());
   });
 });

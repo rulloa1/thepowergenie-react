@@ -56,6 +56,11 @@ try {
   }
   await beat()
   await shot('leads-active-desktop')
+  await page.getByRole('button', { name: 'Add lead' }).click()
+  await page.getByRole('dialog', { name: 'Add a lead' }).waitFor()
+  await shot('leads-add-form-desktop')
+  await page.getByRole('button', { name: 'Cancel' }).click()
+  await page.getByRole('dialog', { name: 'Add a lead' }).waitFor({ state: 'hidden' })
 
   await resize(390, 844)
   await shot('leads-active-phone')
@@ -104,6 +109,10 @@ try {
   await page.getByRole('tab', { name: /Archived/ }).click()
   await page.getByText('Casey Nguyen').waitFor()
   await beat()
+  await shot('leads-archived-desktop')
+  await page.setViewportSize({ width: 390, height: 844 })
+  await shot('leads-archived-phone')
+  await page.setViewportSize({ width: 1280, height: 900 })
   await shot('leads-archived')
   await casey.getByRole('button', { name: 'Restore' }).click()
   await page.getByText('Lead restored').waitFor()

@@ -1,18 +1,53 @@
+import { focusRing } from '../components/legalChrome';
 import {
   BOOKING_REQUEST_SENTENCE,
   CONTACT_EMAIL,
+  CONTACT_PHONE_DISPLAY,
+  CONTACT_PHONE_TEL,
   NO_SAVINGS_GUARANTEE,
+  SMS_CARRIER_LIABILITY,
+  SMS_FREQUENCY,
+  SMS_PROGRAM_DESCRIPTION,
+  SMS_PROGRAM_NAME,
+  SMS_RATES,
+  SMS_STOP_HELP,
   SUNRUN_SEPARATE,
 } from '../lib/legal';
 import LegalDocument, { LegalSection } from './LegalDocument';
 
+const linkClass = `font-semibold text-[#0066CC] no-underline hover:underline ${focusRing}`;
+
 export default function TermsPage() {
   return (
-    <LegalDocument title="Terms of Service">
+    <LegalDocument title="Terms & Conditions">
       <LegalSection heading="What this site is">
         <p className="m-0">
           The Power Genie offers Houston solar referrals and a way to book a call. These terms
-          cover using this website, asking for a referral, and booking that call.
+          cover using this website, asking for a referral, booking that call, and the{' '}
+          {SMS_PROGRAM_NAME} text program.
+        </p>
+      </LegalSection>
+
+      <LegalSection id="sms" heading="Text messages — Power Genie Alerts">
+        <p className="m-0">Program name: {SMS_PROGRAM_NAME}.</p>
+        <p className="m-0">{SMS_PROGRAM_DESCRIPTION}</p>
+        <p className="m-0">{SMS_FREQUENCY}</p>
+        <p className="m-0">{SMS_RATES}</p>
+        <p className="m-0">{SMS_STOP_HELP}</p>
+        <p className="m-0">{SMS_CARRIER_LIABILITY}</p>
+        <p className="m-0">
+          Consent to receive these texts is not a condition of purchase. {SMS_PROGRAM_NAME} is for
+          account login links and new-lead/appointment alerts for Rory Ulloa’s team members who
+          opt in.
+        </p>
+        <p className="m-0">
+          Contact{' '}
+          <a className={linkClass} href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>
+          {' or '}
+          <a className={linkClass} href={`tel:${CONTACT_PHONE_TEL}`}>{CONTACT_PHONE_DISPLAY}</a>.
+        </p>
+        <p className="m-0">
+          <a className={linkClass} href="/privacy">Privacy Policy</a>
         </p>
       </LegalSection>
 
@@ -55,7 +90,12 @@ export default function TermsPage() {
 
       <LegalSection heading="Contact">
         <p className="m-0">
-          Questions about these terms: {CONTACT_EMAIL}.
+          Questions about these terms:{' '}
+          <a className={linkClass} href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>
+          {' or '}
+          <a className={linkClass} href={`tel:${CONTACT_PHONE_TEL}`}>{CONTACT_PHONE_DISPLAY}</a>.
+          {' '}
+          <a className={linkClass} href="/privacy">Privacy Policy</a>.
         </p>
       </LegalSection>
     </LegalDocument>
