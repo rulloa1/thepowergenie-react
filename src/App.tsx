@@ -33,10 +33,10 @@ const config: Config = {
       clip: 'assets/vid/encoded/01-sun-dive.mp4',
       clipMobile: 'assets/vid/mobile/01-sun-dive.mp4',
       accent: '#FF6B00',
-      eyebrow: 'Where It Begins',
-      title: 'A brighter way to power home.',
-      body: 'Every second, the sun releases more energy than humanity has used in all of history. The Power Genie brings that power home to Houston.',
-      tags: ['Solar Energy', 'Battery Storage'],
+      eyebrow: 'Texas Solar Generation',
+      title: 'Sunlight Into Real Savings',
+      body: 'Every second, the Texas sun pours limitless energy onto your roof. Stop paying skyrocketing utility rates and let The Power Genie by Sunrun transform blazing heat into clean home power.',
+      tags: ['Zero-Grid Peak', 'Clean Texas Energy', 'Meter Relief'],
       cta: {
         primary: { label: 'Explore Your Solar Options', href: '#quote' },
         secondary: { label: 'Book a free savings consult', href: '#consult' },
@@ -50,10 +50,10 @@ const config: Config = {
       clip: 'assets/vid/encoded/02-roof-dive.mp4',
       clipMobile: 'assets/vid/mobile/02-roof-dive.mp4',
       accent: '#0066CC',
-      eyebrow: 'Capture The Light',
-      title: 'Solar, Beautifully Done',
-      body: 'Sleek all-black panels that look as good as they perform. Professionally installed, backed by a 25-year warranty.',
-      tags: ['Premium Panels', 'Expert Install', '25-Year Warranty']
+      eyebrow: 'Sleek Design & Sunrun Elegance',
+      title: 'Sleek Front Skirt & Sunrun Shine',
+      body: 'Flush all-black solar panels framed by a custom aerodynamic front skirt trim that conceals all mounting brackets for a luxury finish. As the sun sweeps overhead, the Sunrun mark gleams across the glass.',
+      tags: ['Sleek Front Skirt', 'Sunrun Brand Shine', '25-Year Warranty']
     },
     {
       id: 'battery',
@@ -63,10 +63,10 @@ const config: Config = {
       clip: 'assets/vid/encoded/03-battery-dive.mp4',
       clipMobile: 'assets/vid/mobile/03-battery-dive.mp4',
       accent: '#4CAF50',
-      eyebrow: 'Tesla Powerwall',
-      title: 'Battery Backup, by Tesla',
-      body: 'Your panels charge a Tesla Powerwall all day. When the grid goes dark — storm season, peak hours, outages — it keeps your lights and your AC running.',
-      tags: ['Tesla Powerwall', 'Outage Protection', 'Peak Savings']
+      eyebrow: 'Daytime Solar Capture',
+      title: 'Tesla Powerwall Sunlight Storage',
+      body: 'During peak daylight, excess rooftop solar energy channels directly into your Tesla Powerwall battery system. Watch clean solar wattage charge your battery for when you need it most.',
+      tags: ['Tesla Powerwall', 'Daytime Sun Storage', 'Zero Grid Draw']
     },
     {
       id: 'home',
@@ -76,10 +76,10 @@ const config: Config = {
       clip: 'assets/vid/encoded/04-home-dive.mp4',
       clipMobile: 'assets/vid/mobile/04-home-dive.mp4',
       accent: '#FFF8F0',
-      eyebrow: 'Power Everything',
-      title: 'Your Home, Powered',
-      body: 'Run the AC through a Houston summer, charge your EV, and live comfortably — all on clean energy you generate.',
-      tags: ['Lower Bills', 'EV Ready', 'Smart Home']
+      eyebrow: 'Nighttime Power & EV Charging',
+      title: 'From Tesla Powerwall to Home & EV',
+      body: 'When night falls, stored energy discharges seamlessly from your Tesla Powerwalls back into your home — keeping interior lights bright, air conditioning cool, and charging your EV via Level 2 wall connector.',
+      tags: ['Nighttime Discharge', 'Level 2 EV Charging', 'Whole-Home Backup']
     },
     {
       id: 'community',
@@ -89,10 +89,10 @@ const config: Config = {
       clip: 'assets/vid/encoded/05-community-dive.mp4',
       clipMobile: 'assets/vid/mobile/05-community-dive.mp4',
       accent: '#4CAF50',
-      eyebrow: 'Join The Movement',
-      title: 'Your Neighborhood',
-      body: 'Join Houston families going solar. Build a cleaner, more resilient community together.',
-      tags: ['Local Impact', 'Growing Network', 'Cleaner Future']
+      eyebrow: 'Gas-Genie Fuel Rewards',
+      title: 'Gas Credits Straight to Your Wallet',
+      body: 'Clean solar that pays at the pump. Earn monthly Gas-Genie fuel credits and utility cashback deposited directly into your digital wallet, putting cash back into customer pockets every month.',
+      tags: ['Gas Credits in Wallet', 'Monthly Fuel Savings', 'Utility Cash Back']
     },
     {
       id: 'cta',
@@ -102,10 +102,10 @@ const config: Config = {
       clip: 'assets/vid/encoded/06-cta-dive.mp4',
       clipMobile: 'assets/vid/mobile/06-cta-dive.mp4',
       accent: '#FF6B00',
-      eyebrow: 'Your Turn',
-      title: 'Go Solar Today',
-      body: 'Lower your bills, protect your home, and power the future. Get your free custom solar quote in minutes.',
-      tags: ['Zero Down', 'Immediate Savings', 'Clean Energy'],
+      eyebrow: 'Energy Independence',
+      title: 'Your Zero-Down Solar Sanctuary',
+      body: 'Own your power with $0 down Sunrun solar + Tesla Powerwall battery storage. Charge your EV on sunlight, enjoy 24/7 whole-home backup, and earn monthly gas credits.',
+      tags: ['Zero Down', 'Tesla Powerwall Included', 'Gas Credits Active'],
       cta: {
         primary: { label: 'Get My Free Quote', href: '#quote' },
         secondary: { label: 'Book a free savings consult', href: '#consult' },

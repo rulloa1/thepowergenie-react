@@ -1,0 +1,5 @@
+Run ID: 01M5SQJC1AVRAPWMMQ2S6NKY7M
+Status: RUNNING
+
+Hints
+  poll the status and response: monid runs get -r 01M5SQJC1AVRAPWMMQ2S6NKY7M
