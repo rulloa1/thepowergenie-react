@@ -7,6 +7,7 @@
 // The Postgres exclusion constraint is the final backstop against double booking.
 
 import { billAmount, type NormalizedBill } from '../_shared/bill.ts';
+import { METER_CONSENT_TEXT, readMeterRequest } from '../_shared/meter.ts';
 import { sniffBill, type BillKind } from '../_shared/bill-file.ts';
 import { adminClient, bookedIntervals, type Admin } from '../_shared/db.ts';
 import { fail, json, notConfigured, preflight, serviceKey, env } from '../_shared/http.ts';
@@ -116,6 +117,14 @@ async function book(admin: Admin, req: Request) {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return fail(400, 'invalid', 'Please enter a valid email address.');
   if (address.length < 5) return fail(400, 'invalid', 'Please enter the service address.');
 
+  const meterResult = readMeterRequest({
+    esiId: clean(form.get('meterEsiId'), 40),
+    meterNumber: clean(form.get('meterNumber'), 40),
+    email: clean(form.get('meterEmail'), 80),
+    consent: clean(form.get('meterConsent'), 8) === 'yes',
+  }, email);
+  if (!meterResult.ok) return fail(400, 'invalid_meter', meterResult.message);
+
   const startDate = new Date(start);
   if (!start || Number.isNaN(startDate.getTime())) return fail(400, 'invalid', 'Please choose a time.');
 
@@ -211,6 +220,26 @@ async function book(admin: Admin, req: Request) {
     return fail(500, 'save_failed', "We couldn't save your booking. Please try again.");
   }
 
+  let meterStatus: string | null = null;
+  if (meterResult.value) {
+    const meter = meterResult.value;
+    const { error } = await admin.from('smt_authorizations').insert({
+      appointment_id: appt.id,
+      esi_id: meter.esiId,
+      meter_number: meter.meterNumber,
+      customer_email: meter.email,
+      consent_at: new Date().toISOString(),
+      consent_text: METER_CONSENT_TEXT,
+      status: 'pending_setup',
+    });
+    if (error) {
+      console.error('[booking:meter]', error);
+      meterStatus = 'failed';
+    } else {
+      meterStatus = 'pending_setup';
+    }
+  }
+
   if (bill && billPath) {
     const { error } = await admin.from('hub_appointment_files').insert({
       appointment_id: appt.id,
@@ -270,7 +299,13 @@ async function book(admin: Admin, req: Request) {
     status: response.status,
   })));
 
-  return json({ ok: true, start: startDate.toISOString(), end: endDate.toISOString(), timeZone: SLOT_TIME_ZONE });
+  return json({
+    ok: true,
+    start: startDate.toISOString(),
+    end: endDate.toISOString(),
+    timeZone: SLOT_TIME_ZONE,
+    meterStatus,
+  });
 }
 
 Deno.serve(async (req) => {

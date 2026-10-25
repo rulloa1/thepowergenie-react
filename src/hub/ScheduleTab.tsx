@@ -14,6 +14,7 @@ import {
   Phone,
   RefreshCw,
 } from 'lucide-react';
+import UsageCard, { type CustomerUsage } from '../components/dashboard/UsageCard';
 import { callFunction, supabase } from '../lib/supabase';
 import type { Profile } from './Dashboard';
 import { Button, Notice, Spinner, cn, inputClass, labelClass } from './ui';
@@ -103,6 +104,7 @@ export default function ScheduleTab({ profile }: { profile: Profile }) {
   const [showCancelled, setShowCancelled] = useState(false);
   const [adding, setAdding] = useState(false);
   const [functionsReady, setFunctionsReady] = useState(true);
+  const [usageByAppointment, setUsageByAppointment] = useState<Record<string, CustomerUsage>>({});
 
   useEffect(() => {
     // Drop ?google=… so a refresh doesn't repeat the banner.
@@ -132,7 +134,9 @@ export default function ScheduleTab({ profile }: { profile: Profile }) {
         .limit(1000),
     ]);
     if (apptRes.error) setError("Couldn't load appointments. Has the database been set up?");
-    setAppts((apptRes.data as Appointment[]) ?? []);
+    const loaded = (apptRes.data as Appointment[]) ?? [];
+    setAppts(loaded);
+    setUsageByAppointment(await loadMeterUsage(loaded.map((row) => row.id)));
     setEventRows(eventRes.error ? [] : ((eventRes.data as CalendarEventRow[]) ?? []));
     if (statusRes.error) {
       setFunctionsReady(statusRes.error.code !== 'not_configured' && statusRes.error.status !== 404);
@@ -298,6 +302,7 @@ export default function ScheduleTab({ profile }: { profile: Profile }) {
                     ) : (
                       <AppointmentCard
                         key={it.appt.id}
+                        usage={usageByAppointment[it.appt.id] ?? null}
                         appt={it.appt}
                         isOwner={isOwner}
                         members={members}
@@ -404,8 +409,46 @@ function syncLine(appt: Appointment, members: GoogleMember[], events: CalendarEv
   return { tone: 'muted' as const, text: 'Google Calendar not connected' };
 }
 
+const METER_STATUSES = new Set(['pending_setup', 'requested', 'approved', 'expired', 'failed']);
+
+async function loadMeterUsage(appointmentIds: string[]): Promise<Record<string, CustomerUsage>> {
+  if (!supabase || appointmentIds.length === 0) return {};
+  const authRes = await supabase
+    .from('smt_authorizations')
+    .select('id, appointment_id, status, esi_id')
+    .in('appointment_id', appointmentIds);
+  if (authRes.error || !authRes.data) return {};
+  const auths = authRes.data as { id: string; appointment_id: string; status: string; esi_id: string | null }[];
+  const authIds = auths.map((row) => row.id);
+  const [monthlyRes, intervalRes] = authIds.length
+    ? await Promise.all([
+      supabase.from('smt_usage_monthly').select('authorization_id, period_start, period_end, kwh').in('authorization_id', authIds),
+      supabase.from('smt_usage_intervals').select('authorization_id').in('authorization_id', authIds),
+    ])
+    : [{ data: [] as { authorization_id: string; period_start: string; period_end: string; kwh: number }[] }, { data: [] as { authorization_id: string }[] }];
+  const withIntervals = new Set((intervalRes.data ?? []).map((row) => row.authorization_id));
+  const rowsByAuth = new Map<string, CustomerUsage['rows']>();
+  for (const row of monthlyRes.data ?? []) {
+    const list = rowsByAuth.get(row.authorization_id) ?? [];
+    list.push({ periodStart: row.period_start, periodEnd: row.period_end, kwh: Number(row.kwh) });
+    rowsByAuth.set(row.authorization_id, list);
+  }
+  const usage: Record<string, CustomerUsage> = {};
+  for (const auth of auths) {
+    if (!METER_STATUSES.has(auth.status)) continue;
+    usage[auth.appointment_id] = {
+      status: auth.status as CustomerUsage['status'],
+      esiId: auth.esi_id,
+      rows: rowsByAuth.get(auth.id) ?? [],
+      hasIntervals: withIntervals.has(auth.id),
+    };
+  }
+  return usage;
+}
+
 function AppointmentCard({
   appt: a,
+  usage,
   isOwner,
   members,
   events,
@@ -414,6 +457,7 @@ function AppointmentCard({
   onRescheduled,
 }: {
   appt: Appointment;
+  usage: CustomerUsage | null;
   isOwner: boolean;
   members: GoogleMember[];
   events: CalendarEventRow[];
@@ -465,6 +509,8 @@ function AppointmentCard({
             <MapPin className="h-4 w-4 shrink-0 text-hub-soft" />{a.address}
           </a>
         )}
+        {a.note && <p className="m-0 mt-1 whitespace-pre-wrap rounded-xl bg-[#F6F7FB] px-3 py-2 text-[0.88rem]">{a.note}</p>}
+        {usage ? <UsageCard usage={usage} /> : null}
         {a.note && <p className="m-0 mt-1 whitespace-pre-wrap rounded-xl bg-hub-muted px-3 py-2 text-[0.88rem]">{a.note}</p>}
       </div>
 

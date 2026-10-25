@@ -1,6 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CalendarCheck, CalendarDays, Clock, FileUp, Phone, X } from 'lucide-react';
+import { MeterFields, emptyMeter, meterBodyFrom, type MeterFormValues } from '../components/dashboard/MeterFields';
+import { readMeterRequest } from '../lib/esiId';
 import { callFunction, supabase } from '../lib/supabase';
+import { usageStatusCopy } from '../lib/usage';
 import { BrandMark, Button, Notice, NotConfigured, Spinner, cn, inputClass, labelClass } from './ui';
 import { centralDateKey, formatBytes, formatDay, formatShortDay, formatTime } from './time';
 
@@ -26,6 +29,8 @@ export default function BookingPage() {
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [booked, setBooked] = useState<Slot | null>(null);
+  const [meter, setMeter] = useState<MeterFormValues>(emptyMeter);
+  const [meterStatus, setMeterStatus] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
@@ -94,6 +99,12 @@ export default function BookingPage() {
 
     setFormError(null);
     const fd = new FormData(e.currentTarget);
+    const meterCheck = readMeterRequest(meterBodyFrom(meter), String(fd.get('email') || ''));
+    if (!meterCheck.ok) {
+      setFormError(meterCheck.message);
+      document.getElementById('connect-meter')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
     const bookingSlot = slot || {
       start: new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
       end: new Date(Date.now() + 25 * 3600 * 1000).toISOString(),
@@ -101,8 +112,14 @@ export default function BookingPage() {
     fd.set('start', bookingSlot.start);
     fd.delete('bill');
     if (bill) fd.set('bill', bill, bill.name);
+    if (meterCheck.value) {
+      fd.set('meterEsiId', meterCheck.value.esiId);
+      fd.set('meterNumber', meterCheck.value.meterNumber);
+      fd.set('meterEmail', meterCheck.value.email);
+      fd.set('meterConsent', 'yes');
+    }
     setSubmitting(true);
-    const { error } = await callFunction<{ ok: boolean }>('booking', { body: fd });
+    const { data, error } = await callFunction<{ ok: boolean; meterStatus?: string | null }>('booking', { body: fd });
     setSubmitting(false);
     if (error) {
       setFormError(error.message);
@@ -112,6 +129,7 @@ export default function BookingPage() {
       }
       return;
     }
+    setMeterStatus(data?.meterStatus ?? null);
     setBooked(bookingSlot);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -137,7 +155,7 @@ export default function BookingPage() {
 
       <main className="mx-auto min-w-0 max-w-5xl px-4 pb-24 pt-8 sm:px-6 sm:pt-12">
         {booked ? (
-          <Confirmation slot={booked} hadBill={!!bill} />
+          <Confirmation slot={booked} hadBill={!!bill} meterStatus={meterStatus} />
         ) : (
           <>
             <div className="flex flex-wrap items-center gap-2">
@@ -403,6 +421,8 @@ export default function BookingPage() {
                     </p>
                   </div>
 
+                  <MeterFields values={meter} onChange={setMeter} />
+
                   {formError && <Notice tone="error">{formError}</Notice>}
 
                   <Button
@@ -431,7 +451,7 @@ export default function BookingPage() {
   );
 }
 
-function Confirmation({ slot, hadBill }: { slot: Slot; hadBill: boolean }) {
+function Confirmation({ slot, hadBill, meterStatus }: { slot: Slot; hadBill: boolean; meterStatus: string | null }) {
   return (
     <div className="mx-auto max-w-lg rounded-3xl border border-[#E2E8F0] bg-white p-7 text-center shadow-[0_12px_40px_rgba(10,20,40,0.06)] sm:p-10">
       <span className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-[#DCFCE7] shadow-sm">
@@ -454,6 +474,7 @@ function Confirmation({ slot, hadBill }: { slot: Slot; hadBill: boolean }) {
       <p className="mt-5 text-[0.94rem] leading-relaxed text-[#4A5568]">
         Horace Lawrence (Sunrun Solar Advisor) has been notified and will reach out with your video conference link or phone call.
         {hadBill ? ' Thank you for attaching your electric bill — Horace will prepare your preliminary roof & solar sizing model beforehand.' : ''}
+        {meterStatus ? ` ${usageStatusCopy(meterStatus)}` : ''}
       </p>
 
       <div className="mt-6 border-t border-[#F1F5F9] pt-4 text-xs text-[#64748B]">
