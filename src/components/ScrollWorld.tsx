@@ -6,6 +6,7 @@ import { preservedScrollTop } from '../lib/scrollPosition';
 import { shouldHandleClientNavigation } from '../lib/siteRoutes';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { Sun, Moon, Battery, BatteryCharging, Zap, Home as HomeIcon, ShieldCheck, ArrowRight, Sparkles } from 'lucide-react';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -134,6 +135,8 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
   const [readingMode, setReadingMode] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [segments, setSegments] = useState<Segment[]>([]);
+  const [homeMode, setHomeMode] = useState<'day' | 'night'>('day');
+  const homeOverrideRef = useRef(false);
   
   const stateRef = useRef({
     totalW: 0,
@@ -198,24 +201,6 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
     segmentsRef.current.forEach((s, i) => {
       if (s.video) syncFrame(s);
       if (!s.ready || !s.video || !s.visible) return;
-      
-      if (i === 0) {
-        if (window.scrollY <= 2) {
-          // Live ambient hero state: Earth and Sun are animated live without zooming in and out
-          if (s.video.currentTime >= 0.8) {
-            s.video.currentTime = 0.04;
-          }
-          if (s.video.paused) {
-            s.video.play().catch(() => {});
-          }
-          moving = true;
-          return;
-        } else {
-          if (!s.video.paused) {
-            s.video.pause();
-          }
-        }
-      }
       
       const lerp = isMobile ? 0.45 : 0.35;
       s.cur = (s.cur || 0) + ((s.target || 0) - (s.cur || 0)) * lerp;
@@ -410,6 +395,20 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
           c.style.transform = `translateY(${ty}vh)`;
           c.style.pointerEvents = cop > 0.5 ? 'auto' : 'none';
           c.setAttribute('aria-hidden', String(cop <= 0.5));
+        }
+
+        // Automatic scroll-sync demonstration for the Home section:
+        // Day mode in the first half (solar saving to battery),
+        // Night mode in the second half (battery powering home).
+        if (s.id === 'home') {
+          if (cop > 0.08) {
+            if (!homeOverrideRef.current) {
+              const targetMode = pr < 0.48 ? 'day' : 'night';
+              setHomeMode((prev) => (prev === targetMode ? prev : targetMode));
+            }
+          } else {
+            homeOverrideRef.current = false;
+          }
         }
       });
     }
@@ -892,9 +891,18 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
             />
             {s.kind === 'dive' && s.si === 0 && (
               <div className="sw-sun-live-fx absolute inset-0 pointer-events-none z-[3]">
-                <div className="absolute -top-[12%] left-1/2 -translate-x-1/2 w-[130vw] h-[70vh] rounded-full bg-[radial-gradient(ellipse_at_center,rgba(255,180,50,0.22)_0%,rgba(255,107,0,0.1)_45%,transparent_75%)] animate-[sw-solar-pulse_6s_ease-in-out_infinite]" />
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(255,225,130,0.16)_0%,transparent_65%)] animate-[sw-ray-shimmer_7s_ease-in-out_infinite]" />
-                <div className="absolute left-1/2 bottom-[14%] -translate-x-1/2 w-[min(32vw,320px)] h-[min(32vw,320px)] rounded-full shadow-[0_0_60px_rgba(80,170,255,0.28)] animate-[sw-earth-halo_5s_ease-in-out_infinite] pointer-events-none" />
+                <div className="absolute -top-[14%] left-1/2 -translate-x-1/2 w-[140vw] h-[75vh] rounded-full bg-[radial-gradient(ellipse_at_center,rgba(255,180,50,0.18)_0%,rgba(255,107,0,0.06)_45%,transparent_75%)] animate-[sw-solar-pulse_6s_ease-in-out_infinite]" />
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(255,225,130,0.12)_0%,transparent_65%)] animate-[sw-ray-shimmer_7s_ease-in-out_infinite]" />
+              </div>
+            )}
+            {s.kind === 'dive' && s.si === 3 && (
+              <div
+                className={cn(
+                  "sw-home-day-ambient absolute inset-0 pointer-events-none z-[3] transition-opacity duration-700",
+                  homeMode === 'day' ? "opacity-100" : "opacity-0"
+                )}
+              >
+                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_65%_35%,rgba(255,215,130,0.14)_0%,rgba(255,165,60,0.05)_50%,transparent_80%)] mix-blend-screen" />
               </div>
             )}
           </div>
@@ -911,7 +919,10 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
             key={s.id}
             id={s.id}
             aria-label={s.label || s.title}
-            className="sw-copy absolute left-[clamp(18px,5vw,64px)] top-[max(112px,calc(56%-170px))] w-[min(42vw,460px)] opacity-0 will-change-[opacity,transform] md:block flex flex-col items-start max-md:right-[clamp(18px,5vw,64px)] max-md:top-auto max-md:bottom-[calc(clamp(32px,8dvh,70px)+env(safe-area-inset-bottom))] max-md:w-auto max-md:max-w-[560px]"
+            className={cn(
+              "sw-copy absolute left-[clamp(18px,5vw,64px)] top-[max(112px,calc(56%-170px))] opacity-0 will-change-[opacity,transform] md:block flex flex-col items-start max-md:right-[clamp(18px,5vw,64px)] max-md:top-auto max-md:bottom-[calc(clamp(32px,8dvh,70px)+env(safe-area-inset-bottom))] max-md:w-auto max-md:max-w-[560px]",
+              s.id === 'home' ? "w-[min(48vw,520px)] max-lg:w-[min(54vw,500px)]" : "w-[min(42vw,460px)]"
+            )}
             style={{ '--sw-accent': s.accent || '', '--sw-accent-ink': accentInk(s.accent) } as React.CSSProperties}
           >
             <p className="sw-copy__step flex items-center gap-1 font-mono text-[0.74rem] tracking-[0.12em] text-[var(--sw-ink-soft)] mb-4">
@@ -941,6 +952,17 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
               <p className="sw-copy__body mt-4.5 text-[clamp(1rem,1.25vw,1.14rem)] leading-[1.55] text-[color-mix(in_srgb,var(--sw-ink)_78%,var(--sw-ink-soft))] max-w-[40ch] drop-shadow-[0_1px_12px_color-mix(in_srgb,var(--sw-bg)_90%,transparent)]">
                 {s.body}
               </p>
+            )}
+
+            {/* Interactive Day / Night Power Demonstration for Home */}
+            {s.id === 'home' && (
+              <HomePowerFlowHUD
+                mode={homeMode}
+                onToggle={(nextMode) => {
+                  homeOverrideRef.current = true;
+                  setHomeMode(nextMode);
+                }}
+              />
             )}
             {s.tags && s.tags.length > 0 && (
               <ul className="sw-copy__benefits flex flex-wrap gap-2 mt-6 p-0 list-none" aria-label={`${s.title} benefits`}>
