@@ -24,20 +24,6 @@ const DEMO_PROFILE: Profile = {
   role: 'owner',
 };
 
-const DEMO_PROFILE: Profile = {
-  id: 'demo-horace-7721',
-  email: 'horace.lawrence@sunrun.com',
-  full_name: 'Horace Lawrence',
-  role: 'owner',
-};
-
-const DEMO_PROFILE: Profile = {
-  id: 'demo-horace-7721',
-  email: 'horace.lawrence@sunrun.com',
-  full_name: 'Horace Lawrence',
-  role: 'owner',
-};
-
 type Tab = 'chat' | 'files' | 'schedule' | 'leads';
 const TABS: { id: Tab; label: string; icon: typeof MessageCircle }[] = [
   { id: 'leads', label: 'Leads', icon: Inbox },
@@ -56,12 +42,6 @@ export default function Dashboard() {
   const [ready, setReady] = useState(false);
   const [profile, setProfile] = useState<Profile | null | undefined>(undefined);
   const [needsPassword, setNeedsPassword] = useState(arrivalAuthType === 'invite' || arrivalAuthType === 'recovery');
-  const [isDemo, setIsDemo] = useState(() => {
-    return typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('demo') === 'true';
-  });
-  const [isDemo, setIsDemo] = useState(() => {
-    return typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('demo') === 'true';
-  });
   const [isDemo, setIsDemo] = useState(() => {
     return typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('demo') === 'true';
   });
