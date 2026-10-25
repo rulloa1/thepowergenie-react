@@ -33,8 +33,11 @@ const TABS: { id: Tab; label: string; icon: typeof MessageCircle }[] = [
 ];
 
 function initialTab(): Tab {
+  if (typeof window !== 'undefined' && window.location.pathname.startsWith('/pipeline')) {
+    return 'leads';
+  }
   const t = new URLSearchParams(window.location.search).get('tab');
-  return t === 'files' || t === 'schedule' || t === 'leads' ? t : 'chat';
+  return t === 'files' || t === 'schedule' || t === 'leads' ? t : 'leads';
 }
 
 export default function Dashboard() {

@@ -99,7 +99,7 @@ export function sitePage(path: string): SitePage {
   if (path === '/privacy') return 'privacy';
   if (path === '/terms') return 'terms';
   if (path === '/book') return 'book';
-  if (path === '/dashboard') return 'dashboard';
+  if (path === '/dashboard' || path === '/pipeline' || path === '/hub') return 'dashboard';
   if (path === '/homeowner' || path === '/portal' || path === '/referrals') return 'homeowner';
   return 'marketing';
 }
