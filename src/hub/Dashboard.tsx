@@ -31,6 +31,13 @@ const DEMO_PROFILE: Profile = {
   role: 'owner',
 };
 
+const DEMO_PROFILE: Profile = {
+  id: 'demo-horace-7721',
+  email: 'horace.lawrence@sunrun.com',
+  full_name: 'Horace Lawrence',
+  role: 'owner',
+};
+
 type Tab = 'chat' | 'files' | 'schedule' | 'leads';
 const TABS: { id: Tab; label: string; icon: typeof MessageCircle }[] = [
   { id: 'leads', label: 'Leads', icon: Inbox },
@@ -49,6 +56,9 @@ export default function Dashboard() {
   const [ready, setReady] = useState(false);
   const [profile, setProfile] = useState<Profile | null | undefined>(undefined);
   const [needsPassword, setNeedsPassword] = useState(arrivalAuthType === 'invite' || arrivalAuthType === 'recovery');
+  const [isDemo, setIsDemo] = useState(() => {
+    return typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('demo') === 'true';
+  });
   const [isDemo, setIsDemo] = useState(() => {
     return typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('demo') === 'true';
   });
@@ -260,6 +270,13 @@ function HubApp({
 
   return (
     <div className="hub-canvas flex min-h-[100dvh] flex-col">
+      {isDemo && (
+        <div className="sticky top-0 z-40 bg-gradient-to-r from-orange-500/15 via-amber-500/15 to-orange-500/15 border-b border-orange-200/80 px-4 py-2 text-center text-[0.82rem] text-hub-ink backdrop-blur-md flex items-center justify-center gap-2">
+          <span className="font-bold text-[#FF6B00]">✨ Demo Mode:</span>
+          <span>Viewing live preview of Horace Lawrence's Sunrun Partner Workspace. Interactive leads, AI advisor, files, and scheduling tools.</span>
+          <button onClick={onExitDemo} className="ml-2 text-xs font-bold underline text-[#FF6B00] hover:text-[#E65100] cursor-pointer">Exit to Sign In</button>
+        </div>
+      )}
       {isDemo && (
         <div className="sticky top-0 z-40 bg-gradient-to-r from-orange-500/15 via-amber-500/15 to-orange-500/15 border-b border-orange-200/80 px-4 py-2 text-center text-[0.82rem] text-hub-ink backdrop-blur-md flex items-center justify-center gap-2">
           <span className="font-bold text-[#FF6B00]">✨ Demo Mode:</span>
