@@ -28,10 +28,10 @@ const config: Config = {
     {
       id: 'sun',
       label: 'The Source',
-      still: 'assets/stills/01-sun.webp',
-      stillMobile: 'assets/stills/01-sun-m.webp',
-      clip: 'assets/vid/encoded/01-sun-dive.mp4',
-      clipMobile: 'assets/vid/mobile/01-sun-dive.mp4',
+      still: 'assets-v2/stills/01-sun.webp',
+      stillMobile: 'assets-v2/stills/01-sun-m.webp',
+      clip: 'assets-v2/vid/encoded/01-sun-dive.mp4',
+      clipMobile: 'assets-v2/vid/mobile/01-sun-dive.mp4',
       accent: '#FF6B00',
       eyebrow: 'Texas Solar Generation',
       title: 'Sunlight Into Real Savings',
@@ -45,10 +45,10 @@ const config: Config = {
     {
       id: 'roof',
       label: 'Your Roof',
-      still: 'assets/stills/02-roof.webp',
-      stillMobile: 'assets/stills/02-roof-m.webp',
-      clip: 'assets/vid/encoded/02-roof-dive.mp4',
-      clipMobile: 'assets/vid/mobile/02-roof-dive.mp4',
+      still: 'assets-v2/stills/02-roof.webp',
+      stillMobile: 'assets-v2/stills/02-roof-m.webp',
+      clip: 'assets-v2/vid/encoded/02-roof-dive.mp4',
+      clipMobile: 'assets-v2/vid/mobile/02-roof-dive.mp4',
       accent: '#0066CC',
       eyebrow: 'Sleek Design & Sunrun Elegance',
       title: 'Sleek Front Skirt & Sunrun Shine',
@@ -58,10 +58,10 @@ const config: Config = {
     {
       id: 'battery',
       label: 'Storage',
-      still: 'assets/stills/03-battery.webp',
-      stillMobile: 'assets/stills/03-battery-m.webp',
-      clip: 'assets/vid/encoded/03-battery-dive.mp4',
-      clipMobile: 'assets/vid/mobile/03-battery-dive.mp4',
+      still: 'assets-v2/stills/03-battery.webp',
+      stillMobile: 'assets-v2/stills/03-battery-m.webp',
+      clip: 'assets-v2/vid/encoded/03-battery-dive.mp4',
+      clipMobile: 'assets-v2/vid/mobile/03-battery-dive.mp4',
       accent: '#4CAF50',
       eyebrow: 'Daytime Solar Capture',
       title: 'Tesla Powerwall Sunlight Storage',
@@ -71,10 +71,10 @@ const config: Config = {
     {
       id: 'home',
       label: 'Home',
-      still: 'assets/stills/04-home.webp',
-      stillMobile: 'assets/stills/04-home-m.webp',
-      clip: 'assets/vid/encoded/04-home-dive.mp4',
-      clipMobile: 'assets/vid/mobile/04-home-dive.mp4',
+      still: 'assets-v2/stills/04-home.webp',
+      stillMobile: 'assets-v2/stills/04-home-m.webp',
+      clip: 'assets-v2/vid/encoded/04-home-dive.mp4',
+      clipMobile: 'assets-v2/vid/mobile/04-home-dive.mp4',
       accent: '#FFF8F0',
       eyebrow: 'Nighttime Power & EV Charging',
       title: 'From Tesla Powerwall to Home & EV',
@@ -84,10 +84,10 @@ const config: Config = {
     {
       id: 'community',
       label: 'Community',
-      still: 'assets/stills/05-community.webp',
-      stillMobile: 'assets/stills/05-community-m.webp',
-      clip: 'assets/vid/encoded/05-community-dive.mp4',
-      clipMobile: 'assets/vid/mobile/05-community-dive.mp4',
+      still: 'assets-v2/stills/05-community.webp',
+      stillMobile: 'assets-v2/stills/05-community-m.webp',
+      clip: 'assets-v2/vid/encoded/05-community-dive.mp4',
+      clipMobile: 'assets-v2/vid/mobile/05-community-dive.mp4',
       accent: '#4CAF50',
       eyebrow: 'Gas-Genie Fuel Rewards',
       title: 'Gas Credits Straight to Your Wallet',
@@ -97,10 +97,10 @@ const config: Config = {
     {
       id: 'cta',
       label: 'Get Started',
-      still: 'assets/stills/06-cta.webp',
-      stillMobile: 'assets/stills/06-cta-m.webp',
-      clip: 'assets/vid/encoded/06-cta-dive.mp4',
-      clipMobile: 'assets/vid/mobile/06-cta-dive.mp4',
+      still: 'assets-v2/stills/06-cta.webp',
+      stillMobile: 'assets-v2/stills/06-cta-m.webp',
+      clip: 'assets-v2/vid/encoded/06-cta-dive.mp4',
+      clipMobile: 'assets-v2/vid/mobile/06-cta-dive.mp4',
       accent: '#FF6B00',
       eyebrow: 'Energy Independence',
       title: 'Your Zero-Down Solar Sanctuary',
@@ -113,18 +113,18 @@ const config: Config = {
     }
   ],
   connectors: [
-    'assets/vid/encoded/c01-sun-roof.mp4',
-    'assets/vid/encoded/c02-roof-battery.mp4',
-    'assets/vid/encoded/c03-battery-home.mp4',
-    'assets/vid/encoded/c04-home-community.mp4',
-    'assets/vid/encoded/c05-community-cta.mp4'
+    'assets-v2/vid/encoded/c01-sun-roof.mp4',
+    'assets-v2/vid/encoded/c02-roof-battery.mp4',
+    'assets-v2/vid/encoded/c03-battery-home.mp4',
+    'assets-v2/vid/encoded/c04-home-community.mp4',
+    'assets-v2/vid/encoded/c05-community-cta.mp4'
   ],
   connectorsMobile: [
-    'assets/vid/mobile/c01-sun-roof.mp4',
-    'assets/vid/mobile/c02-roof-battery.mp4',
-    'assets/vid/mobile/c03-battery-home.mp4',
-    'assets/vid/mobile/c04-home-community.mp4',
-    'assets/vid/mobile/c05-community-cta.mp4'
+    'assets-v2/vid/mobile/c01-sun-roof.mp4',
+    'assets-v2/vid/mobile/c02-roof-battery.mp4',
+    'assets-v2/vid/mobile/c03-battery-home.mp4',
+    'assets-v2/vid/mobile/c04-home-community.mp4',
+    'assets-v2/vid/mobile/c05-community-cta.mp4'
   ]
 };
 
