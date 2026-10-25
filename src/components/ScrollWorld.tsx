@@ -120,6 +120,239 @@ function followBrands(
   if (details) details.open = false;
 }
 
+function HomePowerFlowHUD({
+  mode,
+  onToggle,
+}: {
+  mode: 'day' | 'night';
+  onToggle: (mode: 'day' | 'night') => void;
+}) {
+  const isDay = mode === 'day';
+
+  return (
+    <div className="sw-power-hud mt-5 w-full rounded-2xl bg-[rgba(8,20,32,0.92)] backdrop-blur-xl border border-[rgba(255,255,255,0.14)] p-4 sm:p-5 shadow-[0_16px_40px_rgba(0,0,0,0.5)] text-white pointer-events-auto transition-all duration-300">
+      {/* Top Header & Mode Toggle Pills */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/10">
+        <div>
+          <span className="text-[0.68rem] font-mono tracking-[0.14em] uppercase text-emerald-400 font-semibold flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            Live Power Flow Simulation
+          </span>
+          <h4 className="text-[0.92rem] font-bold text-white mt-0.5">
+            {isDay ? 'Solar Surplus Charging Powerwall' : 'Stored Battery Powering Home'}
+          </h4>
+        </div>
+
+        {/* Segmented Day / Night Toggle */}
+        <div className="flex items-center gap-1 bg-black/45 p-1 rounded-full border border-white/10 shrink-0 self-start sm:self-auto">
+          <button
+            type="button"
+            onClick={() => onToggle('day')}
+            className={cn(
+              "flex items-center gap-1.5 px-3 py-1 rounded-full text-[0.74rem] font-semibold transition-all duration-200 cursor-pointer border-0",
+              isDay
+                ? "bg-amber-500 text-slate-950 shadow-[0_0_12px_rgba(245,158,11,0.5)] font-bold"
+                : "text-slate-300 hover:text-white bg-transparent"
+            )}
+          >
+            <Sun className={cn("w-3.5 h-3.5", isDay && "text-slate-950 animate-[sw-spin-slow_12s_linear_infinite]")} />
+            <span>Day: Storing</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => onToggle('night')}
+            className={cn(
+              "flex items-center gap-1.5 px-3 py-1 rounded-full text-[0.74rem] font-semibold transition-all duration-200 cursor-pointer border-0",
+              !isDay
+                ? "bg-cyan-500 text-slate-950 shadow-[0_0_12px_rgba(6,182,212,0.5)] font-bold"
+                : "text-slate-300 hover:text-white bg-transparent"
+            )}
+          >
+            <Moon className="w-3.5 h-3.5" />
+            <span>Night: Using</span>
+          </button>
+        </div>
+      </div>
+
+      {/* 3-Node Energy Schematic with Live Flow Conduits */}
+      <div className="relative my-3 pt-1">
+        <svg
+          viewBox="0 0 320 125"
+          className="w-full h-auto overflow-visible select-none pointer-events-none"
+        >
+          <defs>
+            <linearGradient id="sw-solar-charge-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="#F59E0B" />
+              <stop offset="100%" stopColor="#10B981" />
+            </linearGradient>
+            <linearGradient id="sw-battery-home-grad" x1="100%" y1="0%" x2="50%" y2="100%">
+              <stop offset="0%" stopColor="#06B6D4" />
+              <stop offset="100%" stopColor="#10B981" />
+            </linearGradient>
+            <linearGradient id="sw-solar-home-grad" x1="0%" y1="0%" x2="50%" y2="100%">
+              <stop offset="0%" stopColor="#F59E0B" />
+              <stop offset="100%" stopColor="#38BDF8" />
+            </linearGradient>
+          </defs>
+
+          {/* Conduit: Solar (55, 28) -> Powerwall (265, 28) */}
+          <path
+            d="M 68 28 L 252 28"
+            fill="none"
+            stroke="rgba(255,255,255,0.12)"
+            strokeWidth="3"
+            strokeLinecap="round"
+          />
+          {isDay && (
+            <path
+              d="M 68 28 L 252 28"
+              fill="none"
+              stroke="url(#sw-solar-charge-grad)"
+              strokeWidth="4"
+              strokeDasharray="8 6"
+              strokeLinecap="round"
+              className="animate-[sw-flow-dash-right_1.1s_linear_infinite]"
+            />
+          )}
+
+          {/* Conduit: Solar (55, 28) -> Home (160, 100) */}
+          <path
+            d="M 68 36 Q 110 92 145 100"
+            fill="none"
+            stroke="rgba(255,255,255,0.12)"
+            strokeWidth="3"
+            strokeLinecap="round"
+          />
+          {isDay && (
+            <path
+              d="M 68 36 Q 110 92 145 100"
+              fill="none"
+              stroke="url(#sw-solar-home-grad)"
+              strokeWidth="4"
+              strokeDasharray="8 6"
+              strokeLinecap="round"
+              className="animate-[sw-flow-dash-down_1.3s_linear_infinite]"
+            />
+          )}
+
+          {/* Conduit: Powerwall (265, 28) -> Home (160, 100) */}
+          <path
+            d="M 252 36 Q 210 92 175 100"
+            fill="none"
+            stroke="rgba(255,255,255,0.12)"
+            strokeWidth="3"
+            strokeLinecap="round"
+          />
+          {!isDay && (
+            <path
+              d="M 252 36 Q 210 92 175 100"
+              fill="none"
+              stroke="url(#sw-battery-home-grad)"
+              strokeWidth="4"
+              strokeDasharray="8 6"
+              strokeLinecap="round"
+              className="animate-[sw-flow-dash-down_1.1s_linear_infinite]"
+            />
+          )}
+        </svg>
+
+        {/* Nodes Overlaid on Schematic */}
+        {/* Node 1: Solar Roof */}
+        <div className="absolute left-0 top-0 -translate-y-1 flex flex-col items-center w-24">
+          <div
+            className={cn(
+              "w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 shadow-lg",
+              isDay
+                ? "bg-amber-500/25 text-amber-400 border border-amber-400/70 shadow-[0_0_18px_rgba(245,158,11,0.45)]"
+                : "bg-slate-800/80 text-slate-500 border border-slate-700/60"
+            )}
+          >
+            <Sun className={cn("w-5 h-5", isDay && "animate-[sw-solar-pulse_3s_ease-in-out_infinite]")} />
+          </div>
+          <span className="text-[0.72rem] font-semibold text-slate-200 mt-1">Solar Roof</span>
+          <span
+            className={cn(
+              "text-[0.76rem] font-bold font-mono",
+              isDay ? "text-amber-400" : "text-slate-500"
+            )}
+          >
+            {isDay ? '8.6 kW' : '0.0 kW'}
+          </span>
+        </div>
+
+        {/* Node 2: Tesla Powerwall */}
+        <div className="absolute right-0 top-0 -translate-y-1 flex flex-col items-center w-28">
+          <div
+            className={cn(
+              "w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 shadow-lg",
+              isDay
+                ? "bg-emerald-500/25 text-emerald-400 border border-emerald-400/70 shadow-[0_0_18px_rgba(16,185,129,0.45)]"
+                : "bg-cyan-500/25 text-cyan-400 border border-cyan-400/70 shadow-[0_0_18px_rgba(6,182,212,0.45)]"
+            )}
+          >
+            {isDay ? (
+              <BatteryCharging className="w-5 h-5 animate-pulse text-emerald-400" />
+            ) : (
+              <Battery className="w-5 h-5 text-cyan-400" />
+            )}
+          </div>
+          <span className="text-[0.72rem] font-semibold text-slate-200 mt-1">Tesla Powerwall</span>
+          <span
+            className={cn(
+              "text-[0.76rem] font-bold font-mono",
+              isDay ? "text-emerald-400" : "text-cyan-400"
+            )}
+          >
+            {isDay ? '+5.4 kW Storing' : '3.2 kW Powering'}
+          </span>
+        </div>
+
+        {/* Node 3: Home & Family Load */}
+        <div className="absolute left-1/2 bottom-0 -translate-x-1/2 translate-y-2 flex flex-col items-center w-28">
+          <div className="w-10 h-10 rounded-full flex items-center justify-center bg-sky-500/25 text-sky-400 border border-sky-400/70 shadow-[0_0_18px_rgba(56,189,248,0.4)]">
+            <HomeIcon className="w-5 h-5" />
+          </div>
+          <span className="text-[0.72rem] font-semibold text-slate-200 mt-1">Living Room & AC</span>
+          <span className="text-[0.76rem] font-bold font-mono text-sky-400">
+            3.2 kW Load
+          </span>
+        </div>
+      </div>
+
+      {/* Narrative Explanation Banner */}
+      <div className="mt-7 pt-3 border-t border-white/10 flex flex-col gap-2">
+        <div className="flex items-start gap-2.5 bg-white/5 rounded-xl p-2.5 border border-white/10">
+          <Zap className={cn("w-4 h-4 shrink-0 mt-0.5", isDay ? "text-amber-400" : "text-cyan-400")} />
+          <p className="text-[0.78rem] text-slate-300 leading-snug m-0">
+            {isDay ? (
+              <>
+                <strong className="text-white font-semibold">Surplus Saved to Battery: </strong>
+                Your 32 panels produce <span className="text-amber-400 font-mono font-bold">8.6 kW</span>. Your home uses 3.2 kW, and <span className="text-emerald-400 font-mono font-bold">+5.4 kW</span> clean energy is stored in your Tesla Powerwall (now at <span className="text-emerald-300 font-bold">96%</span>).
+              </>
+            ) : (
+              <>
+                <strong className="text-white font-semibold">100% Stored Power at Night: </strong>
+                With solar resting, your Powerwall seamlessly discharges <span className="text-cyan-400 font-mono font-bold">3.2 kW</span> to run your air conditioning, TV, and pool with <span className="text-emerald-400 font-bold">zero grid power</span> used.
+              </>
+            )}
+          </p>
+        </div>
+
+        {/* Grid Protection Footer */}
+        <div className="flex items-center justify-between text-[0.7rem] font-mono text-slate-400 px-1">
+          <span className="flex items-center gap-1 text-emerald-400">
+            <ShieldCheck className="w-3.5 h-3.5" />
+            Grid Draw: 0.0 kW
+          </span>
+          <span className="text-slate-300">
+            {isDay ? '⚡ 100% Solar Self-Sufficiency' : '🛡️ Complete Blackout Protection'}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: ScrollWorldProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
@@ -920,12 +1153,14 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
             id={s.id}
             aria-label={s.label || s.title}
             className={cn(
-              "sw-copy absolute left-[clamp(18px,5vw,64px)] top-[max(112px,calc(56%-170px))] opacity-0 will-change-[opacity,transform] md:block flex flex-col items-start max-md:right-[clamp(18px,5vw,64px)] max-md:top-auto max-md:bottom-[calc(clamp(32px,8dvh,70px)+env(safe-area-inset-bottom))] max-md:w-auto max-md:max-w-[560px]",
-              s.id === 'home' ? "w-[min(48vw,520px)] max-lg:w-[min(54vw,500px)]" : "w-[min(42vw,460px)]"
+              "sw-copy absolute left-[clamp(18px,5vw,64px)] opacity-0 will-change-[opacity,transform] md:block flex flex-col items-start max-md:right-[clamp(18px,5vw,64px)] max-md:top-auto max-md:bottom-[calc(clamp(32px,8dvh,70px)+env(safe-area-inset-bottom))] max-md:w-auto max-md:max-w-[560px]",
+              s.id === 'home'
+                ? "top-[clamp(65px,8.5vh,92px)] w-[min(48vw,520px)] max-lg:w-[min(54vw,500px)]"
+                : "top-[max(112px,calc(56%-170px))] w-[min(42vw,460px)]"
             )}
             style={{ '--sw-accent': s.accent || '', '--sw-accent-ink': accentInk(s.accent) } as React.CSSProperties}
           >
-            <p className="sw-copy__step flex items-center gap-1 font-mono text-[0.74rem] tracking-[0.12em] text-[var(--sw-ink-soft)] mb-4">
+            <p className={cn("sw-copy__step flex items-center gap-1 font-mono text-[0.74rem] tracking-[0.12em] text-[var(--sw-ink-soft)]", s.id === 'home' ? "mb-1" : "mb-4")}>
               <span>{pad(i + 1)}</span>
               <span aria-hidden="true">/</span>
               <span>{pad(config.sections.length)}</span>
@@ -943,13 +1178,19 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
                   {s.title}
                 </h1>
               ) : (
-                <h2 className="sw-copy__title font-[family:var(--sw-font-display)] font-bold text-[var(--sw-ink)] text-[clamp(2rem,4.4vw,3.5rem)] leading-[1.03] mt-3 tracking-tight drop-shadow-[0_2px_20px_color-mix(in_srgb,var(--sw-bg)_70%,transparent)]">
+                <h2 className={cn(
+                  "sw-copy__title font-[family:var(--sw-font-display)] font-bold text-[var(--sw-ink)] leading-[1.03] tracking-tight drop-shadow-[0_2px_20px_color-mix(in_srgb,var(--sw-bg)_70%,transparent)]",
+                  s.id === 'home' ? "mt-1.5 text-[clamp(1.75rem,3.2vw,2.5rem)]" : "mt-3 text-[clamp(2rem,4.4vw,3.5rem)]"
+                )}>
                   {s.title}
                 </h2>
               )
             )}
             {s.body && (
-              <p className="sw-copy__body mt-4.5 text-[clamp(1rem,1.25vw,1.14rem)] leading-[1.55] text-[color-mix(in_srgb,var(--sw-ink)_78%,var(--sw-ink-soft))] max-w-[40ch] drop-shadow-[0_1px_12px_color-mix(in_srgb,var(--sw-bg)_90%,transparent)]">
+              <p className={cn(
+                "sw-copy__body text-[color-mix(in_srgb,var(--sw-ink)_78%,var(--sw-ink-soft))] max-w-[42ch] drop-shadow-[0_1px_12px_color-mix(in_srgb,var(--sw-bg)_90%,transparent)]",
+                s.id === 'home' ? "mt-1.5 text-[clamp(0.85rem,1.05vw,0.96rem)] leading-[1.4]" : "mt-4.5 text-[clamp(1rem,1.25vw,1.14rem)] leading-[1.55]"
+              )}>
                 {s.body}
               </p>
             )}
@@ -964,7 +1205,7 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
                 }}
               />
             )}
-            {s.tags && s.tags.length > 0 && (
+            {s.id !== 'home' && s.tags && s.tags.length > 0 && (
               <ul className="sw-copy__benefits flex flex-wrap gap-2 mt-6 p-0 list-none" aria-label={`${s.title} benefits`}>
                 {s.tags.map(tag => (
                   <li key={tag} className="text-[0.82rem] font-semibold text-[color-mix(in_srgb,var(--sw-accent-ink)_70%,#000)] px-3.5 py-1.5 rounded-full bg-[color-mix(in_srgb,var(--sw-accent-ink)_14%,#fff)] border border-[color-mix(in_srgb,var(--sw-accent-ink)_30%,transparent)]">
@@ -1055,9 +1296,17 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
           0%, 100% { opacity: 0.65; }
           50% { opacity: 0.95; }
         }
-        @keyframes sw-earth-halo {
-          0%, 100% { opacity: 0.65; transform: translate(-50%, 0) scale(0.98); }
-          50% { opacity: 0.95; transform: translate(-50%, 0) scale(1.02); }
+        @keyframes sw-flow-dash-right {
+          from { stroke-dashoffset: 28; }
+          to { stroke-dashoffset: 0; }
+        }
+        @keyframes sw-flow-dash-down {
+          from { stroke-dashoffset: 28; }
+          to { stroke-dashoffset: 0; }
+        }
+        @keyframes sw-spin-slow {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
         }
         .sw-scene__still { opacity: 1; }
         .sw-scene.is-framed .sw-scene__still {

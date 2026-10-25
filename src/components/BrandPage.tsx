@@ -54,55 +54,104 @@ const BRAND_LOCKUPS = {
 export default function BrandPage({ id, onNavigate, getSalesforceUrl, onQuoteClick }: BrandPageProps) {
   if (id === 'brands') {
     return (
-      <div className="min-h-screen bg-[#071b27] text-[#f4f8fb] font-sans selection:bg-[#a7e6ff] selection:text-[#071b27]">
-        <Header onNavigate={onNavigate} brandsCurrent />
-        <main>
-          <section className="px-[7vw] pt-20 pb-16 max-w-[1100px]">
-            <p className="text-[11px] font-bold tracking-[2px] text-[#f6cf85] uppercase">THE POWER GENIE FAMILY</p>
-            <h1 className="text-[clamp(42px,6.4vw,88px)] leading-[1.03] tracking-[-0.055em] font-semibold my-[22px]">Different energy.<br />Connected by possibility.</h1>
-            <p className="text-lg text-[#bacbd6] max-w-[600px] mb-8">Find your way into The Power Genie world. Explore our brands, discover solar for your home, and choose your next step.</p>
-            <button onClick={() => onNavigate('journey')} className="inline-flex items-center min-h-[44px] text-sm border-b border-[#ffffff55] hover:border-white transition-colors cursor-pointer">
-              Start The Power Genie solar journey ↗
-            </button>
-          </section>
+      <div className="relative min-h-screen bg-[#071b27] text-[#f4f8fb] font-sans selection:bg-[#a7e6ff] selection:text-[#071b27] overflow-x-hidden">
+        {/* Full-screen Background Image & Atmospheric Energy Graphics */}
+        <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+          <img
+            src="assets/stills/06-cta.webp"
+            alt=""
+            fetchPriority="high"
+            decoding="async"
+            className="w-full h-full object-cover object-center opacity-30 scale-105 filter blur-[1px]"
+          />
+          {/* Luminous Brand Accent Radiant Orbs */}
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_-10%,rgba(246,207,133,0.22)_0%,transparent_70%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_85%_35%,rgba(192,244,119,0.16)_0%,transparent_60%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_65%,rgba(149,219,233,0.15)_0%,transparent_60%)]" />
+          {/* Cyber-Solar Geometric Vector Grid */}
+          <div className="absolute inset-0 opacity-[0.09] bg-[linear-gradient(to_right,#ffffff20_1px,transparent_1px),linear-gradient(to_bottom,#ffffff20_1px,transparent_1px)] bg-[size:4.5rem_4.5rem]" />
+          {/* Dark luxury gradient scrim for high-contrast legibility */}
+          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(7,27,39,0.76)_0%,rgba(7,27,39,0.88)_40%,#071b27_96%)]" />
+        </div>
 
-          <section className="grid grid-cols-1 md:grid-cols-3 gap-[18px] px-[7vw]" aria-label="Choose a brand">
-            <BrandCard 
-              href="/celebrity-solar"
-              kicker="01 / THE SPOTLIGHT" 
-              title="Celebrity Solar" 
-              body="A brighter home deserves the spotlight. Explore solar and battery options through The Power Genie." 
-              accent="#edcd8b"
-              onClick={() => onNavigate('celebrity-solar')}
-            />
-            <BrandCard 
-              href="/hip-hop-solar"
-              kicker="02 / THE CULTURE" 
-              title="Hip-Hop Solar" 
-              body="Bring a new perspective to how you power your home. Discover solar and storage through The Power Genie." 
-              accent="#c0f477"
-              onClick={() => onNavigate('hip-hop-solar')}
-            />
-            <BrandCard 
-              href="/gas-genie"
-              kicker="03 / WHAT’S NEXT" 
-              title="Gas Genie" 
-              body="A new part of The Power Genie family is taking shape." 
-              accent="#95dbe9"
-              onClick={() => onNavigate('gas-genie')}
-            />
-          </section>
+        <div className="relative z-10">
+          <Header onNavigate={onNavigate} brandsCurrent />
+          <main>
+            <section className="px-[7vw] pt-20 pb-16 max-w-[1100px]">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-[11px] font-bold tracking-[2px] text-[#f6cf85] uppercase mb-5">
+                <span className="w-2 h-2 rounded-full bg-[#f6cf85] animate-pulse" />
+                THE POWER GENIE FAMILY
+              </div>
+              <h1 className="text-[clamp(42px,6.4vw,88px)] leading-[1.03] tracking-[-0.055em] font-semibold my-[18px] drop-shadow-[0_4px_24px_rgba(0,0,0,0.6)]">
+                Different energy.<br />Connected by possibility.
+              </h1>
+              <p className="text-lg text-[#bacbd6] max-w-[620px] mb-8 leading-relaxed drop-shadow-[0_2px_12px_rgba(0,0,0,0.5)]">
+                Find your way into The Power Genie world. Explore our brands, discover solar for your home, and choose your next step.
+              </p>
+              <button
+                onClick={() => onNavigate('journey')}
+                className="inline-flex items-center gap-2 min-h-[44px] text-sm text-[#f4f8fb] border-b border-[#ffffff55] hover:border-[#f6cf85] hover:text-[#f6cf85] transition-all cursor-pointer font-medium"
+              >
+                <span>Start The Power Genie solar journey</span>
+                <span className="text-base">↗</span>
+              </button>
+            </section>
 
-          <section className="px-[7vw] pt-20 pb-16 max-w-[1100px]">
-            <p className="text-[11px] font-bold tracking-[2px] text-[#f6cf85] uppercase">ONE CONNECTED JOURNEY</p>
-            <h2 className="text-[clamp(28px,3.3vw,46px)] leading-[1.12] tracking-[-0.045em] font-semibold mt-4">Your home is where it starts.</h2>
-            <p className="text-[#bacbd6] my-6">Celebrity Solar and Hip-Hop Solar connect you to The Power Genie’s solar inquiry experience. Gas Genie is coming soon.</p>
-            <button onClick={() => onNavigate('journey')} className="inline-flex justify-center items-center bg-[#f6cf85] text-[#102029] text-sm font-bold px-6 min-h-[48px] rounded-full hover:brightness-110 transition-all cursor-pointer">
-              Explore The Power Genie
-            </button>
-          </section>
-        </main>
-        <Footer onNavigate={onNavigate} />
+            <section className="grid grid-cols-1 md:grid-cols-3 gap-[22px] px-[7vw]" aria-label="Choose a brand">
+              <BrandCard 
+                href="/celebrity-solar"
+                kicker="01 / THE SPOTLIGHT" 
+                title="Celebrity Solar" 
+                body="A brighter home deserves the spotlight. Explore solar and battery options through The Power Genie." 
+                accent="#edcd8b"
+                image="assets/stills/04-home.webp"
+                lockup={BRAND_LOCKUPS['celebrity-solar']}
+                badge="Luxury Living"
+                onClick={() => onNavigate('celebrity-solar')}
+              />
+              <BrandCard 
+                href="/hip-hop-solar"
+                kicker="02 / THE CULTURE" 
+                title="Hip-Hop Solar" 
+                body="Bring a new perspective to how you power your home. Discover solar and storage through The Power Genie." 
+                accent="#c0f477"
+                image="assets/stills/05-community.webp"
+                lockup={BRAND_LOCKUPS['hip-hop-solar']}
+                badge="Community Power"
+                onClick={() => onNavigate('hip-hop-solar')}
+              />
+              <BrandCard 
+                href="/gas-genie"
+                kicker="03 / WHAT’S NEXT" 
+                title="Gas Genie" 
+                body="A new part of The Power Genie family is taking shape. Clean energy transitions for the next generation." 
+                accent="#95dbe9"
+                image="assets/stills/03-battery.webp"
+                lockup={BRAND_LOCKUPS['gas-genie']}
+                badge="Coming Soon"
+                onClick={() => onNavigate('gas-genie')}
+              />
+            </section>
+
+            <section className="px-[7vw] pt-24 pb-20 max-w-[1100px]">
+              <div className="relative rounded-3xl p-8 sm:p-12 overflow-hidden border border-white/15 bg-white/5 backdrop-blur-xl shadow-[0_20px_50px_rgba(0,0,0,0.4)]">
+                <div className="absolute -right-20 -bottom-20 w-80 h-80 rounded-full bg-[radial-gradient(circle,rgba(246,207,133,0.18)_0%,transparent_70%)] pointer-events-none" />
+                <p className="text-[11px] font-bold tracking-[2px] text-[#f6cf85] uppercase">ONE CONNECTED JOURNEY</p>
+                <h2 className="text-[clamp(28px,3.3vw,46px)] leading-[1.12] tracking-[-0.045em] font-semibold mt-4">Your home is where it starts.</h2>
+                <p className="text-[#bacbd6] my-6 max-w-[640px] text-base leading-relaxed">
+                  Celebrity Solar and Hip-Hop Solar connect you to The Power Genie’s solar inquiry experience. Discover customized savings, Tesla Powerwall storage, and seamless Sunrun installation.
+                </p>
+                <button
+                  onClick={() => onNavigate('journey')}
+                  className="inline-flex justify-center items-center bg-[#f6cf85] text-[#102029] text-sm font-bold px-7 min-h-[48px] rounded-full hover:brightness-110 shadow-[0_4px_20px_rgba(246,207,133,0.35)] transition-all cursor-pointer"
+                >
+                  Explore The Power Genie
+                </button>
+              </div>
+            </section>
+          </main>
+          <Footer onNavigate={onNavigate} />
+        </div>
       </div>
     );
   }
@@ -293,12 +342,25 @@ function Header({
   );
 }
 
-function BrandCard({ href, kicker, title, body, accent, onClick }: {
+function BrandCard({
+  href,
+  kicker,
+  title,
+  body,
+  accent,
+  image,
+  lockup,
+  badge,
+  onClick,
+}: {
   href: string;
   kicker: string;
   title: string;
   body: string;
   accent: string;
+  image?: string;
+  lockup?: (typeof BRAND_LOCKUPS)[keyof typeof BRAND_LOCKUPS];
+  badge?: string;
   onClick: () => void;
 }) {
   return (
@@ -309,15 +371,70 @@ function BrandCard({ href, kicker, title, body, accent, onClick }: {
         event.preventDefault();
         onClick();
       }}
-      className="flex flex-col text-left text-inherit no-underline min-h-[350px] p-8 border border-[#ffffff24] bg-[linear-gradient(145deg,#ffffff08,transparent)] rounded-[22px] transition-all hover:-translate-y-1.25 hover:border-[var(--accent)] cursor-pointer group"
+      className="group relative flex flex-col text-left text-inherit no-underline min-h-[420px] p-8 border border-white/15 rounded-[26px] overflow-hidden transition-all duration-300 hover:-translate-y-2 hover:border-[var(--accent)] hover:shadow-[0_22px_50px_rgba(0,0,0,0.6)] cursor-pointer"
       style={{ '--accent': accent } as React.CSSProperties}
     >
-      <span className="text-[11px] font-bold tracking-[2px] text-[var(--accent)] uppercase">{kicker}</span>
-      <h2 className="mt-10 mb-2.5 text-[clamp(28px,3.3vw,46px)] leading-[1.12] tracking-[-0.045em] font-semibold text-[var(--accent)] group-hover:brightness-110">{title}</h2>
-      <p className="text-[#bacbd6] text-[15px] leading-[1.65] mb-6">{body}</p>
-      <span className="flex justify-between mt-auto text-sm">
-        Explore {title} <span aria-hidden="true">↗</span>
-      </span>
+      {/* Full-bleed Card Background Image */}
+      {image && (
+        <div className="absolute inset-0 z-0 overflow-hidden">
+          <img
+            src={image}
+            alt=""
+            loading="lazy"
+            decoding="async"
+            className="w-full h-full object-cover object-center filter brightness-[0.68] contrast-[1.08] transition-transform duration-700 ease-out group-hover:scale-110 group-hover:brightness-[0.78]"
+          />
+          {/* Rich Gradient Scrim for crisp readability */}
+          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(7,27,39,0.70)_0%,rgba(7,27,39,0.82)_45%,rgba(7,27,39,0.96)_100%)] transition-opacity duration-300 group-hover:opacity-90" />
+          {/* Brand Accent Atmospheric Glow */}
+          <div
+            className="absolute -bottom-16 -right-16 w-52 h-52 rounded-full opacity-30 blur-2xl transition-opacity duration-500 group-hover:opacity-65"
+            style={{ backgroundColor: accent }}
+          />
+        </div>
+      )}
+
+      {/* Card Content */}
+      <div className="relative z-10 flex flex-col h-full">
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-[11px] font-bold tracking-[2px] text-[var(--accent)] uppercase drop-shadow-[0_1px_4px_rgba(0,0,0,0.8)]">
+            {kicker}
+          </span>
+          {badge && (
+            <span
+              className="text-[10px] font-semibold px-2.5 py-0.5 rounded-full border border-[var(--accent)]/40 bg-[var(--accent)]/15 text-[var(--accent)] backdrop-blur-sm"
+            >
+              {badge}
+            </span>
+          )}
+        </div>
+
+        {/* Lockup Logo if provided */}
+        {lockup ? (
+          <div className="mt-7 mb-3 h-16 flex items-center">
+            <img
+              src={lockup.src}
+              alt={lockup.alt}
+              className="max-h-14 w-auto object-contain filter drop-shadow-[0_4px_14px_rgba(0,0,0,0.7)] transition-transform duration-300 group-hover:scale-105"
+            />
+          </div>
+        ) : (
+          <div className="mt-7" />
+        )}
+
+        <h2 className="mb-3 text-[clamp(26px,2.8vw,38px)] leading-[1.12] tracking-[-0.04em] font-semibold text-white group-hover:text-[var(--accent)] transition-colors drop-shadow-[0_2px_8px_rgba(0,0,0,0.7)]">
+          {title}
+        </h2>
+
+        <p className="text-[#bacbd6] text-[15px] leading-[1.65] mb-6 drop-shadow-[0_1px_4px_rgba(0,0,0,0.7)]">
+          {body}
+        </p>
+
+        <span className="flex items-center justify-between mt-auto pt-4 border-t border-white/10 text-sm font-semibold text-[var(--accent)] group-hover:translate-x-1 transition-transform">
+          <span>Explore {title}</span>
+          <span aria-hidden="true" className="text-lg">→</span>
+        </span>
+      </div>
     </a>
   );
 }
