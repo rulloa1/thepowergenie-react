@@ -44,6 +44,7 @@ test('the client, public site, and shared code do not contain the homeowner reco
   const paths = [...files('src'), ...files('shared'), ...files('public')].filter(path =>
     /\.(ts|tsx|js|html|css|json|svg)$/.test(path) && !/\.test\.tsx?$/.test(path),
   )
+  const paths = [...files('src'), ...files('shared'), ...files('public')].filter(path => /\.(ts|tsx|js|html|css|json|svg)$/.test(path) && !/\.test\.(ts|tsx|js)$/.test(path))
   const extra = ['cust_patricia', 'private-assets']
   for (const path of paths) {
     const text = readFileSync(path, 'utf8')

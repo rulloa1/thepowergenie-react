@@ -118,7 +118,7 @@ export default function BookingPage() {
 
   if (state === 'not_configured') return <NotConfigured what="Online booking" />;
 
-  return (    <div className="min-h-screen bg-gradient-to-b from-[#F8FAFC] via-[#F8FAFC] to-[#F1F5F9] text-[#1A1A2E]">
+  return (    <div className="book-page min-h-screen bg-gradient-to-b from-[#F8FAFC] via-[#F8FAFC] to-[#F1F5F9] text-[#1A1A2E]">
       <header className="sticky top-0 z-20 border-b border-[#E2E8F0] bg-white/90 shadow-[0_1px_8px_rgba(0,0,0,0.02)] backdrop-blur-md">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-2.5 sm:px-6">
           <a href="/" aria-label="The Power Genie home" className="transition hover:opacity-90">

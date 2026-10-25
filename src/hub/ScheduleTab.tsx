@@ -224,14 +224,14 @@ export default function ScheduleTab({ profile }: { profile: Profile }) {
         onDisconnect={disconnect}
       />
 
-      <section aria-label="Upcoming appointments" className="rounded-3xl bg-white p-4 shadow-[0_10px_30px_rgba(10,20,40,0.06)] sm:p-6">
+      <section aria-label="Upcoming appointments" className="rounded-3xl bg-hub-surface p-4 shadow-[0_10px_30px_rgba(10,20,40,0.06)] sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="m-0 text-lg font-bold">Upcoming</h2>
-            <p className="m-0 text-[0.86rem] text-[#6B7280]">Appointments and your Google busy time · Central time</p>
+            <p className="m-0 text-[0.86rem] text-hub-soft">Appointments and your Google busy time · Central time</p>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={load} className="flex h-10 w-10 items-center justify-center rounded-full border border-[#E3E8EF] hover:border-[#1A1A2E]" aria-label="Refresh">
+            <button onClick={load} className="flex h-10 w-10 items-center justify-center rounded-full border border-hub-line hover:border-hub-ink" aria-label="Refresh">
               <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} />
             </button>
             {isOwner && (
@@ -271,28 +271,28 @@ export default function ScheduleTab({ profile }: { profile: Profile }) {
           </div>
         )}
 
-        <label className="mt-4 inline-flex cursor-pointer items-center gap-2 text-[0.86rem] text-[#4A5568]">
-          <input type="checkbox" checked={showCancelled} onChange={(e) => setShowCancelled(e.target.checked)} className="h-4 w-4 accent-[#FF6B00]" />
+        <label className="mt-4 inline-flex cursor-pointer items-center gap-2 text-[0.86rem] text-hub-soft">
+          <input type="checkbox" checked={showCancelled} onChange={(e) => setShowCancelled(e.target.checked)} className="h-4 w-4 accent-hub-accent-ink" />
           Show cancelled
         </label>
 
         {loading && !appts.length ? (
-          <div className="py-10 text-center text-[#6B7280]"><Spinner /></div>
+          <div className="py-10 text-center text-hub-soft"><Spinner /></div>
         ) : items.length === 0 ? (
-          <p className="py-10 text-center text-[#6B7280]">Nothing on the calendar yet. Bookings from the /book page will show up here.</p>
+          <p className="py-10 text-center text-hub-soft">Nothing on the calendar yet. Bookings from the /book page will show up here.</p>
         ) : (
           <div className="mt-2 grid gap-6">
             {items.map(([day, list]) => (
               <div key={day}>
-                <h3 className="m-0 mb-2 text-[0.82rem] font-semibold uppercase tracking-wide text-[#6B7280]">
+                <h3 className="m-0 mb-2 text-[0.82rem] font-semibold uppercase tracking-wide text-hub-soft">
                   {day === today ? 'Today · ' : ''}
                   {formatDay(list[0].start)}
                 </h3>
                 <ul className="m-0 grid list-none gap-2 p-0">
                   {list.map((it) =>
                     it.kind === 'busy' ? (
-                      <li key={`b-${it.start}`} className="flex items-center gap-3 rounded-2xl border border-dashed border-[#D6DCE5] bg-[#FAFBFD] px-4 py-3 text-[0.9rem] text-[#6B7280]">
-                        <span className="w-[120px] shrink-0 font-semibold text-[#4A5568]">{formatTime(it.start)} – {formatTime(it.end)}</span>
+                      <li key={`b-${it.start}`} className="flex items-center gap-3 rounded-2xl border border-dashed border-hub-control bg-hub-muted px-4 py-3 text-[0.9rem] text-hub-soft">
+                        <span className="w-[120px] shrink-0 font-semibold text-hub-soft">{formatTime(it.start)} – {formatTime(it.end)}</span>
                         Busy (Google Calendar)
                       </li>
                     ) : (
@@ -353,7 +353,7 @@ function GoogleCard({
       <span>
         Connected{google.email ? <> as <span className="font-semibold">{google.email}</span></> : ''}. Bookings are added to your calendar and every other connected member’s calendar. Open times follow Horace’s calendar.{extraRequired ? ' Calendars marked required block open times too.' : ''}
         {google.error && (
-          <span className="mt-1 block font-semibold text-[#B42318]">
+          <span className="mt-1 block font-semibold text-hub-danger">
             {google.needsReconnect ? 'Google access expired — please reconnect.' : google.error}
           </span>
         )}
@@ -363,9 +363,9 @@ function GoogleCard({
 
   const canConnect = functionsReady && !!google?.configured;
   return (
-    <section className="flex flex-col gap-3 rounded-3xl bg-white p-4 shadow-[0_10px_30px_rgba(10,20,40,0.06)] sm:flex-row sm:items-center sm:justify-between sm:p-5" aria-label="Google Calendar">
+    <section className="flex flex-col gap-3 rounded-3xl bg-hub-surface p-4 shadow-[0_10px_30px_rgba(10,20,40,0.06)] sm:flex-row sm:items-center sm:justify-between sm:p-5" aria-label="Google Calendar">
       <div className="flex gap-3">
-        <span className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-xl', google?.connected && !google.error ? 'bg-[#EEF9F0] text-[#1E7B34]' : 'bg-[#FFF5EC] text-[#C2410C]')}>
+        <span className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-xl', google?.connected && !google.error ? 'bg-hub-success text-hub-success-ink' : 'bg-hub-accent-soft text-hub-accent-ink')}>
           {google?.connected && !google.error ? <CheckCircle2 className="h-5 w-5" /> : <Link2 className="h-5 w-5" />}
         </span>
         <div className="text-[0.92rem] leading-relaxed">
@@ -379,7 +379,7 @@ function GoogleCard({
           {google!.connected && !google!.needsReconnect && (
             <>
               <Button variant="ghost" onClick={onConnect}>Reconnect</Button>
-              <Button variant="quiet" onClick={onDisconnect} className="text-[#B42318]">Disconnect</Button>
+              <Button variant="quiet" onClick={onDisconnect} className="text-hub-danger">Disconnect</Button>
             </>
           )}
         </div>
@@ -443,39 +443,39 @@ function AppointmentCard({
   };
 
   return (
-    <li className={cn('rounded-2xl border px-4 py-3.5', cancelled ? 'border-[#EEF1F5] bg-[#FAFBFD] opacity-70' : 'border-[#E3E8EF] bg-white')}>
+    <li className={cn('rounded-2xl border px-4 py-3.5', cancelled ? 'border-hub-line bg-hub-muted opacity-70' : 'border-hub-line bg-hub-surface')}>
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="m-0 text-[0.86rem] font-semibold text-[#C2410C]">
+          <p className="m-0 text-[0.86rem] font-semibold text-hub-accent-ink">
             {formatTime(a.starts_at)} – {formatTime(a.ends_at)}
-            {cancelled && <span className="ml-2 rounded-full bg-[#F1F3F7] px-2 py-0.5 text-[0.72rem] text-[#4A5568]">Cancelled</span>}
+            {cancelled && <span className="ml-2 rounded-full bg-hub-muted px-2 py-0.5 text-[0.72rem] text-hub-soft">Cancelled</span>}
           </p>
           <p className={cn('m-0 mt-0.5 text-[1.05rem] font-bold', cancelled && 'line-through')}>{a.customer_name}</p>
         </div>
-        <span className="inline-flex items-center gap-1 rounded-full bg-[#F1F3F7] px-2.5 py-1 text-[0.74rem] font-semibold text-[#4A5568]">
+        <span className="inline-flex items-center gap-1 rounded-full bg-hub-muted px-2.5 py-1 text-[0.74rem] font-semibold text-hub-soft">
           {a.source === 'public' ? <><Globe className="h-3.5 w-3.5" /> Booked online</> : <><LayoutDashboard className="h-3.5 w-3.5" /> Added in dashboard</>}
         </span>
       </div>
 
-      <div className="mt-2 grid gap-1 text-[0.9rem] text-[#334155]">
-        {a.phone && <a href={`tel:${a.phone}`} className="inline-flex items-center gap-2 no-underline text-inherit"><Phone className="h-4 w-4 text-[#8A94A3]" />{a.phone}</a>}
-        {a.email && <a href={`mailto:${a.email}`} className="inline-flex min-w-0 items-center gap-2 break-all no-underline text-inherit"><Mail className="h-4 w-4 shrink-0 text-[#8A94A3]" />{a.email}</a>}
+      <div className="mt-2 grid gap-1 text-[0.9rem] text-hub-ink">
+        {a.phone && <a href={`tel:${a.phone}`} className="inline-flex items-center gap-2 no-underline text-hub-link"><Phone className="h-4 w-4 text-hub-soft" />{a.phone}</a>}
+        {a.email && <a href={`mailto:${a.email}`} className="inline-flex min-w-0 items-center gap-2 break-all no-underline text-hub-link"><Mail className="h-4 w-4 shrink-0 text-hub-soft" />{a.email}</a>}
         {a.address && (
-          <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(a.address)}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 no-underline text-inherit">
-            <MapPin className="h-4 w-4 shrink-0 text-[#8A94A3]" />{a.address}
+          <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(a.address)}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 no-underline text-hub-link">
+            <MapPin className="h-4 w-4 shrink-0 text-hub-soft" />{a.address}
           </a>
         )}
-        {a.note && <p className="m-0 mt-1 whitespace-pre-wrap rounded-xl bg-[#F6F7FB] px-3 py-2 text-[0.88rem]">{a.note}</p>}
+        {a.note && <p className="m-0 mt-1 whitespace-pre-wrap rounded-xl bg-hub-muted px-3 py-2 text-[0.88rem]">{a.note}</p>}
       </div>
 
       {a.hub_appointment_files?.length > 0 && (
         <div className="mt-3 grid gap-2">
           {a.hub_appointment_files.map((f) => (
-            <div key={f.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#BFE3C6] bg-[#EEF9F0] px-3 py-2">
+            <div key={f.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-hub-success-line bg-hub-success px-3 py-2">
               <span className="inline-flex min-w-0 items-center gap-2 text-[0.88rem]">
-                <FileText className="h-4 w-4 shrink-0 text-[#1E7B34]" />
+                <FileText className="h-4 w-4 shrink-0 text-hub-success-ink" />
                 <span className="font-semibold">Light bill</span>
-                <span className="truncate text-[#4A5568]">{f.original_name} · {formatBytes(f.size_bytes)}</span>
+                <span className="truncate text-hub-soft">{f.original_name} · {formatBytes(f.size_bytes)}</span>
               </span>
               <span className="flex gap-1">
                 <Button variant="ghost" className="min-h-[36px] px-3 text-[0.84rem]" onClick={() => openBill(f, false)} disabled={!!opening}>
@@ -491,12 +491,12 @@ function AppointmentCard({
       )}
 
       {!cancelled && (
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-[#EEF1F5] pt-3">
-          <span className="text-[0.8rem] text-[#6B7280]">
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-hub-line pt-3">
+          <span className="text-[0.8rem] text-hub-soft">
             {sync.tone === 'ok' ? (
-              <span className="inline-flex items-center gap-1 text-[#1E7B34]"><CheckCircle2 className="h-4 w-4" /> {sync.text}</span>
+              <span className="inline-flex items-center gap-1 text-hub-success-ink"><CheckCircle2 className="h-4 w-4" /> {sync.text}</span>
             ) : sync.tone === 'bad' ? (
-              <span className="inline-flex items-center gap-1 text-[#B42318]"><AlertTriangle className="h-4 w-4" /> {sync.text}</span>
+              <span className="inline-flex items-center gap-1 text-hub-danger"><AlertTriangle className="h-4 w-4" /> {sync.text}</span>
             ) : (
               sync.text
             )}
@@ -565,7 +565,7 @@ function RescheduleForm({ appt, onDone }: { appt: Appointment; onDone: (warning:
 
   return (
     <form
-      className="mt-3 grid gap-3 rounded-2xl border border-[#E3E8EF] bg-[#FAFBFD] p-3"
+      className="mt-3 grid gap-3 rounded-2xl border border-hub-line bg-hub-muted p-3"
       onSubmit={(event) => {
         event.preventDefault();
         void submit(false);
@@ -650,7 +650,7 @@ function AddAppointment({ onDone }: { onDone: (msg: string) => void }) {
   };
 
   return (
-    <form id="add-appt" onSubmit={(e) => submit(e)} className="mt-4 grid gap-4 rounded-2xl border border-[#E3E8EF] bg-[#FAFBFD] p-4">
+    <form id="add-appt" onSubmit={(e) => submit(e)} className="mt-4 grid gap-4 rounded-2xl border border-hub-line bg-hub-muted p-4">
       <div className="grid gap-4 sm:grid-cols-3">
         <div>
           <label htmlFor="a-date" className={labelClass}>Date</label>
