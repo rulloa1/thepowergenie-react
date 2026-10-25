@@ -94,6 +94,9 @@ export default defineConfig({
     tailwindcss(),
     powerGenieApi(),
   ],
+  optimizeDeps: {
+    entries: ['index.html'],
+  },
   server: {
     port: 3000,
     host: '0.0.0.0',
