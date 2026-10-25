@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { Mail, Phone } from 'lucide-react';
 import ScrollWorld from './components/ScrollWorld';
 import BrandPage from './components/BrandPage';
@@ -7,6 +7,7 @@ import { Config } from './types';
 import LegalFooter from './components/LegalFooter';
 import { openAssistant } from './lib/openAssistant';
 import {
+  assistantBrandFromView,
   isBrandPage,
   referralBrandFromLocation,
   marketingViewFromLocation,
@@ -199,10 +200,15 @@ export default function App() {
     return () => io.disconnect();
   }, [view]);
 
-  useEffect(() => {
-    document.documentElement.classList.toggle('quote-in-view', quoteInView);
-    return () => document.documentElement.classList.remove('quote-in-view');
-  }, [quoteInView]);
+  useLayoutEffect(() => {
+    const root = document.documentElement;
+    root.classList.toggle('quote-in-view', quoteInView);
+    root.classList.toggle('pg-mobile-cta', view === 'journey' && !quoteInView);
+    root.dataset.pgBrand = assistantBrandFromView(view);
+    return () => {
+      root.classList.remove('quote-in-view', 'pg-mobile-cta');
+    };
+  }, [quoteInView, view]);
 
   useEffect(() => {
     if (formReady || view !== 'journey') return;

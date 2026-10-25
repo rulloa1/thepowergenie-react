@@ -104,9 +104,17 @@ export function sitePage(path: string): SitePage {
   return 'marketing';
 }
 
-/** The marketing assistant stays off the hub and the legal pages. */
+/**
+ * Public pages get the booking chat bubble. The Referral Hub is the exception:
+ * the bubble stays off /dashboard, including the signed-in dashboard and its sign-in screen.
+ */
 export function showMarketingAssistant(page: SitePage): boolean {
-  return page === 'marketing';
+  return page !== 'dashboard';
+}
+
+/** Accent for the chat bubble. The journey, booking, legal, and portal pages use Power Genie orange. */
+export function assistantBrandFromView(view: MarketingView): 'power-genie' | BrandPageId {
+  return view === 'journey' ? 'power-genie' : view;
 }
 
 /**

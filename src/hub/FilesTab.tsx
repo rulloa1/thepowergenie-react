@@ -79,11 +79,11 @@ export default function FilesTab() {
   const shown = files.filter((f) => f.name.toLowerCase().includes(query.trim().toLowerCase()));
 
   return (
-    <section aria-label="Shared files" className="rounded-3xl bg-white p-4 shadow-[0_10px_30px_rgba(10,20,40,0.06)] sm:p-6">
+    <section aria-label="Shared files" className="rounded-3xl bg-hub-surface p-4 shadow-[0_10px_30px_rgba(10,20,40,0.06)] sm:p-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="m-0 text-lg font-bold">Files</h2>
-          <p className="m-0 text-[0.86rem] text-[#6B7280]">Private to Horace and Rory. Links expire after a minute.</p>
+          <p className="m-0 text-[0.86rem] text-hub-soft">Private to Horace and Rory. Links expire after a minute.</p>
         </div>
         <Button onClick={() => input.current?.click()} disabled={!!uploading}>
           {uploading ? <Spinner className="h-4 w-4" /> : <Upload className="h-4 w-4" />}
@@ -101,31 +101,31 @@ export default function FilesTab() {
         }}
       >
         <div className="relative">
-          <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8A94A3]" />
+          <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-hub-soft" />
           <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search files" aria-label="Search files" className={`${inputClass} pl-10`} />
         </div>
 
         {error && <div className="mt-3"><Notice tone="error">{error}</Notice></div>}
 
         {loading ? (
-          <div className="py-10 text-center text-[#6B7280]"><Spinner /></div>
+          <div className="py-10 text-center text-hub-soft"><Spinner /></div>
         ) : shown.length === 0 ? (
-          <div className="mt-4 rounded-2xl border-2 border-dashed border-[#E3E8EF] px-4 py-12 text-center text-[#6B7280]">
+          <div className="mt-4 rounded-2xl border-2 border-dashed border-hub-line px-4 py-12 text-center text-hub-soft">
             {files.length ? 'No files match that search.' : 'No files yet. Upload documents or photos, or drop them here.'}
           </div>
         ) : (
-          <ul className="m-0 mt-3 list-none divide-y divide-[#EEF1F5] p-0">
+          <ul className="m-0 mt-3 list-none divide-y divide-hub-line p-0">
             {shown.map((f) => {
               const isImage = (f.metadata?.mimetype || '').startsWith('image/');
               const Icon = isImage ? ImageIcon : FileText;
               return (
                 <li key={f.name} className="flex items-center gap-3 py-3">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#F1F3F7]">
-                    <Icon className="h-5 w-5 text-[#4A5568]" />
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-hub-muted">
+                    <Icon className="h-5 w-5 text-hub-soft" />
                   </span>
                   <button onClick={() => open(f.name, false)} className="min-w-0 flex-1 text-left">
                     <span className="block truncate font-semibold">{f.name}</span>
-                    <span className="text-[0.8rem] text-[#6B7280]">
+                    <span className="text-[0.8rem] text-hub-soft">
                       {formatBytes(f.metadata?.size)} {f.created_at ? `· ${formatDateTime(f.created_at)}` : ''}
                     </span>
                   </button>
@@ -150,7 +150,7 @@ function IconButton({ label, onClick, danger, children }: { label: string; onCli
       onClick={onClick}
       aria-label={label}
       title={label.split(' ')[0]}
-      className={`flex h-10 w-10 items-center justify-center rounded-full hover:bg-[#F1F3F7] ${danger ? 'text-[#B42318]' : 'text-[#4A5568]'}`}
+      className={`flex h-10 w-10 items-center justify-center rounded-full hover:bg-hub-muted ${danger ? 'text-hub-danger' : 'text-hub-soft'}`}
     >
       {children}
     </button>

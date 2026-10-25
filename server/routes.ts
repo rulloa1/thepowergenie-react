@@ -12,6 +12,7 @@ import { loadSlotRules } from './slot-rules.js'
 import { chicagoDate, listSlots } from './slots.js'
 import { assistantAvailabilityBusy } from './google-calendar.js'
 import { createSignedUpload, deleteObject, downloadObject, hubBusyIntervals, serviceBearerAuthorized, takenAppointments } from './supabase.js'
+import { requireHubMember } from './hub-member.js'
 
 const TEN_MINUTES = 10 * 60 * 1000
 
@@ -102,7 +103,8 @@ const PENDING_BILL = /^pending\/[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][
  * Authorization must be EXTRACT_SHARED_SECRET or, as a fallback, this server's
  * SUPABASE_SERVICE_ROLE_KEY. Callers without one of those secrets are rejected.
  * The caller uploads into powergenie/pending and passes that path.
- * This is the same extractor the assistant uses. The temp object is deleted here.
+ * This is the same extractor the assistant uses. HEIC/HEIF is converted to JPEG
+ * for the model only. The temp object is deleted here; the caller's original is not.
  */
 export async function handleExtract(request: Request): Promise<Response> {
   if (!serviceBearerAuthorized(request)) throw new HttpError(401, 'Unauthorized.')
@@ -115,7 +117,7 @@ export async function handleExtract(request: Request): Promise<Response> {
   try {
     const bytes = await downloadObject(path)
     const sniffed = sniffMedia(bytes)
-    if (!sniffed || sniffed === 'image/heic') return json({ fields: EMPTY_BILL, warning: 'unreadable' })
+    if (!sniffed) return json({ fields: EMPTY_BILL, warning: 'unreadable' })
     assertBillBytes(bytes, sniffed)
     const fields = await extractBill(bytes, sniffed)
     const warning = isBlankBill(fields)
@@ -125,6 +127,38 @@ export async function handleExtract(request: Request): Promise<Response> {
   } finally {
     await deleteObject(path)
   }
+}
+
+/**
+ * Signed-in hub members can read a light bill with the same extractor the
+ * website assistant uses. The bytes come from the member; this route does
+ * not accept a storage path, so it cannot pull an existing private object.
+ * Saving the lead stays on RLS in the browser.
+ */
+export async function handleHubBill(request: Request): Promise<Response> {
+  assertSameOrigin(request)
+  const member = await requireHubMember(request)
+  enforceRateLimit(`hub-bill:${member.id}`, 20, TEN_MINUTES)
+  const body = await readWebJson(request, 16_000_000)
+  if (!isRecord(body)) throw new HttpError(400, 'Invalid request.')
+  const fileName = typeof body.fileName === 'string' ? body.fileName : 'light-bill'
+  const mimeType = typeof body.mimeType === 'string' ? body.mimeType : ''
+  const dataBase64 = typeof body.dataBase64 === 'string' ? body.dataBase64 : ''
+  if (!dataBase64) throw new HttpError(400, 'Attach the bill again.')
+  if (dataBase64.length > 14_000_000) throw new HttpError(413, 'That file is over 10 MB. Try a photo or a smaller PDF.')
+  let bytes: Uint8Array
+  try {
+    bytes = new Uint8Array(Buffer.from(dataBase64, 'base64'))
+  } catch {
+    throw new HttpError(400, 'Attach the bill again.')
+  }
+  const declared = assertAllowedUpload(fileName, mimeType, bytes.byteLength)
+  const sniffed = assertBillBytes(bytes, declared)
+  const fields = await extractBill(bytes, sniffed)
+  const warning = isBlankBill(fields)
+    ? 'I could not read that automatically. You can type the details below, and the file can still be attached.'
+    : null
+  return json({ fields, warning })
 }
 
 export async function handleLead(request: Request): Promise<Response> {
@@ -155,7 +189,7 @@ function requestUrl(request: Request): URL {
   }
 }
 
-const ASSISTANT_ROUTES = new Set(['chat', 'uploads', 'bill', 'lead', 'slots', 'extract'])
+const ASSISTANT_ROUTES = new Set(['chat', 'uploads', 'bill', 'lead', 'slots', 'extract', 'hub-bill'])
 
 /** One function serves every assistant route. The widget calls /api/assistant?route=. */
 function assistantRoute(url: URL): string {
@@ -182,6 +216,7 @@ export async function handleApi(request: Request): Promise<Response> {
     if (pathname === '/api/lead' && request.method === 'POST') return await handleLead(request)
     if (pathname === '/api/slots' && request.method === 'GET') return await handleSlots(request)
     if (pathname === '/api/extract' && request.method === 'POST') return await handleExtract(request)
+    if (pathname === '/api/hub-bill' && request.method === 'POST') return await handleHubBill(request)
     return json({ error: 'Not found.' }, 404)
   } catch (error) {
     if (error instanceof HttpError) return json({ error: error.message }, error.status)
