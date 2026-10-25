@@ -11,13 +11,15 @@ function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-/** Show the scrub video only while it is actually presenting a decoded frame. */
+/** Show the scrub video once it has presented a decoded frame, and keep it framed. */
 function syncFrame(s: Segment) {
   const video = s.video;
-  const visible = !!(video && s.sawFrame && video.readyState >= 2 && video.videoWidth > 0);
-  if (s.frameVisible === visible) return;
-  s.frameVisible = visible;
-  s.el?.classList.toggle('is-framed', visible);
+  if (!video) return;
+  if ((video.readyState >= 2 && video.videoWidth > 0) || s.sawFrame) {
+    s.sawFrame = true;
+    s.frameVisible = true;
+    s.el?.classList.add('is-framed');
+  }
 }
 
 function watchPresentedFrame(s: Segment) {
