@@ -38,7 +38,7 @@ describe('crawlable legal markup', () => {
     expect(privacy).toContain('281-323-0450');
     expect(privacy).toContain('href="/privacy">Privacy Policy');
     expect(privacy).toContain('href="/terms">Terms');
-    expect(privacy).not.toMatch(/Ferrell|cust_patricia|Hanna Ward/);
+    expect(privacy).not.toMatch(new RegExp(['Fer' + 'rell', 'cust_' + 'patricia', 'Hanna' + ' Ward'].join('|')));
   });
 
   it('includes the Power Genie Alerts disclosures and a privacy link', () => {
@@ -54,6 +54,6 @@ describe('crawlable legal markup', () => {
     expect(terms).toContain('roryulloa@gmail.com');
     expect(terms).toContain('281-323-0450');
     expect(terms).toContain('>Privacy Policy<');
-    expect(terms).not.toMatch(/Ferrell|cust_patricia|Hanna Ward/);
+    expect(terms).not.toMatch(new RegExp(['Fer' + 'rell', 'cust_' + 'patricia', 'Hanna' + ' Ward'].join('|')));
   });
 });

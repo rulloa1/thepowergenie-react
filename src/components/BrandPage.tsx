@@ -154,7 +154,13 @@ export default function BrandPage({ id, onNavigate, getSalesforceUrl, onQuoteCli
       <Header onNavigate={onNavigate} lockup={BRAND_LOCKUPS[id]} />
       <main>
         <section className="relative isolation-auto min-h-[78svh] flex items-end px-[7vw] pt-24 pb-24 overflow-hidden">
-          <img className="absolute inset-0 w-full h-full object-cover z-[-2]" src={content.image} alt="" />
+          <img
+            className="absolute inset-0 w-full h-full object-cover z-[-2]"
+            src={content.image}
+            alt=""
+            fetchPriority="high"
+            decoding="async"
+          />
           <div className="absolute inset-0 bg-[linear-gradient(90deg,#071b27f5,#071b27cb_40%,#071b2744)] z-[-1]" />
           <div className="max-w-[780px]">
             <button onClick={() => onNavigate('brands')} className="inline-block text-xs text-[#d1e0e8] mb-7 min-h-[32px] hover:text-white transition-colors cursor-pointer">
@@ -256,6 +262,8 @@ function Header({
           alt={logo.alt}
           width={logo.width}
           height={logo.height}
+          fetchPriority="high"
+          decoding="async"
           className={
             lockup
               ? 'block h-20 w-auto shrink-0 object-contain max-sm:h-14'

@@ -239,9 +239,17 @@ export default function App() {
     const next: MarketingView = newView === 'journey' || isBrandPage(newView) ? newView : 'journey';
     const href = marketingViewHref(next, new URL(window.location.href));
     const current = `${window.location.pathname}${window.location.search}${window.location.hash}`;
-    setView(next);
-    window.scrollTo(0, 0);
-    if (current !== href) window.history.pushState({}, '', href);
+    const applyNav = () => {
+      setView(next);
+      window.scrollTo(0, 0);
+      if (current !== href) window.history.pushState({}, '', href);
+    };
+
+    if (typeof document !== 'undefined' && 'startViewTransition' in document) {
+      (document as any).startViewTransition(applyNav);
+    } else {
+      applyNav();
+    }
   };
 
   if (view !== 'journey') {
