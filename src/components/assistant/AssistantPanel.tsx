@@ -18,10 +18,10 @@ import {
 type Phase = 'chat' | 'bill' | 'confirm' | 'book' | 'done'
 
 const fieldClass =
-  'w-full min-h-11 rounded-xl border border-[#1A1A2E]/15 bg-white px-3 text-base text-[#1A1A2E] outline-none focus:border-[#FF6B00] focus:ring-2 focus:ring-[#FF6B00]/30'
+  'pg-assistant-field w-full min-h-11 rounded-xl border border-[#1A1A2E]/15 bg-white px-3 text-base text-[#1A1A2E] outline-none'
 
 const primaryClass =
-  'inline-flex min-h-11 items-center justify-center rounded-full bg-[#FF6B00] px-4 font-bold text-white disabled:opacity-50'
+  'pg-assistant-primary inline-flex min-h-11 items-center justify-center rounded-full px-4 font-bold disabled:opacity-50'
 
 const quietClass =
   'inline-flex min-h-11 items-center justify-center rounded-full border border-[#1A1A2E]/15 bg-white px-4 font-semibold text-[#1A1A2E]'
@@ -241,9 +241,9 @@ export default function AssistantPanel({ frameClass, mode, nonce, onClose }: Pan
       aria-modal="true"
       aria-labelledby="genie-title"
       data-testid="genie-panel"
-      className={frameClass}
+      className={`${frameClass} pg-assistant-panel`}
     >
-      <header className="flex items-center gap-3 bg-[#0B2233] px-4 py-[max(12px,env(safe-area-inset-top))] text-white sm:py-4">
+      <header className="pg-assistant-header flex items-center gap-3 bg-[#0B2233] px-4 py-[max(12px,env(safe-area-inset-top))] text-white sm:py-4">
         <img src="/assets/brand/power-genie-icon.png" alt="" className="h-10 w-10 rounded-xl bg-white/10 object-cover" />
         <div className="min-w-0 flex-1">
           <h2 id="genie-title" className="truncate text-base font-bold">
@@ -251,7 +251,7 @@ export default function AssistantPanel({ frameClass, mode, nonce, onClose }: Pan
           </h2>
           <p className="truncate text-xs text-[#D9E6F2]">Questions, your bill, and a free consult with Horace</p>
         </div>
-        <button type="button" className="inline-flex h-11 w-11 items-center justify-center rounded-full hover:bg-white/10" onClick={onClose} aria-label="Close">
+        <button type="button" className="inline-flex h-11 w-11 items-center justify-center rounded-full hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white" onClick={onClose} aria-label="Close">
           <X className="h-5 w-5" />
         </button>
       </header>
@@ -308,7 +308,7 @@ export default function AssistantPanel({ frameClass, mode, nonce, onClose }: Pan
           <section className="space-y-3">
             <h3 className="text-lg font-bold">Upload your electric bill</h3>
             <p className="text-sm leading-relaxed text-[#4A5568]">
-              A photo or PDF is enough. Horace uses it for the savings estimate. JPEG, PNG, WEBP, or PDF, up to 10 MB.
+              A photo or PDF is enough. Horace uses it for the savings estimate. JPEG, PNG, WEBP, HEIC, or PDF, up to 10 MB.
             </p>
             <label className={`${primaryClass} w-full cursor-pointer`}>
               Take a photo
@@ -329,7 +329,7 @@ export default function AssistantPanel({ frameClass, mode, nonce, onClose }: Pan
                 data-testid="bill-file"
                 className="sr-only"
                 type="file"
-                accept="image/jpeg,image/png,image/webp,application/pdf,.pdf"
+                accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif,application/pdf,.pdf"
                 onChange={event => {
                   void onFile(event.target.files?.[0])
                   event.target.value = ''
@@ -418,7 +418,7 @@ export default function AssistantPanel({ frameClass, mode, nonce, onClose }: Pan
                           type="button"
                           key={slot.start}
                           aria-pressed={slotStart === slot.start}
-                          className={`min-h-10 rounded-full px-3 text-sm font-semibold ${slotStart === slot.start ? 'bg-[#0B2233] text-white' : 'bg-white text-[#1A1A2E] ring-1 ring-[#1A1A2E]/15'}`}
+                          className={`min-h-10 rounded-full px-3 text-sm font-semibold ${slotStart === slot.start ? 'pg-assistant-primary' : 'bg-white text-[#1A1A2E] ring-1 ring-[#1A1A2E]/15'}`}
                           onClick={() => setSlotStart(slot.start)}
                         >
                           {slot.time}
@@ -434,7 +434,7 @@ export default function AssistantPanel({ frameClass, mode, nonce, onClose }: Pan
 
         {phase === 'done' && confirmation && (
           <section className="space-y-3" data-testid="booking-confirmation">
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#FF6B00] text-2xl text-white" aria-hidden="true">
+            <div className="pg-assistant-primary mx-auto flex h-14 w-14 items-center justify-center rounded-full text-2xl" aria-hidden="true">
               ✓
             </div>
             <h3 className="text-center text-xl font-bold">Your consult is booked</h3>
@@ -528,7 +528,7 @@ export default function AssistantPanel({ frameClass, mode, nonce, onClose }: Pan
           <label className="flex items-start gap-3 text-sm leading-snug">
             <input
               data-testid="tcpa-consent"
-              className="mt-1 h-5 w-5 shrink-0 accent-[#FF6B00]"
+              className="mt-1 h-5 w-5 shrink-0"
               type="checkbox"
               checked={consent}
               onChange={event => setConsent(event.target.checked)}
@@ -625,8 +625,19 @@ function textToNum(value: string | null): number | null {
   return Number.isFinite(parsed) ? parsed : null
 }
 
+function isHeifFile(file: File, type: string): boolean {
+  const lower = file.name.toLowerCase()
+  return type === 'image/heic' || type === 'image/heif' || lower.endsWith('.heic') || lower.endsWith('.heif')
+}
+
 async function prepareBillFile(file: File): Promise<File> {
-  const type = file.type || mimeFromName(file.name)
+  const type = (file.type || mimeFromName(file.name)).toLowerCase()
+  // Keep the iPhone original. The server makes a JPEG copy only for reading.
+  if (isHeifFile(file, type)) {
+    if (file.size > MAX_BILL_BYTES) throw new Error('That file is over 10 MB. Try a photo or a smaller PDF.')
+    const media = type === 'image/heif' || file.name.toLowerCase().endsWith('.heif') ? 'image/heif' : 'image/heic'
+    return file.type === media ? file : new File([file], file.name, { type: media })
+  }
   if (file.size > MAX_BILL_BYTES && !type.startsWith('image/')) {
     throw new Error('That file is over 10 MB. Try a photo or a smaller PDF.')
   }
@@ -660,6 +671,8 @@ function mimeFromName(fileName: string): string {
   const lower = fileName.toLowerCase()
   if (lower.endsWith('.png')) return 'image/png'
   if (lower.endsWith('.webp')) return 'image/webp'
+  if (lower.endsWith('.heic')) return 'image/heic'
+  if (lower.endsWith('.heif')) return 'image/heif'
   if (lower.endsWith('.pdf')) return 'application/pdf'
   return 'image/jpeg'
 }

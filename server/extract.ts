@@ -2,6 +2,7 @@ import { generateText, Output } from 'ai'
 import { z } from 'zod'
 import { EXTRACT_INSTRUCTIONS, normalizeBill as normalizeShared } from '../supabase/functions/_shared/bill.js'
 import { EMPTY_BILL, type BillFields } from '../shared/types.js'
+import { billImageForModel } from './bill-image.js'
 import { assistantModel, mockAiEnabled } from './prompt.js'
 
 const billSchema = z.object({
@@ -87,9 +88,16 @@ export async function extractBill(
   mediaType: string,
   generate: (bytes: Uint8Array, mediaType: string) => Promise<unknown> = defaultGenerate,
 ): Promise<BillFields> {
+  let prepared: { bytes: Uint8Array; mediaType: string }
+  try {
+    prepared = await billImageForModel(bytes, mediaType)
+  } catch (error) {
+    console.error('bill_extract_failed', error instanceof Error ? error.name : 'unknown')
+    return { ...EMPTY_BILL }
+  }
   if (mockAiEnabled()) return { ...MOCK_BILL }
   try {
-    const output = await generate(bytes, mediaType)
+    const output = await generate(prepared.bytes, prepared.mediaType)
     if (!output) return { ...EMPTY_BILL }
     return normalizeBill(output)
   } catch (error) {

@@ -13,11 +13,19 @@
     },
     {
       "source": "/privacy",
-      "destination": "/index.html"
+      "destination": "/privacy.html"
+    },
+    {
+      "source": "/privacy/",
+      "destination": "/privacy.html"
     },
     {
       "source": "/terms",
-      "destination": "/index.html"
+      "destination": "/terms.html"
+    },
+    {
+      "source": "/terms/",
+      "destination": "/terms.html"
     },
     {
       "source": "/((?!api/|brand-lockups(?:/|$)).*)",

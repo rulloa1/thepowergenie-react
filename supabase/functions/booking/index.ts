@@ -8,6 +8,7 @@
 
 import { billAmount, type NormalizedBill } from '../_shared/bill.ts';
 import { METER_CONSENT_TEXT, readMeterRequest } from '../_shared/meter.ts';
+import { sniffBill, type BillKind } from '../_shared/bill-file.ts';
 import { adminClient, bookedIntervals, type Admin } from '../_shared/db.ts';
 import { fail, json, notConfigured, preflight, serviceKey, env } from '../_shared/http.ts';
 import { dashboardLeadUrl, sendLeadAlert, siteOrigin } from '../_shared/notify.ts';
@@ -67,34 +68,15 @@ function clean(value: FormDataEntryValue | null, max: number) {
   return typeof value === 'string' ? value.replace(/\s+/g, ' ').trim().slice(0, max) : '';
 }
 
-// --- Light bill file checks: extension, declared type AND file signature -------------
-
-type BillKind = { ext: string; type: string };
-
-function sniff(bytes: Uint8Array): BillKind | null {
-  const ascii = (from: number, to: number) => String.fromCharCode(...bytes.slice(from, to));
-  if (ascii(0, 5) === '%PDF-') return { ext: 'pdf', type: 'application/pdf' };
-  if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return { ext: 'jpg', type: 'image/jpeg' };
-  if (bytes[0] === 0x89 && ascii(1, 4) === 'PNG') return { ext: 'png', type: 'image/png' };
-  if (ascii(4, 8) === 'ftyp') {
-    const brand = ascii(8, 12);
-    if (['heic', 'heix', 'hevc', 'hevx', 'heim', 'heis', 'mif1', 'msf1'].includes(brand)) {
-      return { ext: 'heic', type: 'image/heic' };
-    }
-  }
-  return null;
-}
-
-const ALLOWED_EXT = new Set(['pdf', 'jpg', 'jpeg', 'png', 'heic', 'heif']);
+// --- Light bill file checks: 10 MB cap, then the file signature -------------------
+// The stored object is the original upload. Reading happens later, from a copy.
 
 async function checkBill(file: File): Promise<{ kind: BillKind; bytes: Uint8Array } | string> {
   if (file.size === 0) return 'The light bill file is empty.';
   if (file.size > MAX_BILL_BYTES) return 'The light bill must be 10 MB or smaller.';
-  const ext = (file.name.split('.').pop() || '').toLowerCase();
-  if (!ALLOWED_EXT.has(ext)) return 'Please upload the light bill as a PDF, JPG, PNG or HEIC file.';
   const bytes = new Uint8Array(await file.arrayBuffer());
-  const kind = sniff(bytes);
-  if (!kind) return "We couldn't read that file. Please upload a PDF, JPG, PNG or HEIC.";
+  const kind = sniffBill(bytes);
+  if (!kind) return "We couldn't read that file. Please upload a PDF, JPG, PNG, WEBP, or HEIC photo.";
   return { kind, bytes };
 }
 
