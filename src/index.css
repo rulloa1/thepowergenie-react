@@ -19,6 +19,11 @@
     overflow-x: clip;
   }
 
+  /* Menus and modals. Both axes, on the root only — see src/lib/scrollLock.ts. */
+  html.pg-scroll-lock {
+    overflow: hidden;
+  }
+
   body {
     @apply bg-[var(--sw-bg)] text-[var(--sw-ink)] font-[family:var(--sw-font-body)];
     margin: 0;
@@ -28,4 +33,27 @@
 @layer components {
   /* Porting critical engine styles to tailwind-compatible classes if needed, 
      but most will be handled by the React components. */
+}
+
+/* The full-width quote button is gone once the quote is on screen, so the
+   assistant pill can sit on the bottom edge instead of hovering above a gap. */
+@media (max-width: 639px) {
+  html.quote-in-view [data-testid="genie-launcher"] {
+    bottom: max(16px, env(safe-area-inset-bottom));
+    width: 3rem;
+    justify-content: center;
+    padding-inline: 0;
+  }
+
+  html.quote-in-view [data-testid="genie-launcher"] .quote-launcher-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
 }

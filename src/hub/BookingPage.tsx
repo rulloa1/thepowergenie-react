@@ -134,7 +134,7 @@ export default function BookingPage() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-5xl px-4 pb-24 pt-8 sm:px-6 sm:pt-12">
+      <main className="mx-auto min-w-0 max-w-5xl px-4 pb-24 pt-8 sm:px-6 sm:pt-12">
         {booked ? (
           <Confirmation slot={booked} hadBill={!!bill} />
         ) : (
@@ -168,10 +168,10 @@ export default function BookingPage() {
               </span>
             </div>
 
-            <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
+            <div className="mt-8 grid min-w-0 grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
               {/* Step 1: time */}
-              <section aria-labelledby="pick-time" className="rounded-3xl border border-[#E2E8F0] bg-white p-5 shadow-[0_8px_30px_rgba(10,20,40,0.04)] sm:p-7">
-                <div className="flex items-center justify-between border-b border-[#F1F5F9] pb-3">
+              <section aria-labelledby="pick-time" className="min-w-0 rounded-3xl border border-[#E2E8F0] bg-white p-5 shadow-[0_8px_30px_rgba(10,20,40,0.04)] sm:p-7">
+                <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 border-b border-[#F1F5F9] pb-3">
                   <h2 id="pick-time" className="m-0 flex items-center gap-2 text-lg font-bold text-[#1A1A2E]">
                     <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#FFF5EC] text-[#FF6B00]">
                       <CalendarDays className="h-4 w-4" />
@@ -211,7 +211,7 @@ export default function BookingPage() {
 
                 {state === 'ready' && days.length > 0 && (
                   <>
-                    <div className="-mx-1 mt-4 flex gap-2 overflow-x-auto px-1 pb-3 scrollbar-thin" role="listbox" aria-label="Available days">
+                    <div className="-mx-1 mt-4 flex min-w-0 max-w-full gap-2 overflow-x-auto px-1 pb-3 scrollbar-thin" role="listbox" aria-label="Available days">
                       {days.map(([k, list]) => {
                         const selected = day === k;
                         return (
@@ -249,7 +249,7 @@ export default function BookingPage() {
                           <p className="m-0 text-[0.88rem] font-bold text-[#4A5568]">{formatDay(daySlots[0].start)}</p>
                           <span className="text-[0.74rem] text-[#64748B]">1-Hour Consultations</span>
                         </div>
-                        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4" role="listbox" aria-label="Available times">
+                        <div className="grid min-w-0 grid-cols-3 gap-2 sm:grid-cols-4" role="listbox" aria-label="Available times">
                           {daySlots.map((s) => {
                             const isChosen = slot?.start === s.start;
                             return (
@@ -266,7 +266,7 @@ export default function BookingPage() {
                                   }
                                 }}
                                 className={cn(
-                                  'min-h-[46px] rounded-xl border text-[0.92rem] font-bold transition-all duration-150',
+                                  'min-h-[46px] min-w-0 rounded-xl border text-[0.92rem] font-bold transition-all duration-150',
                                   isChosen
                                     ? 'border-[#FF6B00] bg-[#FF6B00] text-white shadow-md shadow-[#FF6B00]/30 scale-[1.02]'
                                     : 'border-[#E2E8F0] bg-white text-[#1A1A2E] hover:border-[#FF6B00] hover:bg-[#FFF8F3] hover:text-[#C2410C]',
@@ -284,8 +284,8 @@ export default function BookingPage() {
               </section>
 
               {/* Step 2: details */}
-              <section aria-labelledby="your-details" className="rounded-3xl border border-[#E2E8F0] bg-white p-5 shadow-[0_8px_30px_rgba(10,20,40,0.04)] sm:p-7">
-                <div className="flex items-center justify-between border-b border-[#F1F5F9] pb-3">
+              <section aria-labelledby="your-details" className="min-w-0 rounded-3xl border border-[#E2E8F0] bg-white p-5 shadow-[0_8px_30px_rgba(10,20,40,0.04)] sm:p-7">
+                <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 border-b border-[#F1F5F9] pb-3">
                   <h2 id="your-details" className="m-0 flex items-center gap-2 text-lg font-bold text-[#1A1A2E]">
                     <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#FFF5EC] text-[#FF6B00]">
                       <Clock className="h-4 w-4" />
@@ -295,7 +295,7 @@ export default function BookingPage() {
                   <span className="text-[0.76rem] font-bold uppercase tracking-wider text-[#64748B]">Step 2 of 2</span>
                 </div>
 
-                <form ref={formRef} onSubmit={submit} className="mt-4 grid gap-4 scroll-mt-6" noValidate={false}>
+                <form ref={formRef} onSubmit={submit} className="relative mt-4 grid min-w-0 gap-4 scroll-mt-6" noValidate={false}>
                   <div
                     className={cn(
                       'flex items-center gap-2.5 rounded-2xl border px-4 py-3 text-[0.92rem] transition-all',
@@ -319,7 +319,7 @@ export default function BookingPage() {
                   </div>
 
                   {/* Honeypot — hidden from people, tempting to bots. */}
-                  <div aria-hidden="true" className="absolute left-[-9999px] h-0 w-0 overflow-hidden">
+                  <div aria-hidden="true" className="sr-only">
                     <label>
                       Website <input type="text" name="website" tabIndex={-1} autoComplete="off" />
                     </label>
