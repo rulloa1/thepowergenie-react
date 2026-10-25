@@ -1,11 +1,12 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { CalendarCheck, CalendarDays, Clock, FileUp, Phone, X } from 'lucide-react';
 import { MeterFields, emptyMeter, meterBodyFrom, type MeterFormValues } from '../components/dashboard/MeterFields';
 import { readMeterRequest } from '../lib/esiId';
 import { callFunction, supabase } from '../lib/supabase';
 import { usageStatusCopy } from '../lib/usage';
 import { BrandMark, Button, Notice, NotConfigured, Spinner, cn, inputClass, labelClass } from './ui';
-import { centralDateKey, formatBytes, formatDay, formatShortDay, formatTime } from './time';
+import { SlotPicker, type SlotPickerHandle } from './SlotPicker';
+import { formatBytes, formatDay, formatShortDay, formatTime } from './time';
 
 interface Slot {
   start: string;
@@ -22,7 +23,6 @@ type LoadState = 'loading' | 'ready' | 'not_configured' | 'unavailable' | 'error
 export default function BookingPage() {
   const [state, setState] = useState<LoadState>(supabase ? 'loading' : 'not_configured');
   const [slots, setSlots] = useState<Slot[]>([]);
-  const [day, setDay] = useState<string | null>(null);
   const [slot, setSlot] = useState<Slot | null>(null);
   const [bill, setBill] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
@@ -32,6 +32,7 @@ export default function BookingPage() {
   const [meter, setMeter] = useState<MeterFormValues>(emptyMeter);
   const [meterStatus, setMeterStatus] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
+  const pickerRef = useRef<SlotPickerHandle>(null);
 
   useEffect(() => {
     document.title = 'Book a Free Solar Consultation — The Power Genie';
@@ -48,28 +49,12 @@ export default function BookingPage() {
     const list = data?.slots ?? [];
     setSlots(list);
     setState('ready');
-    setDay((current) => {
-      const keys = new Set(list.map((s) => centralDateKey(s.start)));
-      return current && keys.has(current) ? current : list[0] ? centralDateKey(list[0].start) : null;
-    });
     setSlot((current) => (current && list.some((s) => s.start === current.start) ? current : null));
   }, []);
 
   useEffect(() => {
     load();
   }, [load]);
-
-  const days = useMemo(() => {
-    const map = new Map<string, Slot[]>();
-    for (const s of slots) {
-      const k = centralDateKey(s.start);
-      if (!map.has(k)) map.set(k, []);
-      map.get(k)!.push(s);
-    }
-    return [...map.entries()];
-  }, [slots]);
-
-  const daySlots = days.find(([k]) => k === day)?.[1] ?? [];
 
   const pickFile = (file: File | null) => {
     setFileError(null);
@@ -91,8 +76,9 @@ export default function BookingPage() {
 
     if (!slot) {
       if (slots.length > 0) {
-        setFormError('Please choose an available day and time in Step 1 above to complete your booking.');
+        setFormError('Please pick a date and time to complete your booking.');
         document.getElementById('pick-time')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        pickerRef.current?.focus();
         return;
       }
     }
@@ -220,7 +206,7 @@ export default function BookingPage() {
                     <Button variant="ghost" className="mt-3" onClick={load}>Try again</Button>
                   </div>
                 )}
-                {state === 'ready' && days.length === 0 && (
+                {state === 'ready' && slots.length === 0 && (
                   <div className="mt-4">
                     <Notice title="No open times in the next 30 days">
                       Call <a href="tel:+15102417007" className="font-semibold underline">510-241-7007</a> and we'll arrange a dedicated slot.
@@ -228,77 +214,19 @@ export default function BookingPage() {
                   </div>
                 )}
 
-                {state === 'ready' && days.length > 0 && (
-                  <>
-                    <div className="-mx-1 mt-4 flex min-w-0 max-w-full gap-2 overflow-x-auto px-1 pb-3 scrollbar-thin" role="listbox" aria-label="Available days">
-                      {days.map(([k, list]) => {
-                        const selected = day === k;
-                        return (
-                          <button
-                            key={k}
-                            type="button"
-                            role="option"
-                            aria-selected={selected}
-                            onClick={() => {
-                              setDay(k);
-                              setSlot(null);
-                            }}
-                            className={cn(
-                              'flex min-w-[86px] shrink-0 flex-col items-center rounded-2xl border px-3 py-2.5 text-center transition-all duration-150',
-                              selected
-                                ? 'border-[#1A1A2E] bg-[#1A1A2E] text-white shadow-md ring-2 ring-[#FF6B00]/40'
-                                : 'border-[#E2E8F0] bg-white text-[#1A1A2E] hover:border-[#FF6B00] hover:bg-[#FFFBF7]',
-                            )}
-                          >
-                            <span className={cn('text-[0.72rem] font-bold uppercase tracking-wider', selected ? 'text-[#FFD0AD]' : 'text-[#64748B]')}>
-                              {formatShortDay(list[0].start).split(',')[0]}
-                            </span>
-                            <span className="text-[1.05rem] font-extrabold">{formatShortDay(list[0].start).split(', ')[1]}</span>
-                            <span className={cn('mt-0.5 rounded-full px-2 py-0.5 text-[0.66rem] font-bold', selected ? 'bg-white/20 text-white' : 'bg-[#F1F5F9] text-[#64748B]')}>
-                              {list.length} slots
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
-
-                    {day && (
-                      <>
-                        <div className="mb-3 mt-4 flex items-center justify-between">
-                          <p className="m-0 text-[0.88rem] font-bold text-[#4A5568]">{formatDay(daySlots[0].start)}</p>
-                          <span className="text-[0.74rem] text-[#64748B]">1-Hour Consultations</span>
-                        </div>
-                        <div className="grid min-w-0 grid-cols-3 gap-2 sm:grid-cols-4" role="listbox" aria-label="Available times">
-                          {daySlots.map((s) => {
-                            const isChosen = slot?.start === s.start;
-                            return (
-                              <button
-                                key={s.start}
-                                type="button"
-                                role="option"
-                                aria-selected={isChosen}
-                                onClick={() => {
-                                  setSlot(s);
-                                  setFormError(null);
-                                  if (window.innerWidth < 1024) {
-                                    setTimeout(() => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
-                                  }
-                                }}
-                                className={cn(
-                                  'min-h-[46px] min-w-0 rounded-xl border text-[0.92rem] font-bold transition-all duration-150',
-                                  isChosen
-                                    ? 'border-[#FF6B00] bg-[#FF6B00] text-white shadow-md shadow-[#FF6B00]/30 scale-[1.02]'
-                                    : 'border-[#E2E8F0] bg-white text-[#1A1A2E] hover:border-[#FF6B00] hover:bg-[#FFF8F3] hover:text-[#C2410C]',
-                                )}
-                              >
-                                {formatTime(s.start)}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </>
-                    )}
-                  </>
+                {state === 'ready' && slots.length > 0 && (
+                  <SlotPicker
+                    ref={pickerRef}
+                    slots={slots}
+                    value={slot}
+                    onChange={(next) => {
+                      setSlot(next);
+                      setFormError(null);
+                      if (window.innerWidth < 1024) {
+                        setTimeout(() => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+                      }
+                    }}
+                  />
                 )}
               </section>
 
@@ -325,16 +253,25 @@ export default function BookingPage() {
                     aria-live="polite"
                   >
                     <CalendarCheck className={cn('h-5 w-5 shrink-0', slot ? 'text-[#FF6B00]' : 'text-[#94A3B8]')} />
-                    <div>
+                    <div className="min-w-0 flex-1">
                       {slot ? (
                         <>
                           <span className="font-bold text-[#1A1A2E]">{formatDay(slot.start)}</span>
                           <span className="text-[#64748B]"> · {formatTime(slot.start)} – {formatTime(slot.end)} (Central Time)</span>
                         </>
                       ) : (
-                        <span className="text-[0.88rem]">Please choose an available appointment time in Step 1.</span>
+                        <span className="text-[0.88rem]">Pick a date and time in Step 1.</span>
                       )}
                     </div>
+                    {slot && (
+                      <button
+                        type="button"
+                        className="shrink-0 rounded-lg px-1 py-1 text-[0.84rem] font-bold text-[#C2410C] underline decoration-[#FF6B00] underline-offset-2 hover:text-[#9A3412] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00]"
+                        onClick={() => pickerRef.current?.open()}
+                      >
+                        Change
+                      </button>
+                    )}
                   </div>
 
                   {/* Honeypot — hidden from people, tempting to bots. */}
@@ -438,7 +375,7 @@ export default function BookingPage() {
                     ) : slot ? (
                       `Confirm Consultation · ${formatTime(slot.start)} on ${formatShortDay(slot.start)}`
                     ) : (
-                      'Choose a time above or tap to confirm'
+                      'Pick a date and time above'
                     )}
                   </Button>
                 </form>
