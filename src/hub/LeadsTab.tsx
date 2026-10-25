@@ -14,9 +14,12 @@ import {
   FileText,
   Mail,
   MapPin,
+  Pencil,
   Phone,
+  Plus,
   Printer,
   RefreshCw,
+  RotateCcw,
   Share2,
   ShieldCheck,
   X,
@@ -35,6 +38,11 @@ import {
   type WorkflowDocument,
 } from './optionB';
 import type { Lead, LeadFeed } from './useLeadFeed';
+import { leadsForView } from './useLeadFeed';
+import ArchiveLeadDialog from './ArchiveLeadDialog';
+import LeadForm from './LeadForm';
+import { archiveCustomerLead, createManualLead, restoreCustomerLead, updateManualLead } from './leadActions';
+import { stageLabel, type LeadActor, type LeadDraft } from './leadRecord';
 import { Button, Notice, Spinner, cn } from './ui';
 import { formatDateTime } from './time';
 import {
@@ -569,12 +577,34 @@ function SunrunOptionBWorkflow({ lead }: { lead: Lead }) {
   );
 }
 
-export default function LeadsTab({ feed }: { feed: LeadFeed }) {
+export default function LeadsTab({
+  feed,
+  profile,
+}: {
+  feed: LeadFeed;
+  profile: { id: string; email: string; full_name: string | null };
+}) {
   const [openId, setOpenId] = useState(() => new URLSearchParams(window.location.search).get('id'));
   const [opening, setOpening] = useState<string | null>(null);
   const [billError, setBillError] = useState<string | null>(null);
+  const [view, setView] = useState<'active' | 'archived'>('active');
+  const [editor, setEditor] = useState<{ mode: 'create' | 'edit'; lead: Lead | null } | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [archiveTarget, setArchiveTarget] = useState<Lead | null>(null);
+  const [archiveError, setArchiveError] = useState<string | null>(null);
+  const [archiving, setArchiving] = useState(false);
+  const [actionNote, setActionNote] = useState<string | null>(null);
   const marked = useRef(new Set<string>());
   const scrolled = useRef<string | null>(null);
+  const actor: LeadActor = { id: profile.id, fullName: profile.full_name, email: profile.email };
+  const shown = leadsForView(feed.leads, view);
+  const archivedCount = feed.leads.filter((lead) => lead.archived).length;
+
+  useEffect(() => {
+    if (!openId) return;
+    if (feed.leads.some((lead) => lead.id === openId && lead.archived)) setView('archived');
+  }, [openId, feed.leads]);
 
   useEffect(() => {
     if (!openId) return;
@@ -615,21 +645,72 @@ export default function LeadsTab({ feed }: { feed: LeadFeed }) {
     void select(lead);
   };
 
+  const saveLead = async (draft: LeadDraft, file: File | null) => {
+    if (!editor) return;
+    setSaving(true);
+    setFormError(null);
+    const result = editor.mode === 'create' || !editor.lead
+      ? await createManualLead(draft, actor, file)
+      : await updateManualLead(editor.lead.id, draft, actor, file);
+    setSaving(false);
+    if (!result.ok) {
+      setFormError(result.error);
+      return;
+    }
+    setEditor(null);
+    setActionNote(result.warning || (editor.mode === 'create' ? 'Lead added.' : 'Lead updated.'));
+    if (editor.mode === 'create') setView('active');
+    feed.refresh();
+  };
+
+  const confirmArchive = async () => {
+    if (!archiveTarget) return;
+    setArchiving(true);
+    setArchiveError(null);
+    const result = await archiveCustomerLead(archiveTarget.id, actor);
+    setArchiving(false);
+    if (!result.ok) {
+      setArchiveError(result.error);
+      return;
+    }
+    setArchiveTarget(null);
+    setActionNote('Lead archived. Restore it from Archived if you need it back.');
+    feed.refresh();
+  };
+
+  const restore = async (lead: Lead) => {
+    setActionNote(null);
+    setBillError(null);
+    const result = await restoreCustomerLead(lead.id, actor);
+    if (!result.ok) {
+      setBillError(result.error);
+      return;
+    }
+    setActionNote('Lead restored to the active list.');
+    setView('active');
+    feed.refresh();
+  };
+
   const missing = !feed.loading && !!openId && feed.leads.every((lead) => lead.id !== openId);
 
   return (
     <section aria-label="Leads" className="rounded-3xl bg-hub-surface p-4 shadow-[0_10px_30px_rgba(10,20,40,0.06)] sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="m-0 text-lg font-bold">Leads</h2>
-          <p className="m-0 text-[0.86rem] text-hub-soft">Website assistant and booking page, newest first</p>
+          <h2 className="m-0 text-lg font-bold text-hub-ink">Leads</h2>
+          <p className="m-0 text-[0.86rem] text-hub-soft">Website assistant, booking page, and leads you add, newest first</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {feed.leads.length > 0 && (
+          {feed.writesEnabled && (
+            <Button type="button" variant="accent" className="min-h-[40px] w-full px-3 sm:w-auto" onClick={() => { setFormError(null); setEditor({ mode: 'create', lead: null }); }}>
+              <Plus className="h-4 w-4" /> Add lead
+            </Button>
+          )}
+          {shown.length > 0 && (
             <>
               <button
                 type="button"
-                onClick={() => downloadFile('powergenie-all-leads.csv', leadsToCsvString(feed.leads), 'text/csv;charset=utf-8;')}
+                onClick={() => downloadFile('powergenie-all-leads.csv', leadsToCsvString(shown), 'text/csv;charset=utf-8;')}
                 className="inline-flex items-center gap-1.5 rounded-lg border border-hub-line bg-hub-surface px-3 py-1.5 text-[0.78rem] font-semibold text-hub-ink shadow-sm hover:border-hub-line-strong hover:bg-hub-muted"
                 title="Download all leads in CSV format"
               >
@@ -637,7 +718,7 @@ export default function LeadsTab({ feed }: { feed: LeadFeed }) {
               </button>
               <button
                 type="button"
-                onClick={() => downloadFile('powergenie-all-leads.json', leadsToJsonString(feed.leads), 'application/json')}
+                onClick={() => downloadFile('powergenie-all-leads.json', leadsToJsonString(shown), 'application/json')}
                 className="inline-flex items-center gap-1.5 rounded-lg border border-hub-line bg-hub-surface px-3 py-1.5 text-[0.78rem] font-semibold text-hub-ink shadow-sm hover:border-hub-line-strong hover:bg-hub-muted"
                 title="Download all leads in JSON format"
               >
@@ -647,7 +728,7 @@ export default function LeadsTab({ feed }: { feed: LeadFeed }) {
           )}
           <button
             onClick={feed.refresh}
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-hub-line hover:border-hub-ink"
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-hub-line text-hub-ink hover:border-hub-ink hover:bg-hub-muted"
             aria-label="Refresh leads"
           >
             <RefreshCw className={cn('h-4 w-4', feed.loading && 'animate-spin')} />
@@ -655,7 +736,40 @@ export default function LeadsTab({ feed }: { feed: LeadFeed }) {
         </div>
       </div>
 
+      <div className="mt-4 flex gap-2" role="tablist" aria-label="Lead lists">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={view === 'active'}
+          onClick={() => setView('active')}
+          className={cn(
+            'min-h-[40px] flex-1 rounded-full px-3 text-[0.84rem] font-bold sm:flex-none',
+            view === 'active' ? 'bg-hub-primary text-hub-on-primary' : 'border border-hub-line bg-hub-muted text-hub-soft',
+          )}
+        >
+          Active
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={view === 'archived'}
+          onClick={() => setView('archived')}
+          className={cn(
+            'min-h-[40px] flex-1 rounded-full px-3 text-[0.84rem] font-bold sm:flex-none',
+            view === 'archived' ? 'bg-hub-primary text-hub-on-primary' : 'border border-hub-line bg-hub-muted text-hub-soft',
+          )}
+        >
+          Archived{archivedCount > 0 ? ` (${archivedCount})` : ''}
+        </button>
+      </div>
+
       {feed.error && <div className="mt-4"><Notice tone="error">{feed.error}</Notice></div>}
+      {!feed.loading && !feed.error && !feed.writesEnabled && (
+        <div className="mt-4">
+          <Notice tone="warn">Adding, editing, and archiving leads needs the latest database migration. You can still review the list.</Notice>
+        </div>
+      )}
+      {actionNote && <div className="mt-4"><Notice tone="success">{actionNote}</Notice></div>}
       {billError && <div className="mt-4"><Notice tone="error">{billError}</Notice></div>}
       {missing && (
         <div className="mt-4">
@@ -663,13 +777,17 @@ export default function LeadsTab({ feed }: { feed: LeadFeed }) {
         </div>
       )}
 
-      {feed.loading && !feed.leads.length ? (
+      {feed.loading && !shown.length ? (
         <div className="py-10 text-center text-hub-soft"><Spinner /></div>
-      ) : feed.leads.length === 0 && !feed.error ? (
-        <p className="py-10 text-center text-hub-soft">No leads yet. A website consult or a /book appointment will show up here.</p>
+      ) : shown.length === 0 && !feed.error ? (
+        <p className="py-10 text-center text-hub-soft">
+          {view === 'archived'
+            ? 'No archived leads.'
+            : 'No leads yet. Add one here, or wait for a website consult or a /book appointment.'}
+        </p>
       ) : (
         <ul className="m-0 mt-4 grid list-none gap-3 p-0">
-          {feed.leads.map((lead) => {
+          {shown.map((lead) => {
             const selected = openId === lead.id;
             return (
               <li
@@ -689,9 +807,11 @@ export default function LeadsTab({ feed }: { feed: LeadFeed }) {
                         <span className="rounded-full border border-hub-on-accent bg-hub-accent-fill px-2 py-0.5 text-[0.68rem] font-bold uppercase tracking-wide text-hub-on-accent">New</span>
                       )}
                       <span className="rounded-full bg-hub-accent-soft px-2 py-0.5 text-[0.72rem] font-semibold text-hub-accent-ink">{lead.sourceLabel}</span>
+                      {lead.stage && <span className="rounded-full bg-hub-info px-2 py-0.5 text-[0.72rem] font-semibold text-hub-info-ink">{stageLabel(lead.stage)}</span>}
+                      {lead.archived && <span className="rounded-full bg-hub-muted px-2 py-0.5 text-[0.72rem] font-semibold text-hub-soft">Archived</span>}
                       {lead.cancelled && <span className="rounded-full bg-hub-muted px-2 py-0.5 text-[0.72rem] font-semibold text-hub-soft">Cancelled</span>}
                     </span>
-                    <span className={cn('mt-1 block text-[1.05rem] font-bold', lead.cancelled && 'line-through')}>{lead.name}</span>
+                    <span className={cn('mt-1 block text-[1.05rem] font-bold text-hub-ink', lead.cancelled && 'line-through')}>{lead.name}</span>
                   </button>
                   <span className="text-[0.78rem] text-hub-soft">{formatWhen(lead.createdAt)}</span>
                 </div>
@@ -730,12 +850,17 @@ export default function LeadsTab({ feed }: { feed: LeadFeed }) {
                   <Fact label="Meter">{lead.meterNumber || '—'}</Fact>
                   <Fact label="Average monthly">{lead.avgMonthlyKwh == null ? '—' : formatKwh(lead.avgMonthlyKwh)}</Fact>
                 </dl>
-                {(lead.tdu || lead.repPuctCertificate) && (
+                {((lead.utility && lead.utility !== 'Not provided') || lead.tdu || lead.repPuctCertificate) && (
                   <p className="m-0 mt-2 text-[0.82rem] text-hub-soft">
+                    {lead.utility && lead.utility !== 'Not provided' ? <>Utility {lead.utility}</> : null}
+                    {lead.utility && lead.utility !== 'Not provided' && lead.tdu ? ' · ' : null}
                     {lead.tdu ? <>TDU {lead.tdu}</> : null}
-                    {lead.tdu && lead.repPuctCertificate ? ' · ' : null}
+                    {((lead.utility && lead.utility !== 'Not provided') || lead.tdu) && lead.repPuctCertificate ? ' · ' : null}
                     {lead.repPuctCertificate ? <>PUCT {lead.repPuctCertificate}</> : null}
                   </p>
+                )}
+                {lead.notes && (
+                  <p className="m-0 mt-2 line-clamp-3 whitespace-pre-wrap text-[0.84rem] text-hub-soft">{lead.notes}</p>
                 )}
 
                 <div className="mt-3">
@@ -746,6 +871,33 @@ export default function LeadsTab({ feed }: { feed: LeadFeed }) {
                 {/* Sunrun Option B Workflow Integration for Option B Leads */}
                 {(lead.source === 'customer' || lead.workflowOption === 'option_b_ownership') && (
                   <SunrunOptionBWorkflow lead={lead} />
+                )}
+
+                {lead.source === 'customer' && feed.writesEnabled && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="min-h-[40px] px-3 text-[0.84rem]"
+                      onClick={() => { setFormError(null); setEditor({ mode: 'edit', lead }); }}
+                    >
+                      <Pencil className="h-3.5 w-3.5" /> Edit
+                    </Button>
+                    {lead.archived ? (
+                      <Button type="button" variant="ghost" className="min-h-[40px] px-3 text-[0.84rem]" onClick={() => void restore(lead)}>
+                        <RotateCcw className="h-3.5 w-3.5" /> Restore
+                      </Button>
+                    ) : (
+                      <Button
+                        type="button"
+                        variant="danger"
+                        className="min-h-[40px] px-3 text-[0.84rem]"
+                        onClick={() => { setArchiveError(null); setArchiveTarget(lead); }}
+                      >
+                        Archive
+                      </Button>
+                    )}
+                  </div>
                 )}
 
                 <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-hub-line pt-3">
@@ -790,6 +942,25 @@ export default function LeadsTab({ feed }: { feed: LeadFeed }) {
             );
           })}
         </ul>
+      )}
+      {editor && (
+        <LeadForm
+          mode={editor.mode}
+          lead={editor.lead}
+          busy={saving}
+          error={formError}
+          onClose={() => { if (!saving) setEditor(null); }}
+          onSubmit={(draft, file) => void saveLead(draft, file)}
+        />
+      )}
+      {archiveTarget && (
+        <ArchiveLeadDialog
+          name={archiveTarget.name}
+          busy={archiving}
+          error={archiveError}
+          onCancel={() => { if (!archiving) setArchiveTarget(null); }}
+          onConfirm={() => void confirmArchive()}
+        />
       )}
     </section>
   );

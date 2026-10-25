@@ -278,7 +278,7 @@ function HubApp({ profile }: { profile: Profile }) {
 
       <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col px-4 py-5 sm:px-6">
         <Suspense fallback={<div className="py-10 text-center"><Spinner /></div>}>
-          {tab === 'leads' && <LeadsTab feed={leads} />}
+          {tab === 'leads' && <LeadsTab feed={leads} profile={profile} />}
           {tab === 'chat' && <ChatTab profile={profile} />}
           {tab === 'files' && <FilesTab />}
           {tab === 'schedule' && <ScheduleTab profile={profile} />}
