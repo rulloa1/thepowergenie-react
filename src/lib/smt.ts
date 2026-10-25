@@ -1,5 +1,5 @@
-import { chicagoParts, zonedWallTimeToUtc } from './chicagoTime';
-import type { MeterRequest } from './esiId';
+import { chicagoParts, zonedWallTimeToUtc } from './chicagoTime.js';
+import type { MeterRequest } from './esiId.js';
 
 export const SMT_PRODUCTION_BASE = 'https://services.smartmetertexas.net';
 
