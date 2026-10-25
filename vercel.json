@@ -8,7 +8,7 @@
   ],
   "rewrites": [
     {
-      "source": "/api/(chat|uploads|bill|lead|slots)",
+      "source": "/api/(chat|uploads|bill|lead|slots|visit|invite)",
       "destination": "/api/assistant?route=$1"
     },
     {
@@ -34,7 +34,7 @@
   ],
   "headers": [
     {
-      "source": "/dashboard",
+      "source": "/(dashboard|pipeline|hub|homeowner|portal|referrals)",
       "headers": [{ "key": "X-Robots-Tag", "value": "noindex, nofollow" }]
     }
   ],

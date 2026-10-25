@@ -161,16 +161,6 @@ function SignIn({ onExploreDemo }: { onExploreDemo?: () => void }) {
           Forgot password?
         </Button>
         <div className="pt-2 border-t border-hub-line flex flex-col items-center gap-2">
-          {onExploreDemo && (
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={onExploreDemo}
-              className="w-full text-xs font-bold text-[#FF8A2B] border border-[#FF6B00]/40 bg-[#FF6B00]/15 hover:bg-[#FF6B00]/25 transition"
-            >
-              ✨ Explore Demo Dashboard
-            </Button>
-          )}
           <p className="m-0 text-center text-[0.78rem] text-hub-soft">
             Production access is by invitation only.
           </p>
@@ -285,12 +275,6 @@ function HubApp({
               className="hidden lg:inline-flex items-center gap-1 text-[0.78rem] font-semibold text-[#8EAEC7] hover:text-white transition-colors px-2.5 py-1 rounded-lg border border-[#28496B] bg-[#0C1E32] no-underline"
             >
               ← Public Site
-            </a>
-            <a
-              href="/homeowner"
-              className="hidden sm:inline-flex items-center gap-1 text-[0.78rem] font-bold text-[#FF8A2B] hover:text-[#FF8A2B]/80 transition-colors px-2.5 py-1 rounded-lg border border-[#FF6B00]/40 bg-[#FF6B00]/15 no-underline"
-            >
-              🔋 Homeowner Portal
             </a>
             <div className="flex items-center gap-2">
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-[#FF6B00] to-[#E65100] text-[0.78rem] font-bold text-white shadow-sm">

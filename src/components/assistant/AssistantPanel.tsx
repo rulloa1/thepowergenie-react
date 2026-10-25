@@ -4,6 +4,7 @@ import { DefaultChatTransport } from 'ai'
 import { CalendarCheck, Loader2, Upload, X } from 'lucide-react'
 import type { AssistantMode } from '../../lib/openAssistant'
 import { lockPageScroll } from '../../lib/scrollLock'
+import { trackInfoPageVisit } from '../../lib/visitTrack'
 import {
   EMPTY_BILL,
   MAX_BILL_BYTES,
@@ -74,6 +75,12 @@ export default function AssistantPanel({ frameClass, mode, nonce, onClose }: Pan
     setPhase(mode === 'bill' ? 'bill' : mode === 'book' ? 'book' : 'chat')
     setError('')
   }, [nonce, mode])
+
+  useEffect(() => {
+    if (phase === 'bill' || phase === 'book') {
+      trackInfoPageVisit(`Assistant Intake (${phase === 'bill' ? 'Bill Upload' : 'Consultation Form'})`)
+    }
+  }, [phase])
 
   useEffect(() => {
     return lockPageScroll()

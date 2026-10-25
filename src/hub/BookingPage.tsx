@@ -7,6 +7,7 @@ import { usageStatusCopy } from '../lib/usage';
 import { BrandMark, Button, Notice, NotConfigured, Spinner, cn, inputClass, labelClass } from './ui';
 import { SlotPicker, type SlotPickerHandle } from './SlotPicker';
 import { formatBytes, formatDay, formatShortDay, formatTime } from './time';
+import { trackInfoPageVisit } from '../lib/visitTrack';
 
 interface Slot {
   start: string;
@@ -36,6 +37,7 @@ export default function BookingPage() {
 
   useEffect(() => {
     document.title = 'Book a Free Solar Consultation — The Power Genie';
+    trackInfoPageVisit('/book Consultation & Light Bill Intake');
   }, []);
 
   const load = useCallback(async () => {

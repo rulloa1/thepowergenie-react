@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { BrandMark } from '../hub/ui';
 import { lockPageScroll } from '../lib/scrollLock';
+import { trackInfoPageVisit } from '../lib/visitTrack';
 
 interface ReferralRecord {
   id: string;
@@ -112,6 +113,12 @@ export default function HomeownerPortalPage() {
   }, []);
 
   const [activeTab, setActiveTab] = useState<'powerwall' | 'referrals' | 'savings' | 'concierge'>('powerwall');
+
+  useEffect(() => {
+    if (activeTab === 'referrals') {
+      trackInfoPageVisit('/homeowner Referral Submission Form');
+    }
+  }, [activeTab]);
 
   // Powerwall / Energy Firewall state
   const [isOutageSimulated, setIsOutageSimulated] = useState(false);

@@ -85,23 +85,23 @@ function monthLabel(month: string, withYear: boolean): string {
 }
 
 function UsageHistory({ points }: { points: Lead['usageHistory'] }) {
-  if (!points?.length) return <p className="m-0 text-[0.86rem] text-hub-soft">No usage history on the bill.</p>;
+  if (!points?.length) return <p className="m-0 text-sm font-medium text-[#94A3B8]">No usage history on the bill.</p>;
   const max = Math.max(...points.map((point) => point.kwh), 1);
   const years = new Set(points.map((point) => point.month.slice(0, 4)));
   const withYear = years.size > 1;
   const summary = points.map((point) => `${point.month} ${Math.round(point.kwh).toLocaleString('en-US')} kWh`).join(', ');
   return (
-    <div className="rounded-xl border border-hub-line bg-hub-muted p-2.5">
+    <div className="rounded-xl border border-[#224263] bg-[#0A2035] p-3 shadow-inner">
       <div className="overflow-x-auto" role="img" aria-label={`Monthly usage: ${summary}`}>
-        <div className="flex h-24 items-end gap-1.5" style={{ minWidth: Math.max(points.length * 34, 160) }}>
+        <div className="flex h-28 items-end gap-2" style={{ minWidth: Math.max(points.length * 38, 160) }}>
           {points.map((point) => (
-            <div key={point.month} className="group flex min-w-7 flex-1 flex-col items-center justify-end gap-1" title={`${point.month}: ${point.kwh} kWh`}>
-              <span className="text-[0.62rem] font-bold text-hub-soft transition-colors group-hover:text-hub-accent-ink">{Math.round(point.kwh)}</span>
+            <div key={point.month} className="group flex min-w-8 flex-1 flex-col items-center justify-end gap-1.5" title={`${point.month}: ${point.kwh} kWh`}>
+              <span className="text-xs font-extrabold text-[#F1F5F9] transition-colors group-hover:text-[#38BDF8]">{Math.round(point.kwh)}</span>
               <div
-                className="w-full rounded-t-md bg-gradient-to-t from-hub-chart to-hub-chart-top shadow-sm transition-all group-hover:brightness-95"
-                style={{ height: `${Math.max(8, (point.kwh / max) * 52)}px` }}
+                className="w-full rounded-t-md bg-gradient-to-t from-[#0284C7] to-[#38BDF8] shadow-sm transition-all group-hover:brightness-110"
+                style={{ height: `${Math.max(10, (point.kwh / max) * 62)}px` }}
               />
-              <span className="text-[0.62rem] font-medium text-hub-soft">{monthLabel(point.month, withYear)}</span>
+              <span className="text-xs font-bold text-[#94A3B8]">{monthLabel(point.month, withYear)}</span>
             </div>
           ))}
         </div>
@@ -112,9 +112,9 @@ function UsageHistory({ points }: { points: Lead['usageHistory'] }) {
 
 function Fact({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="min-w-0 rounded-xl border border-hub-line bg-hub-muted p-2.5 transition-colors hover:border-hub-line-strong">
-      <dt className="text-[0.68rem] font-bold uppercase tracking-wider text-hub-soft">{label}</dt>
-      <dd className="m-0 mt-0.5 break-words text-[0.92rem] font-bold text-hub-ink">{children}</dd>
+    <div className="min-w-0 rounded-xl border border-[#234567]/80 bg-[#0B2136] p-3 transition-colors hover:border-[#38BDF8]/60 shadow-sm">
+      <dt className="text-xs font-bold uppercase tracking-wider text-[#93C5FD]">{label}</dt>
+      <dd className="m-0 mt-1 break-words text-base font-extrabold text-[#F8FAFC]">{children}</dd>
     </div>
   );
 }
@@ -816,15 +816,21 @@ export default function LeadsTab({
                   <span className="text-[0.78rem] text-hub-soft">{formatWhen(lead.createdAt)}</span>
                 </div>
 
-                <div className="mt-2 grid gap-1 text-[0.9rem] text-hub-ink">
+                <div className="mt-3 flex flex-wrap gap-2 text-sm font-semibold">
                   {lead.phone && (
-                    <a href={`tel:${lead.phone}`} className="inline-flex items-center gap-2 text-hub-link no-underline">
-                      <Phone className="h-4 w-4 text-hub-soft" />{lead.phone}
+                    <a
+                      href={`tel:${lead.phone}`}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-[#234567] bg-[#0E253B] px-3 py-1.5 text-xs font-bold text-[#38BDF8] hover:bg-[#163859] transition shadow-sm no-underline"
+                    >
+                      <Phone className="h-3.5 w-3.5 text-[#38BDF8]" />{lead.phone}
                     </a>
                   )}
                   {lead.email && (
-                    <a href={`mailto:${lead.email}`} className="inline-flex min-w-0 items-center gap-2 break-all text-hub-link no-underline">
-                      <Mail className="h-4 w-4 shrink-0 text-hub-soft" />{lead.email}
+                    <a
+                      href={`mailto:${lead.email}`}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-[#234567] bg-[#0E253B] px-3 py-1.5 text-xs font-bold text-[#38BDF8] hover:bg-[#163859] transition shadow-sm no-underline"
+                    >
+                      <Mail className="h-3.5 w-3.5 text-[#38BDF8]" />{lead.email}
                     </a>
                   )}
                   {lead.address && (
@@ -832,16 +838,16 @@ export default function LeadsTab({
                       href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(lead.address)}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 text-hub-link no-underline"
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-[#234567] bg-[#0E253B] px-3 py-1.5 text-xs font-bold text-[#93C5FD] hover:bg-[#163859] transition shadow-sm no-underline"
                     >
-                      <MapPin className="h-4 w-4 shrink-0 text-hub-soft" />{lead.address}
+                      <MapPin className="h-3.5 w-3.5 text-[#FF8A2B]" />{lead.address}
                     </a>
                   )}
                 </div>
 
                 <TwoStepOutreachBar lead={lead} />
 
-                <dl className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                <dl className="mt-3.5 grid grid-cols-2 gap-3 sm:grid-cols-3">
                   <Fact label="kWh">{formatKwh(lead.kwh)}</Fact>
                   <Fact label="Bill amount">{formatMoney(lead.amount)}</Fact>
                   <Fact label="Appointment">{formatWhen(lead.appointment)}</Fact>
@@ -851,16 +857,29 @@ export default function LeadsTab({
                   <Fact label="Average monthly">{lead.avgMonthlyKwh == null ? '—' : formatKwh(lead.avgMonthlyKwh)}</Fact>
                 </dl>
                 {((lead.utility && lead.utility !== 'Not provided') || lead.tdu || lead.repPuctCertificate) && (
-                  <p className="m-0 mt-2 text-[0.82rem] text-hub-soft">
-                    {lead.utility && lead.utility !== 'Not provided' ? <>Utility {lead.utility}</> : null}
-                    {lead.utility && lead.utility !== 'Not provided' && lead.tdu ? ' · ' : null}
-                    {lead.tdu ? <>TDU {lead.tdu}</> : null}
-                    {((lead.utility && lead.utility !== 'Not provided') || lead.tdu) && lead.repPuctCertificate ? ' · ' : null}
-                    {lead.repPuctCertificate ? <>PUCT {lead.repPuctCertificate}</> : null}
-                  </p>
+                  <div className="mt-3 flex flex-wrap items-center gap-2 text-xs font-bold">
+                    {lead.utility && lead.utility !== 'Not provided' && (
+                      <span className="rounded-md border border-[#234567] bg-[#0C2237] px-2.5 py-1 text-[#E2E8F0]">
+                        ⚡ {lead.utility}
+                      </span>
+                    )}
+                    {lead.tdu && (
+                      <span className="rounded-md border border-[#234567] bg-[#0C2237] px-2.5 py-1 text-[#38BDF8]">
+                        TDU: {lead.tdu}
+                      </span>
+                    )}
+                    {lead.repPuctCertificate && (
+                      <span className="rounded-md border border-[#234567] bg-[#0C2237] px-2.5 py-1 text-[#FACC15]">
+                        PUCT #{lead.repPuctCertificate}
+                      </span>
+                    )}
+                  </div>
                 )}
                 {lead.notes && (
-                  <p className="m-0 mt-2 line-clamp-3 whitespace-pre-wrap text-[0.84rem] text-hub-soft">{lead.notes}</p>
+                  <div className="mt-3 rounded-xl border border-[#234567] bg-[#091E30] p-3 shadow-inner">
+                    <p className="m-0 text-xs font-bold uppercase tracking-wider text-[#93C5FD]">Customer Notes & TCPA</p>
+                    <p className="m-0 mt-1 whitespace-pre-wrap text-sm font-medium leading-relaxed text-[#F1F5F9]">{lead.notes}</p>
+                  </div>
                 )}
 
                 <div className="mt-3">

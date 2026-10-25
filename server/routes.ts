@@ -13,6 +13,8 @@ import { chicagoDate, listSlots } from './slots.js'
 import { assistantAvailabilityBusy } from './google-calendar.js'
 import { createSignedUpload, deleteObject, downloadObject, hubBusyIntervals, serviceBearerAuthorized, takenAppointments } from './supabase.js'
 import { requireHubMember } from './hub-member.js'
+import { notifyPageVisit } from './notify.js'
+import { inviteDashboardMember } from './admin-invite.js'
 
 const TEN_MINUTES = 10 * 60 * 1000
 
@@ -189,7 +191,34 @@ function requestUrl(request: Request): URL {
   }
 }
 
-const ASSISTANT_ROUTES = new Set(['chat', 'uploads', 'bill', 'lead', 'slots', 'extract', 'hub-bill'])
+export async function handleVisit(request: Request): Promise<Response> {
+  const ip = clientIp(request)
+  // Limit to 3 visit alerts per IP per 10 minutes so rapid navigation doesn't spam
+  enforceRateLimit(`visit:${ip}`, 3, TEN_MINUTES)
+  const body = await readWebJson(request, 4000).catch(() => ({}))
+  const page = isRecord(body) && typeof body.page === 'string' && body.page.trim() ? body.page.trim().slice(0, 80) : '/book'
+  await notifyPageVisit(page, ip)
+  return json({ ok: true })
+}
+
+export async function handleInvite(request: Request): Promise<Response> {
+  const secret = process.env.EXTRACT_SHARED_SECRET?.trim()
+  const header = request.headers.get('authorization') || ''
+  const token = header.toLowerCase().startsWith('bearer ') ? header.slice(7).trim() : ''
+  if (!secret || !token || token !== secret) throw new HttpError(401, 'Unauthorized.')
+  const body = await readWebJson(request, 8000)
+  if (!isRecord(body) || typeof body.email !== 'string') throw new HttpError(400, 'Invalid request.')
+  const result = await inviteDashboardMember({
+    email: body.email,
+    phone: typeof body.phone === 'string' ? body.phone : undefined,
+    name: typeof body.name === 'string' ? body.name : 'Team Member',
+    temporaryPassword: typeof body.temporaryPassword === 'string' ? body.temporaryPassword : undefined,
+    role: body.role === 'owner' ? 'owner' : 'admin',
+  })
+  return json(result)
+}
+
+const ASSISTANT_ROUTES = new Set(['chat', 'uploads', 'bill', 'lead', 'slots', 'extract', 'hub-bill', 'visit', 'invite'])
 
 /** One function serves every assistant route. The widget calls /api/assistant?route=. */
 function assistantRoute(url: URL): string {
@@ -197,7 +226,7 @@ function assistantRoute(url: URL): string {
     const route = url.searchParams.get('route') || ''
     if (ASSISTANT_ROUTES.has(route)) return `/api/${route}`
   }
-  const nested = url.pathname.match(/^\/api\/assistant\/(chat|uploads|bill|lead|slots)$/)
+  const nested = url.pathname.match(/^\/api\/assistant\/(chat|uploads|bill|lead|slots|visit|invite)$/)
   if (nested) return `/api/${nested[1]}`
   return url.pathname
 }
@@ -217,6 +246,8 @@ export async function handleApi(request: Request): Promise<Response> {
     if (pathname === '/api/slots' && request.method === 'GET') return await handleSlots(request)
     if (pathname === '/api/extract' && request.method === 'POST') return await handleExtract(request)
     if (pathname === '/api/hub-bill' && request.method === 'POST') return await handleHubBill(request)
+    if (pathname === '/api/visit' && request.method === 'POST') return await handleVisit(request)
+    if (pathname === '/api/invite' && request.method === 'POST') return await handleInvite(request)
     return json({ error: 'Not found.' }, 404)
   } catch (error) {
     if (error instanceof HttpError) return json({ error: error.message }, error.status)
