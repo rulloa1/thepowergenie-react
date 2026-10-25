@@ -15,6 +15,7 @@ import { createSignedUpload, deleteObject, downloadObject, hubBusyIntervals, ser
 import { requireHubMember } from './hub-member.js'
 import { notifyPageVisit } from './notify.js'
 import { inviteDashboardMember } from './admin-invite.js'
+import { handleSequenceStatus, handleSequenceStart, handleSequencePause, handleSequenceResume, handleUnsubscribe } from './sequence.js'
 
 const TEN_MINUTES = 10 * 60 * 1000
 
@@ -207,7 +208,8 @@ export async function handleInvite(request: Request): Promise<Response> {
   const header = request.headers.get('authorization') || ''
   const token = header.toLowerCase().startsWith('bearer ') ? header.slice(7).trim() : ''
   const adminKey = url.searchParams.get('admin_key')
-  const authorized = (secret && token === secret) || adminKey === 'genie_invite_mike_4352377373'
+  const configuredAdminKey = process.env.ADMIN_INVITE_KEY?.trim()
+  const authorized = (secret && token === secret) || (configuredAdminKey && adminKey === configuredAdminKey)
   if (!authorized) throw new HttpError(401, 'Unauthorized.')
   const body = await readWebJson(request, 8000)
   if (!isRecord(body) || typeof body.email !== 'string') throw new HttpError(400, 'Invalid request.')
@@ -251,6 +253,20 @@ export async function handleApi(request: Request): Promise<Response> {
     if (pathname === '/api/hub-bill' && request.method === 'POST') return await handleHubBill(request)
     if (pathname === '/api/visit' && request.method === 'POST') return await handleVisit(request)
     if (pathname === '/api/invite' && request.method === 'POST') return await handleInvite(request)
+    // Sequence management routes
+    if (pathname === '/api/sequence' && request.method === 'GET') return await handleSequenceStatus(request)
+    if (pathname === '/api/sequence/start' && request.method === 'POST') return await handleSequenceStart(request)
+    if (pathname === '/api/sequence/pause' && request.method === 'POST') return await handleSequencePause(request)
+    if (pathname === '/api/sequence/resume' && request.method === 'POST') return await handleSequenceResume(request)
+    // Public unsubscribe (no auth)
+    if (url.pathname === '/unsubscribe' || url.pathname.startsWith('/unsubscribe/')) {
+      const token = url.pathname.split('/')[2] || url.searchParams.get('token')
+      if (token) {
+        const unsubUrl = new URL(request.url)
+        unsubUrl.searchParams.set('token', token)
+        return await handleUnsubscribe(new Request(unsubUrl, request))
+      }
+    }
     return json({ error: 'Not found.' }, 404)
   } catch (error) {
     if (error instanceof HttpError) return json({ error: error.message }, error.status)

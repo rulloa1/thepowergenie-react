@@ -10,6 +10,7 @@ import { assistantAvailabilityBusy, syncAssistantConsult } from './google-calend
 import { insertRow, downloadObject, moveObject, takenAppointments, hubBusyIntervals } from './supabase.js'
 import { openReceipt, type UploadReceipt } from './receipt.js'
 import { refreshSmtAuthorizations } from './smt/store.js'
+import { pauseSequenceOnBooking } from './sequence.js'
 
 /**
  * Hub assumptions (schema in powergenie-hub-schema.sql):
@@ -330,6 +331,8 @@ export async function saveLead(body: unknown, now = new Date()): Promise<Confirm
         address: String(prepared.customer.service_address || ''),
         note: String(prepared.customer.notes || '').slice(0, 1000),
       })
+      // Auto-pause any active sequence when a new booking is made
+      await pauseSequenceOnBooking(String(prepared.customer.id))
       if (prepared.customer.esiid && prepared.customer.meter_number && prepared.customer.email) {
         await insertRow('smt_authorizations', {
           id: randomUUID(),
