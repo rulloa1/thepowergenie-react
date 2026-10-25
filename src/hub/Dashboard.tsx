@@ -17,6 +17,13 @@ export interface Profile {
   role: 'owner' | 'admin';
 }
 
+const DEMO_PROFILE: Profile = {
+  id: 'demo-horace-7721',
+  email: 'horace.lawrence@sunrun.com',
+  full_name: 'Horace Lawrence',
+  role: 'owner',
+};
+
 type Tab = 'chat' | 'files' | 'schedule' | 'leads';
 const TABS: { id: Tab; label: string; icon: typeof MessageCircle }[] = [
   { id: 'leads', label: 'Leads', icon: Inbox },
@@ -35,6 +42,9 @@ export default function Dashboard() {
   const [ready, setReady] = useState(false);
   const [profile, setProfile] = useState<Profile | null | undefined>(undefined);
   const [needsPassword, setNeedsPassword] = useState(arrivalAuthType === 'invite' || arrivalAuthType === 'recovery');
+  const [isDemo, setIsDemo] = useState(() => {
+    return typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('demo') === 'true';
+  });
 
   useEffect(() => {
     document.title = 'Referral Hub — The Power Genie';
@@ -72,9 +82,12 @@ export default function Dashboard() {
       .then(({ data }) => setProfile((data as Profile) ?? null));
   }, [session]);
 
+  if (isDemo) {
+    return <HubApp profile={DEMO_PROFILE} isDemo onExitDemo={() => setIsDemo(false)} />;
+  }
   if (!supabase) return <NotConfigured what="The Referral Hub" />;
   if (!ready) return <FullPageSpinner />;
-  if (!session) return <SignIn />;
+  if (!session) return <SignIn onExploreDemo={() => setIsDemo(true)} />;
   if (needsPassword) return <SetPassword onDone={() => setNeedsPassword(false)} />;
   if (profile === undefined) return <FullPageSpinner />;
   if (profile === null) return <NotInvited email={session.user.email ?? ''} />;
@@ -102,7 +115,7 @@ function AuthCard({ title, children }: { title: string; children: React.ReactNod
   );
 }
 
-function SignIn() {
+function SignIn({ onExploreDemo }: { onExploreDemo?: () => void }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
@@ -144,7 +157,21 @@ function SignIn() {
         <Button type="button" variant="quiet" onClick={reset} className="justify-self-center">
           Forgot password?
         </Button>
-        <p className="m-0 text-center text-[0.8rem] text-hub-soft">Access is by invitation only.</p>
+        <div className="pt-2 border-t border-hub-line flex flex-col items-center gap-2">
+          {onExploreDemo && (
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={onExploreDemo}
+              className="w-full text-xs font-bold text-[#FF6B00] border border-orange-300 bg-orange-50/70 hover:bg-orange-100/70"
+            >
+              ✨ Explore Demo Dashboard
+            </Button>
+          )}
+          <p className="m-0 text-center text-[0.78rem] text-hub-soft">
+            Production access is by invitation only.
+          </p>
+        </div>
       </form>
     </AuthCard>
   );
@@ -201,7 +228,15 @@ function NotInvited({ email }: { email: string }) {
   );
 }
 
-function HubApp({ profile }: { profile: Profile }) {
+function HubApp({
+  profile,
+  isDemo = false,
+  onExitDemo,
+}: {
+  profile: Profile;
+  isDemo?: boolean;
+  onExitDemo?: () => void;
+}) {
   const [tab, setTab] = useState<Tab>(initialTab);
   const leads = useLeadFeed(profile.id);
 
@@ -215,10 +250,19 @@ function HubApp({ profile }: { profile: Profile }) {
 
   return (
     <div className="hub-canvas flex min-h-[100dvh] flex-col">
+      {isDemo && (
+        <div className="sticky top-0 z-40 bg-gradient-to-r from-orange-500/15 via-amber-500/15 to-orange-500/15 border-b border-orange-200/80 px-4 py-2 text-center text-[0.82rem] text-hub-ink backdrop-blur-md flex items-center justify-center gap-2">
+          <span className="font-bold text-[#FF6B00]">✨ Demo Mode:</span>
+          <span>Viewing live preview of Horace Lawrence's Sunrun Partner Workspace. Interactive leads, AI advisor, files, and scheduling tools.</span>
+          <button onClick={onExitDemo} className="ml-2 text-xs font-bold underline text-[#FF6B00] hover:text-[#E65100] cursor-pointer">Exit to Sign In</button>
+        </div>
+      )}
       <header className="sticky top-0 z-30 border-b border-hub-line bg-hub-topbar shadow-[0_8px_24px_rgba(0,0,0,0.35)] backdrop-blur-md">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-2.5 sm:px-6">
           <div className="flex min-w-0 items-center gap-3">
-            <BrandMark className="h-9 shadow-sm" />
+            <a href="/" className="transition-opacity hover:opacity-80" title="Return to The Power Genie Home">
+              <BrandMark className="h-9 shadow-sm" />
+            </a>
             <div className="flex items-center gap-2">
               <span className="hidden text-[0.8rem] font-bold uppercase tracking-[0.14em] text-hub-accent-ink sm:inline">Referral Hub</span>
               <span className="hidden items-center gap-1.5 rounded-full border border-hub-success-line bg-hub-success px-2.5 py-0.5 text-[0.7rem] font-bold text-hub-success-ink md:inline-flex">
@@ -228,6 +272,18 @@ function HubApp({ profile }: { profile: Profile }) {
             </div>
           </div>
           <div className="flex items-center gap-2.5">
+            <a
+              href="/"
+              className="hidden lg:inline-flex items-center gap-1 text-[0.78rem] font-semibold text-hub-soft hover:text-hub-ink transition-colors px-2.5 py-1 rounded-lg border border-hub-control bg-hub-surface no-underline"
+            >
+              ← Public Site
+            </a>
+            <a
+              href="/homeowner"
+              className="hidden sm:inline-flex items-center gap-1 text-[0.78rem] font-bold text-[#FF6B00] hover:text-[#FF6B00]/80 transition-colors px-2.5 py-1 rounded-lg border border-orange-200 bg-orange-50/70 no-underline"
+            >
+              🔋 Homeowner Portal
+            </a>
             <div className="flex items-center gap-2">
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-hub-primary text-[0.78rem] font-bold text-hub-on-primary shadow-sm">
                 {(profile.full_name || profile.email).slice(0, 2).toUpperCase()}
@@ -237,14 +293,24 @@ function HubApp({ profile }: { profile: Profile }) {
                 <span className="text-[0.72rem] font-semibold text-hub-soft">{profile.role === 'owner' ? 'Sunrun Partner' : 'Admin'}</span>
               </span>
             </div>
-            <button
-              onClick={() => supabase!.auth.signOut()}
-              className="flex h-9 w-9 items-center justify-center rounded-xl border border-hub-control bg-hub-surface text-hub-soft transition-all hover:border-hub-ink hover:bg-hub-muted hover:text-hub-ink"
-              aria-label="Sign out"
-              title="Sign out of Referral Hub"
-            >
-              <LogOut className="h-4 w-4" />
-            </button>
+            {isDemo ? (
+              <button
+                onClick={onExitDemo}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-xl border border-orange-300 bg-orange-50 text-[0.78rem] font-bold text-[#FF6B00] transition-all hover:bg-orange-100 cursor-pointer"
+                title="Exit Demo Mode"
+              >
+                Exit Demo
+              </button>
+            ) : (
+              <button
+                onClick={() => supabase!.auth.signOut()}
+                className="flex h-9 w-9 items-center justify-center rounded-xl border border-hub-control bg-hub-surface text-hub-soft transition-all hover:border-hub-ink hover:bg-hub-muted hover:text-hub-ink cursor-pointer"
+                aria-label="Sign out"
+                title="Sign out of Referral Hub"
+              >
+                <LogOut className="h-4 w-4" />
+              </button>
+            )}
           </div>
         </div>
         <nav className="mx-auto flex max-w-5xl gap-1.5 px-3 sm:px-5" aria-label="Dashboard sections">
