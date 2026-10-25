@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite'
+import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
@@ -35,14 +35,15 @@ function denyPrivateAssets() {
   }
 }
 
-function rejectCustomerDataInBundle() {
+function rejectCustomerDataInBundle(): Plugin {
   return {
     name: 'reject-customer-data-in-bundle',
     generateBundle(_options, bundle) {
-      for (const file of Object.values(bundle)) {
-        const name = file.fileName.toLowerCase()
+      for (const item of Object.values(bundle)) {
+        const file = item as { fileName: string; type: string; code?: string; source?: string | Uint8Array }
+        const name = (file.fileName || '').toLowerCase()
         const source = file.type === 'chunk'
-          ? file.code
+          ? (file.code || '')
           : typeof file.source === 'string'
             ? file.source
             : ''
