@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { UsageMonth } from '../../shared/types';
 import { supabase } from '../lib/supabase';
 import { isManualCreatedBy, isMissingArchiveColumn } from './leadRecord';
+import { DEMO_LEADS } from './demoLeads';
 
 export type LeadSource = 'customer' | 'booking';
 
@@ -287,6 +288,13 @@ export function useLeadFeed(userId: string): LeadFeed {
   const [writesEnabled, setWritesEnabled] = useState(false);
 
   const load = useCallback(async (silent = false) => {
+    if (userId.startsWith('demo-')) {
+      setWritesEnabled(true);
+      setError(null);
+      setLeads(DEMO_LEADS);
+      setLoading(false);
+      return;
+    }
     if (!supabase) {
       setLoading(false);
       return;

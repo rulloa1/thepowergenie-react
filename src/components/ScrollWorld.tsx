@@ -1023,18 +1023,6 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
                 >
                   Our brands
                 </a>
-                <a
-                  href="/dashboard"
-                  className="sw-nav__item whitespace-nowrap font-inherit text-[0.82rem] no-underline px-3.5 py-1.5 rounded-full transition-colors duration-200 text-[#0066CC] font-bold hover:bg-[#0066CC]/10"
-                >
-                  📊 Referral Hub
-                </a>
-                <a
-                  href="/homeowner"
-                  className="sw-nav__item whitespace-nowrap font-inherit text-[0.82rem] no-underline px-3.5 py-1.5 rounded-full transition-colors duration-200 text-[#FF6B00] font-bold hover:bg-[#FF6B00]/10"
-                >
-                  🔋 Homeowner Portal
-                </a>
               </nav>
 
               {/* Mobile Menu */}
@@ -1062,19 +1050,6 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
                       {s.label}
                     </button>
                   ))}
-                  <div className="h-px bg-gray-100 my-1" />
-                  <a
-                    href="/dashboard"
-                    className="block w-full text-left px-5 py-3 text-[0.9rem] font-bold text-[#0066CC] active:bg-blue-50 no-underline"
-                  >
-                    📊 Referral Hub Dashboard
-                  </a>
-                  <a
-                    href="/homeowner"
-                    className="block w-full text-left px-5 py-3 text-[0.9rem] font-bold text-[#FF6B00] active:bg-orange-50 no-underline"
-                  >
-                    🔋 Homeowner & Referrals
-                  </a>
                   <div className="h-px bg-gray-100 my-1" />
                   <a
                     href="/brands"

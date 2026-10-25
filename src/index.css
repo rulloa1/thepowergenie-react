@@ -35,7 +35,9 @@ html[data-pg-brand="brands"] {
   --pg-assistant: #f6cf85;
   --pg-assistant-ink: #102029;
   --pg-assistant-shadow: rgba(246, 207, 133, 0.45);
+}
 
+:root {
   /* Other colors used on the marketing site (hero/CTA, quote panel, logo plate, sections). */
   --pg-orange: #FF6B00;
   --pg-orange-hot: #FF8A2B;

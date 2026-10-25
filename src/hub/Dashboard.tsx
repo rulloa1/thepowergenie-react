@@ -108,10 +108,10 @@ function FullPageSpinner() {
 function AuthCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="hub-canvas flex min-h-screen items-start justify-center px-4 py-16 sm:items-center">
-      <div className="w-full max-w-sm rounded-3xl bg-hub-surface p-7 shadow-[0_10px_30px_rgba(10,20,40,0.08)]">
-        <BrandMark className="mb-6" />
-        <p className="m-0 text-[0.74rem] font-semibold uppercase tracking-[0.14em] text-hub-accent-ink">Referral Hub</p>
-        <h1 className="m-0 mt-1 text-2xl font-bold tracking-tight text-hub-ink">{title}</h1>
+      <div className="w-full max-w-sm rounded-3xl border border-white/10 bg-[#0C1E32]/95 p-7 shadow-[0_20px_50px_rgba(0,0,0,0.6)] backdrop-blur-2xl">
+        <BrandMark className="mb-6 shadow-md" />
+        <p className="m-0 text-[0.74rem] font-semibold uppercase tracking-[0.14em] text-[#FF8A2B]">Referral Hub</p>
+        <h1 className="m-0 mt-1 text-2xl font-bold tracking-tight text-white">{title}</h1>
         <div className="mt-6">{children}</div>
       </div>
     </div>
@@ -166,7 +166,7 @@ function SignIn({ onExploreDemo }: { onExploreDemo?: () => void }) {
               type="button"
               variant="ghost"
               onClick={onExploreDemo}
-              className="w-full text-xs font-bold text-[#FF6B00] border border-orange-300 bg-orange-50/70 hover:bg-orange-100/70"
+              className="w-full text-xs font-bold text-[#FF8A2B] border border-[#FF6B00]/40 bg-[#FF6B00]/15 hover:bg-[#FF6B00]/25 transition"
             >
               ✨ Explore Demo Dashboard
             </Button>
@@ -254,36 +254,27 @@ function HubApp({
   return (
     <div className="hub-canvas flex min-h-[100dvh] flex-col">
       {isDemo && (
-        <div className="sticky top-0 z-40 bg-gradient-to-r from-orange-500/15 via-amber-500/15 to-orange-500/15 border-b border-orange-200/80 px-4 py-2 text-center text-[0.82rem] text-hub-ink backdrop-blur-md flex items-center justify-center gap-2">
-          <span className="font-bold text-[#FF6B00]">✨ Demo Mode:</span>
-          <span>Viewing live preview of Horace Lawrence's Sunrun Partner Workspace. Interactive leads, AI advisor, files, and scheduling tools.</span>
-          <button onClick={onExitDemo} className="ml-2 text-xs font-bold underline text-[#FF6B00] hover:text-[#E65100] cursor-pointer">Exit to Sign In</button>
+        <div className="sticky top-0 z-40 bg-gradient-to-r from-[#FF6B00]/25 via-[#FF8A2B]/20 to-[#FF6B00]/25 border-b border-[#FF6B00]/40 px-4 py-2 text-center text-xs sm:text-sm text-white backdrop-blur-xl flex flex-wrap items-center justify-center gap-2 shadow-lg shadow-black/40">
+          <span className="inline-flex items-center gap-1.5 font-bold text-[#FF8A2B]">
+            <span className="h-2 w-2 rounded-full bg-[#FF6B00] animate-pulse" />
+            ✨ Demo Mode:
+          </span>
+          <span className="text-[#E0ECF6]">Viewing live preview of Horace Lawrence's Sunrun Partner Workspace. Interactive leads, AI advisor, files, and scheduling tools.</span>
+          <button onClick={onExitDemo} className="ml-2 rounded-lg bg-[#FF6B00]/20 border border-[#FF6B00]/40 px-2.5 py-0.5 text-xs font-bold text-[#FF8A2B] hover:bg-[#FF6B00]/30 hover:text-white transition cursor-pointer">
+            Exit to Sign In
+          </button>
         </div>
       )}
-      {isDemo && (
-        <div className="sticky top-0 z-40 bg-gradient-to-r from-orange-500/15 via-amber-500/15 to-orange-500/15 border-b border-orange-200/80 px-4 py-2 text-center text-[0.82rem] text-hub-ink backdrop-blur-md flex items-center justify-center gap-2">
-          <span className="font-bold text-[#FF6B00]">✨ Demo Mode:</span>
-          <span>Viewing live preview of Horace Lawrence's Sunrun Partner Workspace. Interactive leads, AI advisor, files, and scheduling tools.</span>
-          <button onClick={onExitDemo} className="ml-2 text-xs font-bold underline text-[#FF6B00] hover:text-[#E65100] cursor-pointer">Exit to Sign In</button>
-        </div>
-      )}
-      {isDemo && (
-        <div className="sticky top-0 z-40 bg-gradient-to-r from-orange-500/15 via-amber-500/15 to-orange-500/15 border-b border-orange-200/80 px-4 py-2 text-center text-[0.82rem] text-hub-ink backdrop-blur-md flex items-center justify-center gap-2">
-          <span className="font-bold text-[#FF6B00]">✨ Demo Mode:</span>
-          <span>Viewing live preview of Horace Lawrence's Sunrun Partner Workspace. Interactive leads, AI advisor, files, and scheduling tools.</span>
-          <button onClick={onExitDemo} className="ml-2 text-xs font-bold underline text-[#FF6B00] hover:text-[#E65100] cursor-pointer">Exit to Sign In</button>
-        </div>
-      )}
-      <header className="sticky top-0 z-30 border-b border-hub-line bg-hub-topbar shadow-[0_8px_24px_rgba(0,0,0,0.35)] backdrop-blur-md">
+      <header className="sticky top-0 z-30 border-b border-[#1E2E42] bg-[#0A1828]/95 shadow-[0_8px_32px_rgba(0,0,0,0.5)] backdrop-blur-xl">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-2.5 sm:px-6">
           <div className="flex min-w-0 items-center gap-3">
             <a href="/" className="transition-opacity hover:opacity-80" title="Return to The Power Genie Home">
               <BrandMark className="h-9 shadow-sm" />
             </a>
             <div className="flex items-center gap-2">
-              <span className="hidden text-[0.8rem] font-bold uppercase tracking-[0.14em] text-hub-accent-ink sm:inline">Referral Hub</span>
-              <span className="hidden items-center gap-1.5 rounded-full border border-hub-success-line bg-hub-success px-2.5 py-0.5 text-[0.7rem] font-bold text-hub-success-ink md:inline-flex">
-                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-hub-success-ink" />
+              <span className="hidden text-[0.8rem] font-bold uppercase tracking-[0.14em] text-[#FF8A2B] sm:inline">Referral Hub</span>
+              <span className="hidden items-center gap-1.5 rounded-full border border-[#4ADE80]/30 bg-[#4ADE80]/15 px-2.5 py-0.5 text-[0.7rem] font-bold text-[#4ADE80] md:inline-flex">
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#4ADE80]" />
                 Live Advisor
               </span>
             </div>
@@ -291,29 +282,29 @@ function HubApp({
           <div className="flex items-center gap-2.5">
             <a
               href="/"
-              className="hidden lg:inline-flex items-center gap-1 text-[0.78rem] font-semibold text-hub-soft hover:text-hub-ink transition-colors px-2.5 py-1 rounded-lg border border-hub-control bg-hub-surface no-underline"
+              className="hidden lg:inline-flex items-center gap-1 text-[0.78rem] font-semibold text-[#8EAEC7] hover:text-white transition-colors px-2.5 py-1 rounded-lg border border-[#28496B] bg-[#0C1E32] no-underline"
             >
               ← Public Site
             </a>
             <a
               href="/homeowner"
-              className="hidden sm:inline-flex items-center gap-1 text-[0.78rem] font-bold text-[#FF6B00] hover:text-[#FF6B00]/80 transition-colors px-2.5 py-1 rounded-lg border border-orange-200 bg-orange-50/70 no-underline"
+              className="hidden sm:inline-flex items-center gap-1 text-[0.78rem] font-bold text-[#FF8A2B] hover:text-[#FF8A2B]/80 transition-colors px-2.5 py-1 rounded-lg border border-[#FF6B00]/40 bg-[#FF6B00]/15 no-underline"
             >
               🔋 Homeowner Portal
             </a>
             <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-hub-primary text-[0.78rem] font-bold text-hub-on-primary shadow-sm">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-[#FF6B00] to-[#E65100] text-[0.78rem] font-bold text-white shadow-sm">
                 {(profile.full_name || profile.email).slice(0, 2).toUpperCase()}
               </div>
               <span className="hidden text-left text-[0.82rem] leading-tight sm:block">
-                <span className="block font-bold text-hub-ink">{profile.full_name || profile.email}</span>
-                <span className="text-[0.72rem] font-semibold text-hub-soft">{profile.role === 'owner' ? 'Sunrun Partner' : 'Admin'}</span>
+                <span className="block font-bold text-white">{profile.full_name || profile.email}</span>
+                <span className="text-[0.72rem] font-semibold text-[#8EAEC7]">{profile.role === 'owner' ? 'Sunrun Partner' : 'Admin'}</span>
               </span>
             </div>
             {isDemo ? (
               <button
                 onClick={onExitDemo}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-xl border border-orange-300 bg-orange-50 text-[0.78rem] font-bold text-[#FF6B00] transition-all hover:bg-orange-100 cursor-pointer"
+                className="flex items-center gap-1 px-3 py-1.5 rounded-xl border border-[#FF6B00]/40 bg-[#FF6B00]/20 text-[0.78rem] font-bold text-[#FF8A2B] transition-all hover:bg-[#FF6B00]/30 hover:text-white cursor-pointer"
                 title="Exit Demo Mode"
               >
                 Exit Demo
@@ -321,7 +312,7 @@ function HubApp({
             ) : (
               <button
                 onClick={() => supabase!.auth.signOut()}
-                className="flex h-9 w-9 items-center justify-center rounded-xl border border-hub-control bg-hub-surface text-hub-soft transition-all hover:border-hub-ink hover:bg-hub-muted hover:text-hub-ink cursor-pointer"
+                className="flex h-9 w-9 items-center justify-center rounded-xl border border-[#28496B] bg-[#0C1E32] text-[#8EAEC7] transition-all hover:border-white/20 hover:bg-[#132B45] hover:text-white cursor-pointer"
                 aria-label="Sign out"
                 title="Sign out of Referral Hub"
               >
@@ -330,7 +321,7 @@ function HubApp({
             )}
           </div>
         </div>
-        <nav className="mx-auto flex max-w-5xl gap-1.5 px-3 sm:px-5" aria-label="Dashboard sections">
+        <nav className="mx-auto flex max-w-5xl gap-2 px-3 py-2 sm:px-5 overflow-x-auto scrollbar-none" aria-label="Dashboard sections">
           {TABS.map(({ id, label, icon: Icon }) => {
             const active = tab === id;
             return (
@@ -339,16 +330,19 @@ function HubApp({
                 onClick={() => go(id)}
                 aria-current={active ? 'page' : undefined}
                 className={cn(
-                  'relative flex min-h-[42px] min-w-0 flex-1 items-center justify-center gap-1.5 rounded-t-xl px-2.5 text-[0.86rem] font-bold transition-all sm:flex-none sm:gap-2 sm:px-5 sm:text-[0.9rem]',
+                  'relative inline-flex min-h-[40px] items-center justify-center gap-2 rounded-xl px-4 py-2 text-xs sm:text-sm font-bold transition-all whitespace-nowrap cursor-pointer',
                   active
-                    ? 'border-b-2 border-hub-on-primary bg-hub-primary text-hub-on-primary'
-                    : 'border-b-2 border-transparent text-hub-soft hover:bg-hub-muted hover:text-hub-ink',
+                    ? 'bg-gradient-to-r from-[#FF6B00] to-[#E65100] text-white shadow-md shadow-[#FF6B00]/25'
+                    : 'border border-transparent text-[#8EAEC7] hover:border-white/10 hover:bg-white/5 hover:text-white',
                 )}
               >
-                <Icon className={cn('h-4 w-4 shrink-0 transition-transform', active && 'scale-110 text-hub-on-primary')} />
+                <Icon className={cn('h-4 w-4 shrink-0 transition-transform', active && 'scale-110 text-white')} />
                 <span>{label}</span>
                 {id === 'leads' && leads.unseen > 0 && (
-                  <span className="inline-flex min-w-5 items-center justify-center rounded-full border border-hub-on-accent bg-hub-accent-fill px-1.5 text-[0.66rem] font-extrabold leading-5 text-hub-on-accent shadow-sm">
+                  <span className={cn(
+                    "inline-flex min-w-5 items-center justify-center rounded-full px-1.5 text-[0.68rem] font-black shadow-sm",
+                    active ? "bg-white text-[#FF6B00]" : "bg-[#FF6B00] text-white"
+                  )}>
                     {leads.unseen > 99 ? '99+' : leads.unseen}
                     <span className="sr-only"> new leads</span>
                   </span>

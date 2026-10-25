@@ -84,7 +84,8 @@ test('the Vercel SPA rewrite serves /privacy and /terms', () => {
 
   const scroll = readFileSync('src/components/ScrollWorld.tsx', 'utf8')
   assert.match(scroll, /href="\/brands"/)
-  assert.match(scroll, /href="\/homeowner"/)
+  assert.doesNotMatch(scroll, /href="\/homeowner"/)
+  assert.doesNotMatch(scroll, /href="\/dashboard"/)
   assert.doesNotMatch(scroll, /Coming soon/)
   assert.doesNotMatch(scroll, /aria-disabled/)
   assert.doesNotMatch(scroll, /cursor-not-allowed/)
@@ -92,7 +93,8 @@ test('the Vercel SPA rewrite serves /privacy and /terms', () => {
   assert.match(app, /marketingViewFromLocation/)
   assert.match(app, /onNavigateBrands/)
   assert.match(app, /referralBrandFromLocation/)
-  assert.match(app, /href="\/homeowner"/)
+  assert.doesNotMatch(app, /href="\/homeowner"/)
+  assert.doesNotMatch(app, /href="\/dashboard"/)
 
   const privacy = readFileSync('src/pages/PrivacyPage.tsx', 'utf8')
   for (const name of [
