@@ -174,7 +174,7 @@ export default function ChatTab({ profile }: { profile: Profile }) {
                   <div
                     className={cn(
                       'max-w-[85%] overflow-hidden rounded-2xl text-[0.95rem] leading-relaxed sm:max-w-[70%]',
-                      mine ? 'rounded-br-md bg-hub-navy text-white' : 'rounded-bl-md bg-hub-muted text-hub-ink',
+                      mine ? 'rounded-br-md bg-hub-primary text-hub-on-primary' : 'rounded-bl-md bg-hub-muted text-hub-ink',
                     )}
                   >
                     {m.attachment_path && isImage && url && (
@@ -187,7 +187,7 @@ export default function ChatTab({ profile }: { profile: Profile }) {
                         href={url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className={cn('flex items-center gap-2.5 px-3.5 py-2.5 no-underline', mine ? 'text-white' : 'text-hub-ink')}
+                        className={cn('flex items-center gap-2.5 px-3.5 py-2.5 no-underline', mine ? 'text-hub-on-primary' : 'text-hub-ink')}
                       >
                         <FileText className="h-5 w-5 shrink-0 opacity-80" />
                         <span className="min-w-0">
@@ -220,7 +220,7 @@ export default function ChatTab({ profile }: { profile: Profile }) {
           <button
             type="button"
             onClick={() => fileInput.current?.click()}
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-hub-line hover:border-hub-ink"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-hub-control text-hub-ink hover:border-hub-ink"
             aria-label="Attach a file or photo"
           >
             <Paperclip className="h-5 w-5" />
@@ -244,7 +244,7 @@ export default function ChatTab({ profile }: { profile: Profile }) {
           <button
             type="submit"
             disabled={sending || (!text.trim() && !file)}
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-hub-accent-fill text-white disabled:bg-hub-muted disabled:text-hub-soft"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-hub-accent-fill text-hub-on-accent disabled:bg-hub-muted disabled:text-hub-soft"
             aria-label="Send"
           >
             {sending ? <Spinner className="h-4 w-4" /> : <SendHorizontal className="h-5 w-5" />}

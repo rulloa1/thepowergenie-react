@@ -173,7 +173,7 @@ function TwoStepOutreachBar({ lead }: { lead: Lead }) {
         <a
           href={generateTwoStepReviewSmsUrl(lead)}
           onClick={(e) => e.stopPropagation()}
-          className="inline-flex items-center gap-1 rounded-md bg-hub-accent-fill px-2.5 py-1 text-[0.74rem] font-bold text-white no-underline shadow-sm hover:bg-hub-accent-fill-hover"
+          className="inline-flex items-center gap-1 rounded-md bg-hub-accent-fill px-2.5 py-1 text-[0.74rem] font-bold text-hub-on-accent no-underline shadow-sm hover:bg-hub-accent-fill-hover"
           title="Open SMS app with 2-step review request"
         >
           <Phone className="h-3 w-3" /> Text 2 Steps
@@ -193,7 +193,7 @@ function TwoStepOutreachBar({ lead }: { lead: Lead }) {
         <a
           href={generateTwoStepReviewEmailUrl(lead)}
           onClick={(e) => e.stopPropagation()}
-          className="inline-flex items-center gap-1 rounded-md border border-hub-primary bg-hub-primary px-2.5 py-1 text-[0.74rem] font-bold text-white no-underline shadow-sm hover:bg-hub-primary-hover"
+          className="inline-flex items-center gap-1 rounded-md border border-hub-on-primary bg-hub-primary px-2.5 py-1 text-[0.74rem] font-bold text-hub-on-primary no-underline shadow-sm hover:bg-hub-primary-hover"
           title="Open email client with 2-step review request"
         >
           <Mail className="h-3 w-3" /> Email 2 Steps
@@ -321,7 +321,7 @@ function SunrunOptionBWorkflow({ lead }: { lead: Lead }) {
     <div className="mt-4 rounded-2xl border-2 border-hub-accent-ink bg-hub-accent-soft p-4 text-hub-ink sm:p-5">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-hub-accent-line pb-3">
         <div className="flex items-center gap-2">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-hub-accent-fill text-white">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-hub-accent-fill text-hub-on-accent">
             <Zap className="h-4 w-4" />
           </span>
           <div>
@@ -408,7 +408,7 @@ function SunrunOptionBWorkflow({ lead }: { lead: Lead }) {
                       key={document.id}
                       type="button"
                       onClick={() => void openFile(document.path)}
-                      className="inline-flex items-center gap-1 rounded-lg border border-hub-primary bg-hub-primary px-3 py-1.5 text-[0.78rem] font-bold text-white shadow hover:bg-hub-primary-hover"
+                      className="inline-flex items-center gap-1 rounded-lg border border-hub-on-primary bg-hub-primary px-3 py-1.5 text-[0.78rem] font-bold text-hub-on-primary shadow hover:bg-hub-primary-hover"
                     >
                       {canPreviewObject(document.path) ? <Eye className="h-3.5 w-3.5" /> : <FileText className="h-3.5 w-3.5" />}
                       {document.label}
@@ -686,7 +686,7 @@ export default function LeadsTab({ feed }: { feed: LeadFeed }) {
                   <button type="button" onClick={() => select(lead)} className="min-w-0 flex-1 text-left">
                     <span className="flex flex-wrap items-center gap-2">
                       {lead.unseen && (
-                        <span className="rounded-full bg-hub-accent-fill px-2 py-0.5 text-[0.68rem] font-bold uppercase tracking-wide text-white">New</span>
+                        <span className="rounded-full border border-hub-on-accent bg-hub-accent-fill px-2 py-0.5 text-[0.68rem] font-bold uppercase tracking-wide text-hub-on-accent">New</span>
                       )}
                       <span className="rounded-full bg-hub-accent-soft px-2 py-0.5 text-[0.72rem] font-semibold text-hub-accent-ink">{lead.sourceLabel}</span>
                       {lead.cancelled && <span className="rounded-full bg-hub-muted px-2 py-0.5 text-[0.72rem] font-semibold text-hub-soft">Cancelled</span>}

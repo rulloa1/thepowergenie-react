@@ -17,56 +17,62 @@
   --pg-logo: #071b27;
 
   /*
-    Referral Hub roles. They point at the marketing tokens.
-    Orange text and white-on-orange fills use #C2410C: #FF6B00 is the brand orange,
-    and it misses WCAG AA for text (about 2.9:1 on white) and for icon buttons.
+    Referral Hub roles, taken from the static sunrun-powergenie journey
+    (experience.css on master). That sheet overrides the light tokens in
+    index.html and is the page people actually see: navy field, ice primary
+    buttons, gold eyebrows and focus, cyan links.
+    These stay off the React --sw-* tokens above. ScrollWorld still reads those.
+    The static site has no status palette, so success, warn, and error are
+    tuned for this navy field and kept apart from the gold accent.
   */
-  --hub-bg: var(--sw-bg);
-  --hub-bg-end: color-mix(in srgb, var(--sw-accent) 12%, var(--sw-bg));
-  --hub-surface: #ffffff;
-  --hub-muted: color-mix(in srgb, var(--sw-bg) 42%, var(--hub-surface));
-  --hub-ink: var(--sw-ink);
-  --hub-soft: var(--sw-ink-soft);
-  --hub-faint: #64748B;
-  --hub-line: color-mix(in srgb, var(--sw-ink) 14%, var(--hub-surface));
-  --hub-line-strong: color-mix(in srgb, var(--sw-ink) 24%, var(--hub-surface));
-  /* Ink mixed to #91919B so input and ghost borders clear 3:1 on white. */
-  --hub-control: #91919B;
-  --hub-topbar: color-mix(in srgb, var(--sw-bg) 86%, var(--hub-surface));
-  --hub-primary: var(--sw-ink);
-  --hub-primary-hover: #2A2A44;
-  --hub-disabled: #9AA1AD;
-  --hub-accent-ink: #C2410C;
-  --hub-accent-fill: #C2410C;
-  --hub-accent-fill-hover: #9A3412;
-  --hub-accent-soft: color-mix(in srgb, var(--pg-orange) 12%, var(--hub-surface));
-  --hub-accent-line: #D17049;
-  --hub-link: var(--sw-accent);
-  --hub-link-hover: #004C99;
-  --hub-focus: var(--hub-accent-ink);
-  --hub-focus-soft: color-mix(in srgb, var(--hub-focus) 28%, transparent);
-  --hub-chart: #C2410C;
-  --hub-chart-top: #E05E00;
-  --hub-on-navy: #D9E6F2;
-  --hub-scrim: color-mix(in srgb, var(--pg-navy) 72%, transparent);
-  --hub-info-bg: color-mix(in srgb, var(--sw-accent) 10%, var(--hub-surface));
-  --hub-info-line: #6F8AAD;
-  --hub-info-ink: #123A63;
-  --hub-warn-bg: color-mix(in srgb, var(--pg-orange) 12%, var(--hub-surface));
-  --hub-warn-line: #A58456;
-  --hub-warn-ink: #7A4A06;
-  --hub-error-bg: #FFF0EE;
-  --hub-error-line: #CF726B;
-  --hub-error-ink: #8A1F11;
-  --hub-success-bg: color-mix(in srgb, var(--pg-green) 14%, var(--hub-surface));
-  --hub-success-line: #699472;
-  --hub-success-ink: #185A26;
-  --hub-danger: #B42318;
-  --hub-danger-ink: #991B1B;
-  --hub-danger-soft: #FEF2F2;
-  --hub-danger-line: #CF726B;
-  --hub-danger-fill: #DC2626;
-  --hub-danger-fill-hover: #B91C1C;
+  --hub-bg: #071b27;
+  --hub-bg-end: color-mix(in srgb, #87dbff 12%, #071b27);
+  --hub-surface: #1b2d38;
+  --hub-muted: #2a3b45;
+  --hub-ink: #f7fbff;
+  --hub-soft: #bed0dc;
+  --hub-faint: #8aa0b0;
+  --hub-line: #47565f;
+  --hub-line-strong: #6a767d;
+  /* Ghost borders on the static site are #ffffff55. That clears 3:1 on the navy surfaces. */
+  --hub-control: #8f989e;
+  --hub-topbar: #132632;
+  --hub-primary: #d4f1ff;
+  --hub-primary-hover: #b6e6fb;
+  --hub-on-primary: #082638;
+  --hub-disabled: #3e5563;
+  --hub-accent-ink: #ffdc90;
+  --hub-accent-fill: #ffcf75;
+  --hub-accent-fill-hover: #e8b85c;
+  --hub-on-accent: #102029;
+  --hub-accent-soft: color-mix(in srgb, #ffcf75 16%, var(--hub-surface));
+  --hub-accent-line: #ffcf75;
+  --hub-link: #87dbff;
+  --hub-link-hover: #d4f1ff;
+  --hub-focus: #ffdc90;
+  --hub-focus-soft: color-mix(in srgb, #ffdc90 32%, transparent);
+  --hub-chart: #ffcf75;
+  --hub-chart-top: #ffdc90;
+  --hub-on-navy: #d5e3eb;
+  --hub-scrim: color-mix(in srgb, #071b27 72%, transparent);
+  --hub-info-bg: color-mix(in srgb, #87dbff 16%, var(--hub-surface));
+  --hub-info-line: #87dbff;
+  --hub-info-ink: #d4f1ff;
+  --hub-warn-bg: color-mix(in srgb, #fbbf24 18%, var(--hub-surface));
+  --hub-warn-line: #fbbf24;
+  --hub-warn-ink: #fde68a;
+  --hub-error-bg: color-mix(in srgb, #f87171 18%, var(--hub-surface));
+  --hub-error-line: #f87171;
+  --hub-error-ink: #fecaca;
+  --hub-success-bg: color-mix(in srgb, #34d399 18%, var(--hub-surface));
+  --hub-success-line: #4ade80;
+  --hub-success-ink: #b7f7c8;
+  --hub-danger: #fb7185;
+  --hub-danger-ink: #fecaca;
+  --hub-danger-soft: color-mix(in srgb, #f87171 20%, var(--hub-surface));
+  --hub-danger-line: #f87171;
+  --hub-danger-fill: #dc2626;
+  --hub-danger-fill-hover: #b91c1c;
 }
 
 @theme inline {
@@ -82,11 +88,13 @@
   --color-hub-topbar: var(--hub-topbar);
   --color-hub-primary: var(--hub-primary);
   --color-hub-primary-hover: var(--hub-primary-hover);
+  --color-hub-on-primary: var(--hub-on-primary);
   --color-hub-disabled: var(--hub-disabled);
-  --color-hub-accent: var(--pg-orange);
+  --color-hub-accent: var(--hub-accent-fill);
   --color-hub-accent-ink: var(--hub-accent-ink);
   --color-hub-accent-fill: var(--hub-accent-fill);
   --color-hub-accent-fill-hover: var(--hub-accent-fill-hover);
+  --color-hub-on-accent: var(--hub-on-accent);
   --color-hub-accent-soft: var(--hub-accent-soft);
   --color-hub-accent-line: var(--hub-accent-line);
   --color-hub-link: var(--hub-link);
@@ -122,6 +130,48 @@
 @utility hub-canvas {
   background-image: linear-gradient(180deg, var(--hub-bg) 0%, var(--hub-bg-end) 100%);
   color: var(--hub-ink);
+}
+
+/* The public booking page keeps its own light chrome. Shared buttons, fields,
+   and notices read these overrides so their text stays AA on that white page. */
+.book-page {
+  --hub-bg: #f8fafc;
+  --hub-surface: #ffffff;
+  --hub-muted: #f1f5f9;
+  --hub-ink: #1a1a2e;
+  --hub-soft: #4a5568;
+  --hub-faint: #64748b;
+  --hub-control: #91919b;
+  --hub-primary: #1a1a2e;
+  --hub-primary-hover: #2a2a44;
+  --hub-on-primary: #ffffff;
+  --hub-disabled: #9aa1ad;
+  --hub-accent-ink: #c2410c;
+  --hub-accent-fill: #c2410c;
+  --hub-accent-fill-hover: #9a3412;
+  --hub-on-accent: #ffffff;
+  --hub-accent-soft: #fff1e8;
+  --hub-accent-line: #d17049;
+  --hub-link: #0066cc;
+  --hub-link-hover: #004c99;
+  --hub-focus: #c2410c;
+  --hub-focus-soft: color-mix(in srgb, #c2410c 28%, transparent);
+  --hub-info-bg: #e8f3fb;
+  --hub-info-line: #6f8aad;
+  --hub-info-ink: #123a63;
+  --hub-warn-bg: #fff4e8;
+  --hub-warn-line: #a58456;
+  --hub-warn-ink: #7a4a06;
+  --hub-error-bg: #fff0ee;
+  --hub-error-line: #cf726b;
+  --hub-error-ink: #8a1f11;
+  --hub-success-bg: #eef8f0;
+  --hub-success-line: #699472;
+  --hub-success-ink: #185a26;
+  --hub-danger: #b42318;
+  --hub-danger-ink: #991b1b;
+  --hub-danger-soft: #fef2f2;
+  --hub-danger-line: #cf726b;
 }
 
 @layer base {

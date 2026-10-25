@@ -50,15 +50,17 @@ export function Notice({
 /** Shown whenever the site hasn't been given its Supabase/Google keys yet. */
 export function NotConfigured({ what }: { what: string }) {
   return (
-    <div className="mx-auto max-w-md px-5 py-16 text-center">
-      <BrandMark className="mx-auto mb-8" />
-      <h1 className="m-0 text-2xl font-bold tracking-tight text-hub-ink">{what} isn't configured yet</h1>
-      <p className="mt-3 text-hub-soft">
-        Everything is built — it just needs its keys. Once they're added, this page will come to life.
-      </p>
-      <p className="mt-6 text-sm text-hub-soft">
-        Want a free solar quote now? Call <a className="font-semibold text-hub-link" href="tel:+15102417007">510-241-7007</a>.
-      </p>
+    <div className="hub-canvas flex min-h-screen items-center justify-center px-5 py-16">
+      <div className="mx-auto max-w-md text-center">
+        <BrandMark className="mx-auto mb-8" />
+        <h1 className="m-0 text-2xl font-bold tracking-tight text-hub-ink">{what} isn't configured yet</h1>
+        <p className="mt-3 text-hub-soft">
+          Everything is built — it just needs its keys. Once they're added, this page will come to life.
+        </p>
+        <p className="mt-6 text-sm text-hub-soft">
+          Want a free solar quote now? Call <a className="font-semibold text-hub-link" href="tel:+15102417007">510-241-7007</a>.
+        </p>
+      </div>
     </div>
   );
 }
@@ -74,8 +76,8 @@ export function Button({
   ...props
 }: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'accent' | 'ghost' | 'danger' | 'quiet' }) {
   const variants = {
-    primary: 'bg-hub-primary text-white hover:bg-hub-primary-hover shadow-sm hover:shadow active:scale-[0.99] disabled:bg-hub-disabled',
-    accent: 'bg-hub-accent-fill text-white hover:bg-hub-accent-fill-hover shadow-sm hover:shadow-md active:scale-[0.99] disabled:bg-hub-disabled',
+    primary: 'border border-hub-on-primary bg-hub-primary text-hub-on-primary hover:bg-hub-primary-hover shadow-sm hover:shadow active:scale-[0.99] disabled:border-hub-control disabled:bg-hub-disabled disabled:text-hub-soft',
+    accent: 'border border-hub-on-accent bg-hub-accent-fill text-hub-on-accent hover:bg-hub-accent-fill-hover shadow-sm hover:shadow-md active:scale-[0.99] disabled:border-hub-control disabled:bg-hub-disabled disabled:text-hub-soft',
     ghost: 'border border-hub-control bg-hub-surface text-hub-ink hover:border-hub-ink hover:bg-hub-muted active:scale-[0.99]',
     danger: 'border border-hub-danger-line bg-hub-surface text-hub-danger hover:bg-hub-danger-soft active:scale-[0.99]',
     quiet: 'text-hub-link hover:text-hub-link-hover hover:underline px-0',
@@ -84,7 +86,7 @@ export function Button({
     <button
       {...props}
       className={cn(
-        'inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl px-5 text-[0.92rem] font-bold transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-hub-focus focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100',
+        'inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl px-5 text-[0.92rem] font-bold transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-hub-focus focus-visible:ring-offset-2 focus-visible:ring-offset-hub-bg disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100',
         variants[variant],
         variant === 'quiet' && 'min-h-0 rounded-none',
         className,

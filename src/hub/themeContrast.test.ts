@@ -34,11 +34,11 @@ function mix(base: string, tint: string, tintAmount: number): string {
   const a = parse(base);
   const b = parse(tint);
   const channels = a.map((part, i) => Math.round(part * (1 - tintAmount) + b[i] * tintAmount));
-  return `#${channels.map((part) => part.toString(16).padStart(2, '0')).join('')}`.toUpperCase();
+  return `#${channels.map((part) => part.toString(16).padStart(2, '0')).join('')}`;
 }
 
 describe('referral hub theme tokens', () => {
-  it('keeps the marketing journey tokens and points the hub at them', () => {
+  it('keeps the React marketing tokens and uses the static site palette on the hub', () => {
     expect(decl('--sw-bg')).toBe('#E8F4FD');
     expect(decl('--sw-ink')).toBe('#1A1A2E');
     expect(decl('--sw-ink-soft')).toBe('#4A5568');
@@ -47,81 +47,89 @@ describe('referral hub theme tokens', () => {
     expect(decl('--pg-green')).toBe('#4CAF50');
     expect(decl('--pg-navy')).toBe('#0B2233');
     expect(decl('--pg-logo')).toBe('#071b27');
-    expect(decl('--hub-bg')).toBe('var(--sw-bg)');
-    expect(decl('--hub-ink')).toBe('var(--sw-ink)');
-    expect(decl('--hub-soft')).toBe('var(--sw-ink-soft)');
-    expect(decl('--hub-link')).toBe('var(--sw-accent)');
-    expect(decl('--hub-primary')).toBe('var(--sw-ink)');
-    expect(css).toContain('color-mix(in srgb, var(--pg-orange) 12%, var(--hub-surface))');
-    expect(css).toContain('color-mix(in srgb, var(--sw-accent) 12%, var(--sw-bg))');
+    expect(decl('--hub-bg')).toBe('#071b27');
+    expect(decl('--hub-ink')).toBe('#f7fbff');
+    expect(decl('--hub-soft')).toBe('#bed0dc');
+    expect(decl('--hub-link')).toBe('#87dbff');
+    expect(decl('--hub-primary')).toBe('#d4f1ff');
+    expect(decl('--hub-on-primary')).toBe('#082638');
+    expect(decl('--hub-accent-fill')).toBe('#ffcf75');
+    expect(decl('--hub-on-accent')).toBe('#102029');
+    expect(decl('--hub-accent-ink')).toBe('#ffdc90');
+    expect(decl('--hub-focus')).toBe('#ffdc90');
+    expect(css).toContain('color-mix(in srgb, #ffcf75 16%, var(--hub-surface))');
+    expect(css).toContain('color-mix(in srgb, #87dbff 12%, #071b27)');
+    expect(css).not.toContain('--hub-bg: var(--sw-bg)');
   });
 
   it('meets WCAG AA for text and for control or chart colors', () => {
-    const white = '#FFFFFF';
-    const sky = '#E8F4FD';
-    const muted = mix(white, sky, 0.42);
-    const accentSoft = mix(white, '#FF6B00', 0.12);
-    const successBg = mix(white, '#4CAF50', 0.14);
-    const warnBg = mix(white, '#FF6B00', 0.12);
-    const infoBg = mix(white, '#0066CC', 0.1);
-    const topbar = mix(white, sky, 0.86);
+    const bg = decl('--hub-bg');
+    const surface = decl('--hub-surface');
+    const muted = decl('--hub-muted');
+    const topbar = decl('--hub-topbar');
+    const accentSoft = mix(surface, '#ffcf75', 0.16);
+    const successBg = mix(surface, '#34d399', 0.18);
+    const warnBg = mix(surface, '#fbbf24', 0.18);
+    const infoBg = mix(surface, '#87dbff', 0.16);
+    const errorBg = mix(surface, '#f87171', 0.18);
+    const dangerSoft = mix(surface, '#f87171', 0.2);
 
     const textPairs: Array<[string, string, string]> = [
-      ['ink on sky', '#1A1A2E', sky],
-      ['ink on white', '#1A1A2E', white],
-      ['soft on sky', '#4A5568', sky],
-      ['soft on white', '#4A5568', white],
-      ['soft on muted', '#4A5568', muted],
-      ['faint on white', decl('--hub-faint'), white],
-      ['link on white', '#0066CC', white],
-      ['link on sky', '#0066CC', sky],
-      ['link hover on white', decl('--hub-link-hover'), white],
-      ['accent text on white', decl('--hub-accent-ink'), white],
-      ['accent text on sky', decl('--hub-accent-ink'), sky],
-      ['accent text on soft', decl('--hub-accent-ink'), accentSoft],
-      ['accent text on topbar', decl('--hub-accent-ink'), topbar],
-      ['white on accent fill', white, decl('--hub-accent-fill')],
-      ['white on accent hover', white, decl('--hub-accent-fill-hover')],
-      ['white on primary', white, '#1A1A2E'],
-      ['white on primary hover', white, decl('--hub-primary-hover')],
-      ['white on navy', white, '#0B2233'],
+      ['ink on page', decl('--hub-ink'), bg],
+      ['ink on surface', decl('--hub-ink'), surface],
+      ['ink on muted', decl('--hub-ink'), muted],
+      ['ink on topbar', decl('--hub-ink'), topbar],
+      ['soft on page', decl('--hub-soft'), bg],
+      ['soft on surface', decl('--hub-soft'), surface],
+      ['soft on muted', decl('--hub-soft'), muted],
+      ['faint on surface', decl('--hub-faint'), surface],
+      ['link on page', decl('--hub-link'), bg],
+      ['link on surface', decl('--hub-link'), surface],
+      ['link hover on surface', decl('--hub-link-hover'), surface],
+      ['gold label on page', decl('--hub-accent-ink'), bg],
+      ['gold label on surface', decl('--hub-accent-ink'), surface],
+      ['gold label on soft', decl('--hub-accent-ink'), accentSoft],
+      ['gold label on topbar', decl('--hub-accent-ink'), topbar],
+      ['primary text', decl('--hub-on-primary'), decl('--hub-primary')],
+      ['primary hover text', decl('--hub-on-primary'), decl('--hub-primary-hover')],
+      ['accent text', decl('--hub-on-accent'), decl('--hub-accent-fill')],
+      ['accent hover text', decl('--hub-on-accent'), decl('--hub-accent-fill-hover')],
       ['on navy caption', decl('--hub-on-navy'), '#0B2233'],
       ['success text', decl('--hub-success-ink'), successBg],
-      ['success text on white', decl('--hub-success-ink'), white],
       ['warn text', decl('--hub-warn-ink'), warnBg],
       ['info text', decl('--hub-info-ink'), infoBg],
-      ['error text', decl('--hub-error-ink'), decl('--hub-error-bg')],
-      ['danger text', decl('--hub-danger'), white],
-      ['danger ink', decl('--hub-danger-ink'), decl('--hub-danger-soft')],
-      ['white on danger fill', white, decl('--hub-danger-fill')],
-      ['white on danger hover', white, decl('--hub-danger-fill-hover')],
+      ['error text', decl('--hub-error-ink'), errorBg],
+      ['danger text on surface', decl('--hub-danger'), surface],
+      ['danger ink on soft', decl('--hub-danger-ink'), dangerSoft],
+      ['white on danger fill', '#ffffff', decl('--hub-danger-fill')],
+      ['white on danger hover', '#ffffff', decl('--hub-danger-fill-hover')],
     ];
 
-    for (const [name, fg, bg] of textPairs) {
-      expect(contrast(fg, bg), name).toBeGreaterThanOrEqual(4.5);
+    for (const [name, fg, background] of textPairs) {
+      expect(contrast(fg, background), name).toBeGreaterThanOrEqual(4.5);
     }
 
     const controlPairs: Array<[string, string, string]> = [
-      ['control border on white', decl('--hub-control'), white],
-      ['focus on white', decl('--hub-accent-ink'), white],
-      ['focus on sky', decl('--hub-accent-ink'), sky],
-      ['chart on white', decl('--hub-chart'), white],
-      ['chart top on white', decl('--hub-chart-top'), white],
+      ['control border on surface', decl('--hub-control'), surface],
+      ['control border on page', decl('--hub-control'), bg],
+      ['focus on page', decl('--hub-focus'), bg],
+      ['focus on surface', decl('--hub-focus'), surface],
+      ['chart on surface', decl('--hub-chart'), surface],
+      ['chart top on surface', decl('--hub-chart-top'), surface],
       ['chart on muted', decl('--hub-chart'), muted],
       ['chart top on muted', decl('--hub-chart-top'), muted],
-      ['accent line on white', decl('--hub-accent-line'), white],
+      ['accent line on surface', decl('--hub-accent-line'), surface],
       ['accent line on soft', decl('--hub-accent-line'), accentSoft],
-      ['success line on white', decl('--hub-success-line'), white],
       ['success line on success', decl('--hub-success-line'), successBg],
       ['warn line on warn', decl('--hub-warn-line'), warnBg],
-      ['info line on white', decl('--hub-info-line'), white],
       ['info line on info', decl('--hub-info-line'), infoBg],
-      ['error line on error', decl('--hub-error-line'), decl('--hub-error-bg')],
-      ['danger line on danger soft', decl('--hub-danger-line'), decl('--hub-danger-soft')],
+      ['error line on error', decl('--hub-error-line'), errorBg],
+      ['danger line on danger soft', decl('--hub-danger-line'), dangerSoft],
+      ['danger line on surface', decl('--hub-danger-line'), surface],
     ];
 
-    for (const [name, fg, bg] of controlPairs) {
-      expect(contrast(fg, bg), name).toBeGreaterThanOrEqual(3);
+    for (const [name, fg, background] of controlPairs) {
+      expect(contrast(fg, background), name).toBeGreaterThanOrEqual(3);
     }
   });
 });

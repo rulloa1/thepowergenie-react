@@ -215,7 +215,7 @@ function HubApp({ profile }: { profile: Profile }) {
 
   return (
     <div className="hub-canvas flex min-h-[100dvh] flex-col">
-      <header className="sticky top-0 z-30 border-b border-hub-line bg-hub-topbar shadow-[0_2px_14px_rgba(15,23,42,0.03)] backdrop-blur-md">
+      <header className="sticky top-0 z-30 border-b border-hub-line bg-hub-topbar shadow-[0_8px_24px_rgba(0,0,0,0.35)] backdrop-blur-md">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-2.5 sm:px-6">
           <div className="flex min-w-0 items-center gap-3">
             <BrandMark className="h-9 shadow-sm" />
@@ -229,7 +229,7 @@ function HubApp({ profile }: { profile: Profile }) {
           </div>
           <div className="flex items-center gap-2.5">
             <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-hub-primary text-[0.78rem] font-bold text-white shadow-sm">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-hub-primary text-[0.78rem] font-bold text-hub-on-primary shadow-sm">
                 {(profile.full_name || profile.email).slice(0, 2).toUpperCase()}
               </div>
               <span className="hidden text-left text-[0.82rem] leading-tight sm:block">
@@ -258,14 +258,14 @@ function HubApp({ profile }: { profile: Profile }) {
                 className={cn(
                   'relative flex min-h-[42px] min-w-0 flex-1 items-center justify-center gap-1.5 rounded-t-xl px-2.5 text-[0.86rem] font-bold transition-all sm:flex-none sm:gap-2 sm:px-5 sm:text-[0.9rem]',
                   active
-                    ? 'border-b-2 border-hub-accent-ink bg-hub-accent-soft text-hub-accent-ink'
+                    ? 'border-b-2 border-hub-on-primary bg-hub-primary text-hub-on-primary'
                     : 'border-b-2 border-transparent text-hub-soft hover:bg-hub-muted hover:text-hub-ink',
                 )}
               >
-                <Icon className={cn('h-4 w-4 shrink-0 transition-transform', active && 'scale-110 text-hub-accent-ink')} />
+                <Icon className={cn('h-4 w-4 shrink-0 transition-transform', active && 'scale-110 text-hub-on-primary')} />
                 <span>{label}</span>
                 {id === 'leads' && leads.unseen > 0 && (
-                  <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-hub-accent-fill px-1.5 text-[0.66rem] font-extrabold leading-5 text-white shadow-sm">
+                  <span className="inline-flex min-w-5 items-center justify-center rounded-full border border-hub-on-accent bg-hub-accent-fill px-1.5 text-[0.66rem] font-extrabold leading-5 text-hub-on-accent shadow-sm">
                     {leads.unseen > 99 ? '99+' : leads.unseen}
                     <span className="sr-only"> new leads</span>
                   </span>
