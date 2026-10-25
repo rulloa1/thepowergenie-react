@@ -1,0 +1,114 @@
+- generic [active] [ref=f2e1]:
+  - link "Skip to content" [ref=f2e2] [cursor=pointer]:
+    - /url: "#main"
+  - status [ref=f2e3]:
+    - paragraph [ref=f2e8]: Loading
+  - navigation "Primary" [ref=f2e11]:
+    - generic [ref=f2e12]:
+      - link "The Power Genie" [ref=f2e13] [cursor=pointer]:
+        - /url: "#hero"
+      - link "Free consult" [ref=f2e18] [cursor=pointer]:
+        - /url: "#cta"
+  - main [ref=f2e19]:
+    - generic [ref=f2e21]:
+      - generic [ref=f2e22]: Solar + battery · with Horace Lawrence
+      - heading [level=1] [ref=f2e23]:
+        - text: The grid goes dark.
+        - emphasis [ref=f2e24]: Your home doesn't.
+      - paragraph [ref=f2e25]: Rooftop solar that makes your power and a home battery that saves it, so a storm outage is just weather outside. $0-down options through Sunrun.
+      - generic [ref=f2e26]:
+        - link "Get my free savings consult" [ref=f2e27] [cursor=pointer]:
+          - /url: "#cta"
+        - link "See how it works" [ref=f2e28] [cursor=pointer]:
+          - /url: "#story"
+      - generic [ref=f2e29]: Scroll to bring the sun out
+    - region [ref=f2e32]:
+      - heading "How a solar and battery home rides out an outage" [level=2] [ref=f2e33]
+      - generic [ref=f2e34]:
+        - 'img "A two-story house through a storm outage: dark and unlit under storm clouds, then the sun breaks through onto rooftop solar panels, a wall-mounted battery charges through golden hour, and at dusk every window is lit." [ref=f2e35]'
+        - generic:
+          - article:
+            - generic: "01"
+            - generic:
+              - heading "The grid goes dark" [level=3]
+          - article:
+            - generic: "02"
+            - generic:
+              - heading "Panels take the sun" [level=3]
+          - article:
+            - generic: "03"
+            - generic:
+              - heading "The battery banks the surplus" [level=3]
+          - article:
+            - generic: "04"
+            - generic:
+              - heading "The lights stay on" [level=3]
+    - region [ref=f2e36]:
+      - generic [ref=f2e37]:
+        - heading "Built for the bad days" [level=2] [ref=f2e38]
+        - paragraph [ref=f2e39]: The system in the story, in numbers.
+      - generic [ref=f2e40]:
+        - generic [ref=f2e41]:
+          - generic [ref=f2e42]: 0 kWh
+          - generic [ref=f2e43]: usable storage per Powerwall
+        - generic [ref=f2e44]:
+          - generic [ref=f2e45]: 0 kW
+          - generic [ref=f2e46]: continuous power output
+        - generic [ref=f2e47]:
+          - generic [ref=f2e48]: $0
+          - generic [ref=f2e49]: down on Sunrun plans
+        - generic [ref=f2e50]:
+          - generic [ref=f2e51]: 0 yr
+          - generic [ref=f2e52]: service agreement
+      - paragraph [ref=f2e53]: Battery figures are Tesla Powerwall 3 specifications. Plan terms vary; your advisor will confirm what applies to your home.
+    - region [ref=f2e54]:
+      - generic [ref=f2e55]:
+        - heading "One advisor. The whole system." [level=2] [ref=f2e56]
+        - paragraph [ref=f2e57]: Horace walks you from your first electric bill to a roof that pays you back.
+      - generic [ref=f2e58]:
+        - generic [ref=f2e59]:
+          - heading "Solar designed for your roof" [level=3] [ref=f2e63]
+          - paragraph [ref=f2e64]: A system sized to your actual usage, from your bills, not a one-size quote.
+        - generic [ref=f2e65]:
+          - heading "Battery backup" [level=3] [ref=f2e69]
+          - paragraph [ref=f2e70]: Tesla Powerwall keeps the essentials running through outages and stores daytime sun for the evening.
+        - generic [ref=f2e71]:
+          - heading "$0-down financing" [level=3] [ref=f2e75]
+          - paragraph [ref=f2e76]: Lease and power-plan options that start with no upfront cost, so savings start on day one.
+        - generic [ref=f2e77]:
+          - heading "Installed and serviced by Sunrun" [level=3] [ref=f2e81]
+          - paragraph [ref=f2e82]: Permits, installation and system monitoring are handled by Sunrun, so there's one company to call for the life of the system.
+        - generic [ref=f2e83]:
+          - heading "A consult on your schedule" [level=3] [ref=f2e87]
+          - paragraph [ref=f2e88]: Pick a time, bring a recent electric bill, and get a savings estimate for your home.
+        - generic [ref=f2e89]:
+          - heading "A real person to call" [level=3] [ref=f2e92]
+          - paragraph [ref=f2e93]: Questions go to Horace directly, not a call center queue.
+    - region [ref=f2e94]:
+      - generic [ref=f2e96]:
+        - generic [ref=f2e97]:
+          - generic [ref=f2e98]: HL
+          - generic [ref=f2e99]:
+            - strong [ref=f2e100]: Horace Lawrence
+            - text: Sunrun Solar Advisor
+        - heading "Be the house with the lights on." [level=2] [ref=f2e101]
+        - paragraph [ref=f2e102]: Book a free savings consult. Bring one electric bill and leave with a solar + battery estimate for your home.
+        - generic [ref=f2e103]:
+          - link "Book my free consult (opens Sunrun's referral page in a new tab)" [ref=f2e104] [cursor=pointer]:
+            - /url: https://sunrun.my.salesforce-sites.com/purl/?srep=/powergenie
+            - text: Book my free consult
+            - generic [ref=f2e105]: (opens Sunrun's referral page in a new tab)
+          - paragraph [ref=f2e106]:
+            - text: "Or call Horace:"
+            - link "510-241-7007" [ref=f2e107] [cursor=pointer]:
+              - /url: tel:+15102417007
+  - contentinfo [ref=f2e108]:
+    - generic [ref=f2e109]: The Power Genie
+    - generic [ref=f2e113]:
+      - link "How it works" [ref=f2e114] [cursor=pointer]:
+        - /url: "#story"
+      - link "What's included" [ref=f2e115] [cursor=pointer]:
+        - /url: "#features"
+      - link "510-241-7007" [ref=f2e116] [cursor=pointer]:
+        - /url: tel:+15102417007
+    - paragraph [ref=f2e117]: © 2026 The Power Genie. Solar referrals in partnership with Sunrun. Sunrun and Tesla Powerwall are trademarks of their respective owners. Video is an illustrative rendering, not a specific installation.

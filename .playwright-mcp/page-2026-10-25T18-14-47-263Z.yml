@@ -1,0 +1,135 @@
+- generic [active] [ref=e1]:
+  - link "Skip to content" [ref=e2] [cursor=pointer]:
+    - /url: "#main"
+  - status [ref=e3]:
+    - paragraph [ref=e9]: Loading
+  - navigation "Primary" [ref=e12]:
+    - generic [ref=e13]:
+      - link "The Power Genie" [ref=e14] [cursor=pointer]:
+        - /url: "#hero"
+      - generic [ref=e18]:
+        - link "How it works" [ref=e19] [cursor=pointer]:
+          - /url: "#story"
+        - link "What's included" [ref=e20] [cursor=pointer]:
+          - /url: "#features"
+        - link "Free consult" [ref=e21] [cursor=pointer]:
+          - /url: "#cta"
+  - main [ref=e22]:
+    - generic [ref=e24]:
+      - generic [ref=e25]: Solar + battery · with Horace Lawrence
+      - heading [level=1] [ref=e26]:
+        - text: The grid goes dark.
+        - emphasis [ref=e27]: Your home doesn't.
+      - paragraph [ref=e28]: Rooftop solar that makes your power and a home battery that saves it, so a storm outage is just weather outside. $0-down options through Sunrun.
+      - generic [ref=e29]:
+        - link "Get my free savings consult" [ref=e30] [cursor=pointer]:
+          - /url: "#cta"
+        - link "See how it works" [ref=e31] [cursor=pointer]:
+          - /url: "#story"
+      - generic [ref=e32]: Scroll to bring the sun out
+    - region [ref=e35]:
+      - heading "How a solar and battery home rides out an outage" [level=2] [ref=e36]
+      - generic [ref=e37]:
+        - 'img "A two-story house through a storm outage: dark and unlit under storm clouds, then the sun breaks through onto rooftop solar panels, a wall-mounted battery charges through golden hour, and at dusk every window is lit." [ref=e38]'
+        - generic:
+          - article:
+            - generic: "01"
+            - generic:
+              - heading "The grid goes dark" [level=3]
+              - paragraph: A storm takes the lines down. Without backup, every window on the block goes black and the fridge starts counting hours.
+              - generic:
+                - text: 0 W
+                - generic: from the grid during an outage
+          - article:
+            - generic: "02"
+            - generic:
+              - heading "Panels take the sun" [level=3]
+              - paragraph: The moment the clouds break, the panels on your roof start producing — power made on your house, not shipped in on a wire.
+              - generic:
+                - text: $0
+                - generic: down to get started
+          - article:
+            - generic: "03"
+            - generic:
+              - heading "The battery banks the surplus" [level=3]
+              - paragraph: Whatever the house doesn't use during the day charges the Tesla Powerwall on the wall, ready for the evening and the next outage.
+              - generic:
+                - text: 13.5 kWh
+                - generic: stored per Powerwall
+          - article:
+            - generic: "04"
+            - generic:
+              - heading "The lights stay on" [level=3]
+              - paragraph: Sun goes down, the grid is still out, and your home runs on what it saved. Lights, Wi-Fi, fridge — on.
+              - generic:
+                - text: 11.5 kW
+                - generic: continuous backup output
+    - region [ref=e39]:
+      - generic [ref=e40]:
+        - heading "Built for the bad days" [level=2] [ref=e41]
+        - paragraph [ref=e42]: The system in the story, in numbers.
+      - generic [ref=e43]:
+        - generic [ref=e44]:
+          - generic [ref=e45]: 0 kWh
+          - generic [ref=e46]: usable storage per Powerwall
+        - generic [ref=e47]:
+          - generic [ref=e48]: 0 kW
+          - generic [ref=e49]: continuous power output
+        - generic [ref=e50]:
+          - generic [ref=e51]: $0
+          - generic [ref=e52]: down on Sunrun plans
+        - generic [ref=e53]:
+          - generic [ref=e54]: 0 yr
+          - generic [ref=e55]: service agreement
+      - paragraph [ref=e56]: Battery figures are Tesla Powerwall 3 specifications. Plan terms vary; your advisor will confirm what applies to your home.
+    - region [ref=e57]:
+      - generic [ref=e58]:
+        - heading "One advisor. The whole system." [level=2] [ref=e59]
+        - paragraph [ref=e60]: Horace walks you from your first electric bill to a roof that pays you back.
+      - generic [ref=e61]:
+        - generic [ref=e62]:
+          - heading "Solar designed for your roof" [level=3] [ref=e66]
+          - paragraph [ref=e67]: A system sized to your actual usage, from your bills, not a one-size quote.
+        - generic [ref=e68]:
+          - heading "Battery backup" [level=3] [ref=e72]
+          - paragraph [ref=e73]: Tesla Powerwall keeps the essentials running through outages and stores daytime sun for the evening.
+        - generic [ref=e74]:
+          - heading "$0-down financing" [level=3] [ref=e78]
+          - paragraph [ref=e79]: Lease and power-plan options that start with no upfront cost, so savings start on day one.
+        - generic [ref=e80]:
+          - heading "Installed and serviced by Sunrun" [level=3] [ref=e84]
+          - paragraph [ref=e85]: Permits, installation and system monitoring are handled by Sunrun, so there's one company to call for the life of the system.
+        - generic [ref=e86]:
+          - heading "A consult on your schedule" [level=3] [ref=e90]
+          - paragraph [ref=e91]: Pick a time, bring a recent electric bill, and get a savings estimate for your home.
+        - generic [ref=e92]:
+          - heading "A real person to call" [level=3] [ref=e95]
+          - paragraph [ref=e96]: Questions go to Horace directly, not a call center queue.
+    - region [ref=e97]:
+      - generic [ref=e99]:
+        - generic [ref=e100]:
+          - generic [ref=e101]: HL
+          - generic [ref=e102]:
+            - strong [ref=e103]: Horace Lawrence
+            - text: Sunrun Solar Advisor
+        - heading "Be the house with the lights on." [level=2] [ref=e104]
+        - paragraph [ref=e105]: Book a free savings consult. Bring one electric bill and leave with a solar + battery estimate for your home.
+        - generic [ref=e106]:
+          - link "Book my free consult (opens Sunrun's referral page in a new tab)" [ref=e107] [cursor=pointer]:
+            - /url: https://sunrun.my.salesforce-sites.com/purl/?srep=/powergenie
+            - text: Book my free consult
+            - generic [ref=e108]: (opens Sunrun's referral page in a new tab)
+          - paragraph [ref=e109]:
+            - text: "Or call Horace:"
+            - link "510-241-7007" [ref=e110] [cursor=pointer]:
+              - /url: tel:+15102417007
+  - contentinfo [ref=e111]:
+    - generic [ref=e112]: The Power Genie
+    - generic [ref=e116]:
+      - link "How it works" [ref=e117] [cursor=pointer]:
+        - /url: "#story"
+      - link "What's included" [ref=e118] [cursor=pointer]:
+        - /url: "#features"
+      - link "510-241-7007" [ref=e119] [cursor=pointer]:
+        - /url: tel:+15102417007
+    - paragraph [ref=e120]: © 2026 The Power Genie. Solar referrals in partnership with Sunrun. Sunrun and Tesla Powerwall are trademarks of their respective owners. Video is an illustrative rendering, not a specific installation.
