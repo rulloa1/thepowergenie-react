@@ -1,0 +1,117 @@
+{
+  "runId": "01M5SQJC1AVRAPWMMQ2S6NKY7M",
+  "caller": "API_KEY#bTNHopYk",
+  "owner": "user_3KnlkukWNMUyGFtgYoSJEJ8TUYh",
+  "provider": "bytedance",
+  "providerName": "ByteDance",
+  "endpoint": "/v1/video/seedance-2.0-fast",
+  "status": "COMPLETED",
+  "input": {
+    "body": {
+      "content": [
+        {
+          "type": "image_url",
+          "image_url": {
+            "url": "https://sfs.monid.ai/NoxEzmND59fL8YJ3ut05V_q44FhtzLkyy1_87NUCc5Vku8MSqVSYn4SEORoUB465jVV_C3SbMSnYE7HAhy7K_n0FR1Bl0FWWTXkrBAka0MyQyXcQRJj5iGo5JkmBUaS3_GA8cFd19Wy3O6YUKNzE_n5nHGV5b4NPChNLde5_AVxFluhbEn-heYycWMtGOvCbOq0?e=1793543436"
+          },
+          "role": "first_frame"
+        },
+        {
+          "type": "text",
+          "text": "Slow cinematic push-in toward dual Tesla Powerwall units with subtle glowing solar energy conduits, gentle sunlight ambience, ultra-smooth architectural video."
+        }
+      ],
+      "resolution": "480p",
+      "duration": 5,
+      "ratio": "16:9",
+      "generate_audio": false
+    }
+  },
+  "providerResponse": {
+    "httpStatus": 200
+  },
+  "price": {
+    "type": "PER_UNIT_MATRIX",
+    "amount": {
+      "value": 5.6,
+      "currency": "USD"
+    },
+    "selectors": [
+      {
+        "label": "Resolution",
+        "key": "resolution",
+        "in": "body"
+      }
+    ],
+    "variants": [
+      {
+        "when": {
+          "resolution": "480p"
+        },
+        "price": {
+          "type": "PER_UNIT",
+          "amount": {
+            "value": 5.6,
+            "currency": "USD"
+          },
+          "per": 1000000,
+          "unit": "token"
+        }
+      },
+      {
+        "when": {
+          "resolution": "720p"
+        },
+        "price": {
+          "type": "PER_UNIT",
+          "amount": {
+            "value": 5.6,
+            "currency": "USD"
+          },
+          "per": 1000000,
+          "unit": "token"
+        }
+      }
+    ]
+  },
+  "cost": {
+    "value": 0.283573,
+    "currency": "USD"
+  },
+  "resultCount": 50638,
+  "billedUnits": 50638,
+  "createdAt": "2026-10-25T14:31:24.705Z",
+  "startedAt": "2026-10-25T14:31:24.850Z",
+  "completedAt": "2026-10-25T14:33:29.060Z",
+  "hints": {
+    "retrieve the response later": "monid runs get -r 01M5SQJC1AVRAPWMMQ2S6NKY7M"
+  },
+  "output": {
+    "id": "cgt-20261025223126-d9glf",
+    "model": "dreamina-seedance-2-0-fast-260128",
+    "status": "succeeded",
+    "content": {
+      "video_url": "https://ark-acg-ap-southeast-1.tos-ap-southeast-1.volces.com/dreamina-seedance-2-0-fast/02179293868789000000000000000000000ffffc0a8bb6ab322c7.mp4?X-Tos-Algorithm=TOS4-HMAC-SHA256&X-Tos-Credential=AKLTYWJkZTExNjA1ZDUyNDc3YzhjNTM5OGIyNjBhNDcyOTQ%2F20261025%2Fap-southeast-1%2Ftos%2Frequest&X-Tos-Date=20261025T143307Z&X-Tos-Expires=86400&X-Tos-Signature=2596edb1ee0066bb7f94668886ae6b7d08984c6f831962572b4471d22d4fc0a9&X-Tos-SignedHeaders=host"
+    },
+    "usage": {
+      "completion_tokens": 50638,
+      "total_tokens": 50638
+    },
+    "created_at": 1792938687,
+    "updated_at": 1792938789,
+    "seed": 46146,
+    "resolution": "480p",
+    "ratio": "16:9",
+    "duration": 5,
+    "framespersecond": 24,
+    "service_tier": "default",
+    "execution_expires_after": 172800,
+    "generate_audio": false,
+    "draft": false,
+    "priority": 0,
+    "output_format": "mp4"
+  },
+  "notes": [
+    "Update available: 0.1.7 → 0.1.8. Run `npm update -g @monid-ai/cli` to update monid-cli. Download the latest version of skill at https://monid.ai/SKILL.md."
+  ]
+}
