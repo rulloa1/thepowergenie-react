@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { UsageMonth } from '../../shared/types';
 import { supabase } from '../lib/supabase';
+import { isManualCreatedBy, isMissingArchiveColumn } from './leadRecord';
 
 export type LeadSource = 'customer' | 'booking';
 
@@ -26,7 +27,17 @@ export type Lead = {
   accountNumber: string | null;
   pastDue: number | null;
   currentCharges: number | null;
+  totalDue: number | null;
   notes: string | null;
+  utility: string | null;
+  stage: string | null;
+  createdBy: string | null;
+  archived: boolean;
+  days: number | null;
+  avgKwhPerDay: number | null;
+  kwhSameMonthLastYear: number | null;
+  billDate: string | null;
+  ratePlan: string | null;
   cancelled: boolean;
   unseen: boolean;
   workflowOption?: 'option_b_ownership' | 'option_a_ppa';
@@ -39,6 +50,8 @@ export type LeadFeed = {
   unseen: number;
   refresh: () => void;
   markSeen: (lead: Lead) => Promise<boolean>;
+  /** False until the archive columns from the latest migration are present. */
+  writesEnabled: boolean;
 };
 
 type CustomerRow = {
@@ -61,6 +74,16 @@ type CustomerRow = {
   rep_puct_certificate: string | null;
   avg_monthly_kwh: number | null;
   usage_history: unknown;
+  utility: string | null;
+  stage: string | null;
+  created_by: string | null;
+  days: number | null;
+  avg_kwh_per_day: number | null;
+  kwh_same_month_last_year: number | null;
+  bill_date: string | null;
+  rate_plan: string | null;
+  archived_at?: string | null;
+  archived_by?: string | null;
 };
 
 type FileRow = {
@@ -100,8 +123,10 @@ type AppointmentRow = {
 
 type SeenRow = { source: string; lead_id: string };
 
-const CUSTOMER_COLUMNS =
-  'id,created_at,customer_name,service_address,phone,email,notes,kwh_this_period,total_due,current_charges,past_due,account_number,appointment_date,esiid,meter_number,tdu,rep_puct_certificate,avg_monthly_kwh,usage_history' as const;
+const CUSTOMER_COLUMNS_BASE =
+  'id,created_at,customer_name,service_address,phone,email,notes,kwh_this_period,total_due,current_charges,past_due,account_number,appointment_date,esiid,meter_number,tdu,rep_puct_certificate,avg_monthly_kwh,usage_history,utility,stage,created_by,days,avg_kwh_per_day,kwh_same_month_last_year,bill_date,rate_plan' as const;
+
+const CUSTOMER_COLUMNS = `${CUSTOMER_COLUMNS_BASE},archived_at,archived_by` as const;
 
 function asNumber(value: unknown): number | null {
   if (typeof value === 'number' && Number.isFinite(value)) return value;
@@ -137,8 +162,17 @@ function noteValue(notes: string | null | undefined, label: string): string | nu
   return null;
 }
 
-function customerSource(notes: string | null): string {
+function customerSource(notes: string | null, createdBy: string | null): string {
+  if (isManualCreatedBy(createdBy)) return 'Manual entry';
   return notes && notes.includes('Website assistant lead') ? 'Website assistant' : 'Customer file';
+}
+
+export function leadsForView(leads: Lead[], view: 'active' | 'archived'): Lead[] {
+  return leads.filter((lead) => (view === 'archived' ? lead.archived : !lead.archived));
+}
+
+export function unseenActiveCount(leads: Lead[]): number {
+  return leads.filter((lead) => lead.unseen && !lead.archived).length;
 }
 
 function text(value: string | null | undefined): string | null {
@@ -146,7 +180,7 @@ function text(value: string | null | undefined): string | null {
   return trimmed || null;
 }
 
-function toLeads(customers: CustomerRow[], files: FileRow[], appointments: AppointmentRow[], seenRows: SeenRow[]): Lead[] {
+export function toLeads(customers: CustomerRow[], files: FileRow[], appointments: AppointmentRow[], seenRows: SeenRow[]): Lead[] {
   const seen = new Set(seenRows.map((row) => `${row.source}:${row.lead_id}`));
   const bills = new Map<string, FileRow>();
   for (const file of files) {
@@ -162,7 +196,7 @@ function toLeads(customers: CustomerRow[], files: FileRow[], appointments: Appoi
     return {
       id: row.id,
       source: 'customer',
-      sourceLabel: customerSource(row.notes),
+      sourceLabel: customerSource(row.notes, text(row.created_by)),
       createdAt: row.created_at,
       name: text(row.customer_name) || 'Unnamed lead',
       phone: text(row.phone) || noteValue(row.notes, 'Phone'),
@@ -181,7 +215,17 @@ function toLeads(customers: CustomerRow[], files: FileRow[], appointments: Appoi
       accountNumber: text(row.account_number),
       pastDue: asNumber(row.past_due),
       currentCharges: current,
+      totalDue: total,
       notes: text(row.notes),
+      utility: text(row.utility),
+      stage: text(row.stage),
+      createdBy: text(row.created_by),
+      archived: Boolean(text(row.archived_at)),
+      days: asNumber(row.days),
+      avgKwhPerDay: asNumber(row.avg_kwh_per_day),
+      kwhSameMonthLastYear: asNumber(row.kwh_same_month_last_year),
+      billDate: text(row.bill_date),
+      ratePlan: text(row.rate_plan),
       cancelled: false,
       unseen: !seen.has(`customer:${row.id}`),
     };
@@ -213,7 +257,17 @@ function toLeads(customers: CustomerRow[], files: FileRow[], appointments: Appoi
       accountNumber: null,
       pastDue: null,
       currentCharges: null,
+      totalDue: null,
       notes: null,
+      utility: null,
+      stage: null,
+      createdBy: null,
+      archived: false,
+      days: null,
+      avgKwhPerDay: null,
+      kwhSameMonthLastYear: null,
+      billDate: null,
+      ratePlan: null,
       cancelled: row.status === 'cancelled',
       unseen: !seen.has(`booking:${row.id}`),
     };
@@ -230,6 +284,7 @@ export function useLeadFeed(userId: string): LeadFeed {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [writesEnabled, setWritesEnabled] = useState(false);
 
   const load = useCallback(async (silent = false) => {
     if (!supabase) {
@@ -237,20 +292,31 @@ export function useLeadFeed(userId: string): LeadFeed {
       return;
     }
     if (!silent) setLoading(true);
-    const [customers, files, appointments, seen] = await Promise.all([
+    const [customerQuery, files, appointments, seen] = await Promise.all([
       supabase.from('powergenie_customers').select(CUSTOMER_COLUMNS).order('created_at', { ascending: false }).limit(300),
       supabase.from('powergenie_files').select('id, customer_id, category, storage_path, file_name, created_at').eq('category', 'light_bill').limit(500),
       supabase.from('hub_appointments').select('*, hub_appointment_files(*)').order('created_at', { ascending: false }).limit(300),
       supabase.from('hub_lead_seen').select('source, lead_id').eq('user_id', userId),
     ]);
-    if (customers.error || files.error || appointments.error || seen.error) {
+    let customerRows: unknown = customerQuery.data;
+    let customerError: { code?: string; message: string } | null = customerQuery.error;
+    let canWrite = true;
+    if (customerError && isMissingArchiveColumn(customerError)) {
+      canWrite = false;
+      const legacy = await supabase.from('powergenie_customers').select(CUSTOMER_COLUMNS_BASE).order('created_at', { ascending: false }).limit(300);
+      customerRows = legacy.data;
+      customerError = legacy.error;
+    }
+    if (customerError || files.error || appointments.error || seen.error) {
+      setWritesEnabled(false);
       setError("Couldn't load leads. Apply the latest database migration, then refresh.");
       if (!silent) setLoading(false);
       return;
     }
     setError(null);
+    setWritesEnabled(canWrite);
     setLeads(toLeads(
-      (customers.data ?? []) as unknown as CustomerRow[],
+      (customerRows ?? []) as unknown as CustomerRow[],
       (files.data ?? []) as unknown as FileRow[],
       (appointments.data ?? []) as unknown as AppointmentRow[],
       (seen.data ?? []) as unknown as SeenRow[],
@@ -303,13 +369,14 @@ export function useLeadFeed(userId: string): LeadFeed {
     return true;
   }, [userId]);
 
-  const unseen = useMemo(() => leads.filter((lead) => lead.unseen).length, [leads]);
+  const unseen = useMemo(() => unseenActiveCount(leads), [leads]);
 
   return {
     leads,
     loading,
     error,
     unseen,
+    writesEnabled,
     refresh: () => {
       void load(false);
     },
