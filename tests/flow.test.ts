@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import { after, before, test } from 'node:test'
 import { handleApi } from '../server/routes'
 import { resetRateLimits } from '../server/rate-limit'
@@ -272,6 +273,121 @@ test('extract accepts EXTRACT_SHARED_SECRET and still accepts the service key', 
   } finally {
     delete process.env.EXTRACT_SHARED_SECRET
   }
+})
+
+function pendingPath(signedUrl: string): string {
+  const marker = '/object/upload/sign/powergenie/'
+  const pathname = new URL(signedUrl).pathname
+  return decodeURIComponent(pathname.slice(pathname.indexOf(marker) + marker.length))
+}
+
+async function storedBytes(path: string): Promise<Buffer> {
+  const response = await fetch(`${mock.url}/storage/v1/object/powergenie/${path}`)
+  assert.equal(response.status, 200)
+  return Buffer.from(await response.arrayBuffer())
+}
+
+test('the assistant reads a HEIC bill and Horace still gets the original file', async () => {
+  const heic = readFileSync(new URL('./fixtures/tiny.heic', import.meta.url))
+  const upload = await api('/api/uploads', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ fileName: 'IMG_2048.HEIC', mimeType: 'image/heic', sizeBytes: heic.length }),
+  }, '203.0.113.80')
+  assert.equal(upload.status, 200, await upload.clone().text())
+  const started = await upload.json() as { signedUrl: string; receipt: string }
+  const path = pendingPath(started.signedUrl)
+  const form = new FormData()
+  form.append('', new Blob([new Uint8Array(heic)], { type: 'image/heic' }), 'IMG_2048.HEIC')
+  assert.equal((await fetch(started.signedUrl, { method: 'PUT', body: form })).status, 200)
+
+  const bill = await api('/api/bill', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ receipt: started.receipt }),
+  }, '203.0.113.81')
+  assert.equal(bill.status, 200, await bill.clone().text())
+  const read = await bill.json() as { fields: { kwhThisPeriod: number }; warning: string | null }
+  assert.equal(read.fields.kwhThisPeriod, 1100)
+  assert.equal(read.warning, null)
+  assert.deepEqual(await storedBytes(path), heic)
+
+  const slotsResponse = await api('/api/slots', {}, '203.0.113.82')
+  const { slots } = await slotsResponse.json() as { slots: Array<{ start: string }> }
+  const slotStart = slots[slots.length - 1]?.start
+  assert.ok(slotStart)
+  const lead = await api('/api/lead', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      clientRequestId: '88888888-8888-4888-8888-888888888888',
+      consent: true,
+      name: 'Pat Example',
+      phone: '7135550188',
+      email: 'pat-heic@example.com',
+      serviceAddress: '10 Pine Street, Houston, TX 77008',
+      utility: 'Entergy Texas',
+      slotStart,
+      receipt: started.receipt,
+      bill: read.fields,
+    }),
+  }, '203.0.113.83')
+  assert.equal(lead.status, 200, await lead.clone().text())
+  const saved = mock.files.find(file => file.mime_type === 'image/heic')
+  assert.ok(saved)
+  assert.equal(saved.size_bytes, heic.length)
+  assert.match(String(saved.file_name), /HEIC/i)
+  assert.deepEqual(await storedBytes(String(saved.storage_path)), heic)
+})
+
+test('the booking extract route reads HEIC and WEBP bills', async () => {
+  const heic = readFileSync(new URL('./fixtures/tiny.heic', import.meta.url))
+  const webp = readFileSync(new URL('./fixtures/tiny.webp', import.meta.url))
+  const uploadKind = async (fileName: string, mimeType: string, bytes: Buffer, ip: string) => {
+    const upload = await api('/api/uploads', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ fileName, mimeType, sizeBytes: bytes.length }),
+    }, ip)
+    assert.equal(upload.status, 200, await upload.clone().text())
+    const started = await upload.json() as { signedUrl: string }
+    const form = new FormData()
+    form.append('', new Blob([new Uint8Array(bytes)], { type: mimeType }), fileName)
+    assert.equal((await fetch(started.signedUrl, { method: 'PUT', body: form })).status, 200)
+    return pendingPath(started.signedUrl)
+  }
+  const extract = (path: string, authorization: string | null, ip: string) => {
+    const headers = new Headers({ 'content-type': 'application/json' })
+    if (authorization) headers.set('authorization', authorization)
+    return api('/api/assistant?route=extract', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ path }),
+    }, ip)
+  }
+
+  const heicPath = await uploadKind('light-bill.heic', 'image/heic', heic, '203.0.113.84')
+  assert.equal((await extract(heicPath, null, '203.0.113.85')).status, 401)
+  const heicRead = await extract(heicPath, 'Bearer sb_secret_test_only', '203.0.113.86')
+  assert.equal(heicRead.status, 200, await heicRead.clone().text())
+  const heicFields = await heicRead.json() as { fields: { kwhThisPeriod: number } }
+  assert.equal(heicFields.fields.kwhThisPeriod, 1100)
+
+  const webpPath = await uploadKind('light-bill.webp', 'image/webp', webp, '203.0.113.87')
+  const webpRead = await extract(webpPath, 'Bearer sb_secret_test_only', '203.0.113.88')
+  assert.equal(webpRead.status, 200, await webpRead.clone().text())
+  const webpFields = await webpRead.json() as { fields: { kwhThisPeriod: number } }
+  assert.equal(webpFields.fields.kwhThisPeriod, 1100)
+
+  const junk = Buffer.alloc(32)
+  junk.write('ftyp', 4, 'ascii')
+  junk.write('heic', 8, 'ascii')
+  const junkPath = await uploadKind('broken.heic', 'image/heic', junk, '203.0.113.89')
+  const junkRead = await extract(junkPath, 'Bearer sb_secret_test_only', '203.0.113.90')
+  assert.equal(junkRead.status, 200, await junkRead.clone().text())
+  const junkFields = await junkRead.json() as { fields: { kwhThisPeriod: number | null }; warning: string | null }
+  assert.equal(junkFields.fields.kwhThisPeriod, null)
+  assert.match(junkFields.warning || '', /could not read/i)
 })
 
 test('cross-origin and oversized bill requests are rejected', async () => {
