@@ -18,8 +18,8 @@ import {
 const config: Config = {
   brand: { name: 'The Power Genie', href: '#top', logo: 'assets/brand/power-genie-lockup.webp' },
   mobileClipsUseDesktopFraming: true,
-  diveScroll: 1.1,
-  connScroll: 0.45,
+  diveScroll: 1.5,
+  connScroll: 1.1,
   hint: 'scroll to explore',
   nav: true,
   atmosphere: true,
