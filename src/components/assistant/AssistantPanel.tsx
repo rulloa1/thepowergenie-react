@@ -308,7 +308,7 @@ export default function AssistantPanel({ frameClass, mode, nonce, onClose }: Pan
           <section className="space-y-3">
             <h3 className="text-lg font-bold">Upload your electric bill</h3>
             <p className="text-sm leading-relaxed text-[#4A5568]">
-              A photo or PDF is enough. Horace uses it for the savings estimate. JPEG, PNG, WEBP, or PDF, up to 10 MB.
+              A photo or PDF is enough. Horace uses it for the savings estimate. JPEG, PNG, WEBP, HEIC, or PDF, up to 10 MB.
             </p>
             <label className={`${primaryClass} w-full cursor-pointer`}>
               Take a photo
@@ -329,7 +329,7 @@ export default function AssistantPanel({ frameClass, mode, nonce, onClose }: Pan
                 data-testid="bill-file"
                 className="sr-only"
                 type="file"
-                accept="image/jpeg,image/png,image/webp,application/pdf,.pdf"
+                accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif,application/pdf,.pdf"
                 onChange={event => {
                   void onFile(event.target.files?.[0])
                   event.target.value = ''
@@ -625,8 +625,19 @@ function textToNum(value: string | null): number | null {
   return Number.isFinite(parsed) ? parsed : null
 }
 
+function isHeifFile(file: File, type: string): boolean {
+  const lower = file.name.toLowerCase()
+  return type === 'image/heic' || type === 'image/heif' || lower.endsWith('.heic') || lower.endsWith('.heif')
+}
+
 async function prepareBillFile(file: File): Promise<File> {
-  const type = file.type || mimeFromName(file.name)
+  const type = (file.type || mimeFromName(file.name)).toLowerCase()
+  // Keep the iPhone original. The server makes a JPEG copy only for reading.
+  if (isHeifFile(file, type)) {
+    if (file.size > MAX_BILL_BYTES) throw new Error('That file is over 10 MB. Try a photo or a smaller PDF.')
+    const media = type === 'image/heif' || file.name.toLowerCase().endsWith('.heif') ? 'image/heif' : 'image/heic'
+    return file.type === media ? file : new File([file], file.name, { type: media })
+  }
   if (file.size > MAX_BILL_BYTES && !type.startsWith('image/')) {
     throw new Error('That file is over 10 MB. Try a photo or a smaller PDF.')
   }
@@ -660,6 +671,8 @@ function mimeFromName(fileName: string): string {
   const lower = fileName.toLowerCase()
   if (lower.endsWith('.png')) return 'image/png'
   if (lower.endsWith('.webp')) return 'image/webp'
+  if (lower.endsWith('.heic')) return 'image/heic'
+  if (lower.endsWith('.heif')) return 'image/heif'
   if (lower.endsWith('.pdf')) return 'application/pdf'
   return 'image/jpeg'
 }
