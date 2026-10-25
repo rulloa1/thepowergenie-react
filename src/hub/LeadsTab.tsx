@@ -41,6 +41,10 @@ import {
   downloadFile,
   generateProposalEmailUrl,
   generateProposalSmsUrl,
+  generateTwoStepReviewEmail,
+  generateTwoStepReviewEmailUrl,
+  generateTwoStepReviewSmsText,
+  generateTwoStepReviewSmsUrl,
   getProposalUrl,
   leadsToCsvString,
   leadsToJsonString,
@@ -137,6 +141,75 @@ function useOptionBWorkflow(lead: Lead): OptionBWorkflow | null {
   }, [lead.id, lead.source]);
 
   return workflow;
+}
+
+function TwoStepOutreachBar({ lead }: { lead: Lead }) {
+  const [copiedType, setCopiedType] = useState<'text' | 'email' | null>(null);
+
+  const handleCopyText = (event: React.MouseEvent) => {
+    event.stopPropagation();
+    const text = generateTwoStepReviewSmsText(lead.name);
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedType('text');
+      setTimeout(() => setCopiedType(null), 2500);
+    });
+  };
+
+  const handleCopyEmail = (event: React.MouseEvent) => {
+    event.stopPropagation();
+    const { body } = generateTwoStepReviewEmail(lead.name);
+    navigator.clipboard.writeText(body).then(() => {
+      setCopiedType('email');
+      setTimeout(() => setCopiedType(null), 2500);
+    });
+  };
+
+  return (
+    <div className="mt-2.5 flex flex-wrap items-center gap-2 rounded-xl border border-[#FFE0CC] bg-[#FFFBF7] p-2.5 text-[0.8rem]">
+      <span className="text-[0.72rem] font-bold uppercase tracking-wider text-[#C2410C]">
+        2-Step Review Request:
+      </span>
+      {lead.phone && (
+        <a
+          href={generateTwoStepReviewSmsUrl(lead)}
+          onClick={(e) => e.stopPropagation()}
+          className="inline-flex items-center gap-1 rounded-md bg-[#FF6B00] px-2.5 py-1 text-[0.74rem] font-bold text-white no-underline shadow-sm hover:bg-[#E65100]"
+          title="Open SMS app with 2-step review request"
+        >
+          <Phone className="h-3 w-3" /> Text 2 Steps
+        </a>
+      )}
+      <button
+        type="button"
+        onClick={handleCopyText}
+        className="inline-flex items-center gap-1 rounded-md border border-[#E3E8EF] bg-white px-2 py-1 text-[0.74rem] font-medium text-[#4A5568] hover:bg-[#F8FAFC]"
+        title="Copy SMS text to clipboard"
+      >
+        {copiedType === 'text' ? <Check className="h-3 w-3 text-[#1E7B34]" /> : <Copy className="h-3 w-3" />}
+        {copiedType === 'text' ? 'Copied Text!' : 'Copy Text'}
+      </button>
+
+      {lead.email && (
+        <a
+          href={generateTwoStepReviewEmailUrl(lead)}
+          onClick={(e) => e.stopPropagation()}
+          className="inline-flex items-center gap-1 rounded-md border border-[#0F2942] bg-[#0F2942] px-2.5 py-1 text-[0.74rem] font-bold text-[#64B5F6] no-underline shadow-sm hover:bg-[#1A3E5E]"
+          title="Open email client with 2-step review request"
+        >
+          <Mail className="h-3 w-3" /> Email 2 Steps
+        </a>
+      )}
+      <button
+        type="button"
+        onClick={handleCopyEmail}
+        className="inline-flex items-center gap-1 rounded-md border border-[#E3E8EF] bg-white px-2 py-1 text-[0.74rem] font-medium text-[#4A5568] hover:bg-[#F8FAFC]"
+        title="Copy email body to clipboard"
+      >
+        {copiedType === 'email' ? <Check className="h-3 w-3 text-[#1E7B34]" /> : <Copy className="h-3 w-3" />}
+        {copiedType === 'email' ? 'Copied Email!' : 'Copy Email'}
+      </button>
+    </div>
+  );
 }
 
 function SunrunOptionBWorkflow({ lead }: { lead: Lead }) {
@@ -645,6 +718,8 @@ export default function LeadsTab({ feed }: { feed: LeadFeed }) {
                     </a>
                   )}
                 </div>
+
+                <TwoStepOutreachBar lead={lead} />
 
                 <dl className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
                   <Fact label="kWh">{formatKwh(lead.kwh)}</Fact>
