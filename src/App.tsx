@@ -36,7 +36,7 @@ const config: Config = {
       eyebrow: 'Texas Solar Generation',
       title: 'Sunlight Into Real Savings',
       body: 'Every second, the Texas sun pours limitless energy onto your roof. Stop paying skyrocketing utility rates and let The Power Genie by Sunrun transform blazing heat into clean home power.',
-      tags: ['Zero-Grid Peak', 'Clean Texas Energy', 'Meter Relief'],
+      tags: ['Zero-Grid Peak', 'Clean Texas Energy', 'Rate Lock Protection'],
       cta: {
         primary: { label: 'Explore Your Solar Options', href: '#quote' },
         secondary: { label: 'Book a free savings consult', href: '#consult' },
