@@ -19,9 +19,16 @@ test('the Vercel SPA rewrite serves /privacy and /terms', () => {
     assert.equal(redirect?.permanent, true, source)
   }
 
-  for (const source of ['/privacy', '/terms']) {
+  for (const [source, destination] of [
+    ['/privacy', '/privacy.html'],
+    ['/privacy/', '/privacy.html'],
+    ['/terms', '/terms.html'],
+    ['/terms/', '/terms.html'],
+  ] as const) {
     const rule = vercel.rewrites.find(item => item.source === source)
-    assert.equal(rule?.destination, '/index.html', source)
+    assert.equal(rule?.destination, destination, source)
+    assert.equal(destination.endsWith('.html'), true, source)
+    assert.equal(destination.includes('/api/'), false, source)
   }
 
   const spa = vercel.rewrites.find(rule => rule.destination === '/index.html' && rule.source.includes('(?!api/'))
@@ -90,12 +97,18 @@ test('the Vercel SPA rewrite serves /privacy and /terms', () => {
   const privacy = readFileSync('src/pages/PrivacyPage.tsx', 'utf8')
   for (const name of [
     'BOOKING_FIELDS_SENTENCE',
+    'COLLECTED_INFORMATION_SENTENCE',
+    'INFORMATION_USE_SENTENCE',
+    'SECURITY_SENTENCE',
+    'SMS_NO_SHARE_SENTENCE',
+    'SMS_OPT_OUT_SENTENCE',
     'SMT_CONSENT_SENTENCE',
     'ASSISTANT_OPENAI_SENTENCE',
     'GOOGLE_CALENDAR_USE',
     'GOOGLE_NOT_SOLD',
     'GOOGLE_LIMITED_USE',
     'DELETION_SENTENCE',
+    'OPERATOR_SENTENCE',
   ]) {
     assert.match(privacy, new RegExp(name))
   }
@@ -103,4 +116,15 @@ test('the Vercel SPA rewrite serves /privacy and /terms', () => {
   assert.match(terms, /BOOKING_REQUEST_SENTENCE/)
   assert.match(terms, /NO_SAVINGS_GUARANTEE/)
   assert.match(terms, /SUNRUN_SEPARATE/)
+  assert.match(terms, /SMS_PROGRAM_NAME/)
+  assert.match(terms, /SMS_PROGRAM_DESCRIPTION/)
+  assert.match(terms, /SMS_FREQUENCY/)
+  assert.match(terms, /SMS_RATES/)
+  assert.match(terms, /SMS_STOP_HELP/)
+  assert.match(terms, /SMS_CARRIER_LIABILITY/)
+  assert.match(terms, /href="\/privacy"/)
+
+  const footer = readFileSync('src/components/LegalFooter.tsx', 'utf8')
+  assert.match(footer, /href="\/privacy">Privacy Policy/)
+  assert.match(footer, /href="\/terms">Terms/)
 })

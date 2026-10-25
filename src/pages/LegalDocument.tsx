@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { focusRing, usePageTitle } from '../components/legalChrome';
-import { CONTACT_EMAIL, EFFECTIVE_DATE, SITE_URL } from '../lib/legal';
+import { CONTACT_EMAIL, CONTACT_PHONE_DISPLAY, CONTACT_PHONE_TEL, EFFECTIVE_DATE, SITE_URL } from '../lib/legal';
 
 const linkClass = `font-semibold text-[#0066CC] no-underline hover:underline ${focusRing}`;
 
@@ -31,15 +31,17 @@ export default function LegalDocument({ title, children }: { title: string; chil
         <p className="m-0 mt-10 text-sm text-[#4A5568]">
           Questions:{' '}
           <a className={linkClass} href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>
+          {' · '}
+          <a className={linkClass} href={`tel:${CONTACT_PHONE_TEL}`}>{CONTACT_PHONE_DISPLAY}</a>
         </p>
       </main>
     </div>
   );
 }
 
-export function LegalSection({ heading, children }: { heading: string; children: ReactNode }) {
+export function LegalSection({ id, heading, children }: { id?: string; heading: string; children: ReactNode }) {
   return (
-    <section>
+    <section id={id}>
       <h2 className="m-0 text-xl font-bold tracking-tight">{heading}</h2>
       <div className="mt-3 grid gap-3 text-[#243044]">{children}</div>
     </section>
