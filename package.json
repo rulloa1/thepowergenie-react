@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "vite --host 0.0.0.0 --port 3000",
-    "build": "tsc -p tsconfig.json && tsc -p tsconfig.server.json && tsc -p api/tsconfig.json && vite build",
+    "build": "tsc -p tsconfig.json && tsc -p tsconfig.server.json && tsc -p api/tsconfig.json && vite build && tsx scripts/prerender-legal.ts",
     "test": "vitest run && tsx --test tests/*.test.ts",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview"
