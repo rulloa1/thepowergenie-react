@@ -69,10 +69,10 @@ function accentInk(accent?: string): string {
  * shortest segment so a third scene cannot enter the mix in either direction.
  */
 function imageFadePx(vh: number, minSpan: number, configured?: number) {
-  const requested = Math.max(1, (configured ?? 0.12) * vh);
-  const crisp = Math.max(1, vh * 0.045);
-  const adjacentOnly = minSpan > 0 ? minSpan * 0.45 : crisp;
-  return Math.min(requested, crisp, adjacentOnly);
+  const requested = Math.max(1, (configured ?? 0.16) * vh);
+  const blend = Math.max(1, vh * 0.12);
+  const adjacentOnly = minSpan > 0 ? minSpan * 0.42 : blend;
+  return Math.min(requested, blend, adjacentOnly);
 }
 
 /**
@@ -199,27 +199,34 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
       if (s.video) syncFrame(s);
       if (!s.ready || !s.video || !s.visible) return;
       
-      if (i === 0 && stateRef.current.idleActive) {
-        if (window.scrollY > 2) {
-          stateRef.current.idleActive = false;
-        } else {
-          const ph = ((performance.now() - stateRef.current.idleStart) / 1000 / (config.idlePeriod || 8)) % 1;
-          s.target = (config.idleRange ?? 0.35) * (0.5 - 0.5 * Math.cos(ph * 2 * Math.PI));
+      if (i === 0) {
+        if (window.scrollY <= 2) {
+          // Live ambient hero state: Earth and Sun are animated live without zooming in and out
+          if (s.video.currentTime >= 0.8) {
+            s.video.currentTime = 0.04;
+          }
+          if (s.video.paused) {
+            s.video.play().catch(() => {});
+          }
           moving = true;
+          return;
+        } else {
+          if (!s.video.paused) {
+            s.video.pause();
+          }
         }
       }
       
-      if (Math.abs((s.cur || 0) - (s.target || 0)) > 0.002) moving = true;
+      const lerp = isMobile ? 0.45 : 0.35;
+      s.cur = (s.cur || 0) + ((s.target || 0) - (s.cur || 0)) * lerp;
+      
+      if (Math.abs((s.cur || 0) - (s.target || 0)) > 0.001) moving = true;
 
-      if (s.video.seeking || s.video.readyState < 1) {
+      if (s.video.seeking || s.video.readyState < 2) {
         moving = true;
         return;
       }
 
-      const handoff = i === 0 && config.idle !== false && Math.abs((s.target || 0) - (s.cur || 0)) > 0.03;
-      const lerp = (isMobile && !handoff) ? 1 : (stateRef.current.idleActive && i === 0 ? 1 : 0.28);
-      s.cur = (s.cur || 0) + ((s.target || 0) - (s.cur || 0)) * lerp;
-      
       const dur = s.video.duration || 1;
       const t = clamp(s.cur, 0, 0.999) * dur;
       
@@ -229,7 +236,7 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
     });
     
     if (moving) wake();
-  }, [isMobile, config.idlePeriod, config.idleRange, config.idle, wake]);
+  }, [isMobile, wake]);
 
   const loadClip = useCallback((s: Segment, preload: 'auto' | 'metadata' = 'metadata') => {
     if (readingMode || s.failed || !s.el) return;
@@ -598,10 +605,10 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
           si: i,
           clip: config.connectors?.[i] || null,
           clipM: config.connectorsMobile?.[i] || null,
-          still: next.still,
-          stillM: next.stillMobile || null,
+          still: s.still,
+          stillM: s.stillMobile || null,
           accent: next.accent,
-          w: config.connScroll ?? 0.9,
+          w: config.connScroll ?? 1.1,
           cur: 0,
           target: 0,
           linger: 0
@@ -650,6 +657,15 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
       s.el?.classList.toggle('is-framed', !!s.frameVisible);
     });
   });
+
+  useEffect(() => {
+    // Preload all video clips as in-memory Blobs so scrolling never stalls or shows static images
+    segmentsRef.current.forEach((s) => {
+      if (s.el && !s.video && !s.loading) {
+        loadClip(s, 'auto');
+      }
+    });
+  }, [segments, loadClip]);
 
   // Event listeners
   useEffect(() => {
@@ -874,6 +890,13 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
               loading="eager"
               className="sw-scene__still absolute inset-0 z-[2] w-full h-full object-cover object-[center_42%] will-change-transform"
             />
+            {s.kind === 'dive' && s.si === 0 && (
+              <div className="sw-sun-live-fx absolute inset-0 pointer-events-none z-[3]">
+                <div className="absolute -top-[12%] left-1/2 -translate-x-1/2 w-[130vw] h-[70vh] rounded-full bg-[radial-gradient(ellipse_at_center,rgba(255,180,50,0.22)_0%,rgba(255,107,0,0.1)_45%,transparent_75%)] animate-[sw-solar-pulse_6s_ease-in-out_infinite]" />
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(255,225,130,0.16)_0%,transparent_65%)] animate-[sw-ray-shimmer_7s_ease-in-out_infinite]" />
+                <div className="absolute left-1/2 bottom-[14%] -translate-x-1/2 w-[min(32vw,320px)] h-[min(32vw,320px)] rounded-full shadow-[0_0_60px_rgba(80,170,255,0.28)] animate-[sw-earth-halo_5s_ease-in-out_infinite] pointer-events-none" />
+              </div>
+            )}
           </div>
         ))}
       </div>
@@ -1001,6 +1024,18 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
           12% { opacity: .5; }
           88% { opacity: .45; }
           100% { opacity: 0; transform: scale(var(--sw-sc)) translate(4vw, -22vh) rotate(210deg); }
+        }
+        @keyframes sw-solar-pulse {
+          0%, 100% { opacity: 0.72; transform: translate(-50%, 0) scale(1); }
+          50% { opacity: 1; transform: translate(-50%, 0) scale(1.04); }
+        }
+        @keyframes sw-ray-shimmer {
+          0%, 100% { opacity: 0.65; }
+          50% { opacity: 0.95; }
+        }
+        @keyframes sw-earth-halo {
+          0%, 100% { opacity: 0.65; transform: translate(-50%, 0) scale(0.98); }
+          50% { opacity: 0.95; transform: translate(-50%, 0) scale(1.02); }
         }
         .sw-scene__still { opacity: 1; }
         .sw-scene.is-framed .sw-scene__still {
