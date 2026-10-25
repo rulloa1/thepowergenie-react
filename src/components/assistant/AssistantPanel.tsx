@@ -53,6 +53,7 @@ export default function AssistantPanel({ frameClass, mode, nonce, onClose }: Pan
   const [windows, setWindows] = useState('')
   const [slots, setSlots] = useState<Slot[]>([])
   const [slotStart, setSlotStart] = useState('')
+  const [activeDay, setActiveDay] = useState('')
   const [consent, setConsent] = useState(false)
   const [confirmation, setConfirmation] = useState<Confirmation | null>(null)
   const phaseRef = useRef(phase)
@@ -240,6 +241,8 @@ export default function AssistantPanel({ frameClass, mode, nonce, onClose }: Pan
 
   const chatting = status === 'submitted' || status === 'streaming'
   const slotGroups = groupSlots(slots)
+  const currentGroup = slotGroups.find(group => group.day === activeDay) ?? slotGroups[0]
+  const chosenSlot = slots.find(slot => slot.start === slotStart)
 
   return (
     <div
@@ -381,60 +384,99 @@ export default function AssistantPanel({ frameClass, mode, nonce, onClose }: Pan
         )}
 
         {phase === 'book' && (
-          <section className="space-y-3">
-            <h3 className="text-lg font-bold">Book a free savings consult</h3>
-            <p className="text-sm leading-relaxed text-[#4A5568]">
-              Horace Lawrence will use this to reach you. Times are in Central Time, weekdays only, one hour each from 9 AM to 8 PM. The last opening starts at 7 PM, with at least one hour’s notice. The{' '}
-              <a className="font-semibold text-[#0066CC]" href="/book">booking page</a>
-              {' '}offers these same times. This savings consult is filed with your bill for Horace.
-            </p>
-            <label className="block text-sm font-semibold">
-              Name
-              <input className={`${fieldClass} mt-1`} value={name} onChange={event => setName(event.target.value)} autoComplete="name" required />
-            </label>
-            <label className="block text-sm font-semibold">
-              Phone
-              <input className={`${fieldClass} mt-1`} value={phone} onChange={event => setPhone(event.target.value)} autoComplete="tel" inputMode="tel" required />
-            </label>
-            <label className="block text-sm font-semibold">
-              Email
-              <input className={`${fieldClass} mt-1`} value={email} onChange={event => setEmail(event.target.value)} autoComplete="email" inputMode="email" required />
-            </label>
-            <label className="block text-sm font-semibold">
-              Service address
-              <input className={`${fieldClass} mt-1`} value={address} onChange={event => setAddress(event.target.value)} autoComplete="street-address" required />
-            </label>
-            <label className="block text-sm font-semibold">
-              Utility
-              <input className={`${fieldClass} mt-1`} value={utility} onChange={event => setUtility(event.target.value)} placeholder="Entergy, CenterPoint…" />
-            </label>
-            <label className="block text-sm font-semibold">
-              Preferred windows <span className="font-normal text-[#4A5568]">(optional)</span>
-              <textarea className={`${fieldClass} mt-1 min-h-20 py-2`} value={windows} onChange={event => setWindows(event.target.value)} placeholder="Weekday mornings" />
-            </label>
-            <fieldset>
-              <legend className="text-sm font-semibold">Pick a time</legend>
-              {slots.length === 0 && !busy && <p className="mt-2 text-sm text-[#4A5568]">No open times in the next two weeks. Call Horace and he’ll find one.</p>}
-              <div className="mt-2 max-h-64 space-y-3 overflow-y-auto pr-1">
-                {slotGroups.map(group => (
-                  <div key={group.day}>
-                    <p className="mb-1 text-xs font-bold uppercase tracking-wide text-[#4A5568]">{group.day}</p>
-                    <div className="flex flex-wrap gap-2">
-                      {group.slots.map(slot => (
+          <section className="@container space-y-5">
+            <div>
+              <h3 className="text-lg font-bold">Book a free savings consult</h3>
+              <p className="mt-1 text-sm leading-relaxed text-[#4A5568]">
+                One hour with Horace Lawrence, weekdays 9 AM–8 PM Central. Same times as the{' '}
+                <a className="font-semibold text-[#0066CC]" href="/book">booking page</a>.
+              </p>
+            </div>
+
+            {/* 1 — Contact */}
+            <div className="space-y-3 rounded-2xl bg-white p-3.5 ring-1 ring-[#1A1A2E]/10">
+              <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#4A5568]">Your details</p>
+              <label className="block text-sm font-semibold">
+                Name
+                <input className={`${fieldClass} mt-1`} value={name} onChange={event => setName(event.target.value)} autoComplete="name" required />
+              </label>
+              <div className="grid gap-3 @sm:grid-cols-2">
+                <label className="block text-sm font-semibold">
+                  Phone
+                  <input className={`${fieldClass} mt-1`} value={phone} onChange={event => setPhone(event.target.value)} autoComplete="tel" inputMode="tel" required />
+                </label>
+                <label className="block text-sm font-semibold">
+                  Email
+                  <input className={`${fieldClass} mt-1`} value={email} onChange={event => setEmail(event.target.value)} autoComplete="email" inputMode="email" required />
+                </label>
+              </div>
+              <label className="block text-sm font-semibold">
+                Service address
+                <input className={`${fieldClass} mt-1`} value={address} onChange={event => setAddress(event.target.value)} autoComplete="street-address" required />
+              </label>
+              <label className="block text-sm font-semibold">
+                Utility <span className="font-normal text-[#4A5568]">(optional)</span>
+                <input className={`${fieldClass} mt-1`} value={utility} onChange={event => setUtility(event.target.value)} placeholder="Entergy, CenterPoint…" />
+              </label>
+            </div>
+
+            {/* 2 — Time: pick a day, then a start time. No nested scroll box. */}
+            <fieldset className="min-w-0 space-y-3 rounded-2xl bg-white p-3.5 ring-1 ring-[#1A1A2E]/10">
+              <legend className="sr-only">Pick a time</legend>
+              <div className="flex items-baseline justify-between gap-2" aria-hidden="true">
+                <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#4A5568]">Pick a time</p>
+                <p className="text-xs text-[#4A5568]">1 hour · Central Time</p>
+              </div>
+              {slots.length === 0 && !busy && (
+                <p className="text-sm text-[#4A5568]">No open times in the next two weeks. Call Horace and he’ll find one.</p>
+              )}
+              {slotGroups.length > 0 && (
+                <>
+                  <div className="-mx-3.5 flex gap-2 overflow-x-auto px-3.5 pb-1 [scrollbar-width:none]" role="group" aria-label="Day">
+                    {slotGroups.map(group => {
+                      const selected = currentGroup?.day === group.day
+                      const [weekday, ...rest] = group.day.split(', ')
+                      const picked = chosenSlot?.day === group.day
+                      return (
                         <button
                           type="button"
-                          key={slot.start}
-                          aria-pressed={slotStart === slot.start}
-                          className={`min-h-10 rounded-full px-3 text-sm font-semibold ${slotStart === slot.start ? 'pg-assistant-primary' : 'bg-white text-[#1A1A2E] ring-1 ring-[#1A1A2E]/15'}`}
-                          onClick={() => setSlotStart(slot.start)}
+                          key={group.day}
+                          aria-pressed={selected}
+                          onClick={() => setActiveDay(group.day)}
+                          className={`relative flex min-w-[64px] shrink-0 flex-col items-center rounded-xl px-2.5 py-2 text-center leading-tight transition ${selected ? 'bg-[#0B2233] text-white' : 'bg-[#F4F6FA] text-[#1A1A2E] hover:bg-[#E8EDF4]'}`}
                         >
-                          {slot.time}
+                          <span className={`text-[0.68rem] font-bold uppercase tracking-wide ${selected ? 'text-[#D9E6F2]' : 'text-[#4A5568]'}`}>{weekday}</span>
+                          <span className="text-sm font-bold">{rest.join(', ') || group.day}</span>
+                          {picked && <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-[var(--pg-assistant,#FF6B00)]" aria-hidden="true" />}
                         </button>
-                      ))}
-                    </div>
+                      )
+                    })}
                   </div>
-                ))}
-              </div>
+                  {currentGroup && (
+                    <div className="grid grid-cols-2 gap-2 @xs:grid-cols-3" role="group" aria-label={currentGroup.day}>
+                      {currentGroup.slots.map(slot => {
+                        const selected = slotStart === slot.start
+                        return (
+                          <button
+                            type="button"
+                            key={slot.start}
+                            aria-pressed={selected}
+                            aria-label={slot.label || `${currentGroup.day}, ${slot.time}`}
+                            className={`min-h-11 rounded-xl text-sm font-semibold transition ${selected ? 'pg-assistant-primary shadow-sm' : 'bg-white text-[#1A1A2E] ring-1 ring-[#1A1A2E]/15 hover:ring-[#1A1A2E]/35'}`}
+                            onClick={() => setSlotStart(slot.start)}
+                          >
+                            {shortTime(slot.time)}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )}
+                </>
+              )}
+              <label className="block border-t border-[#1A1A2E]/10 pt-3 text-sm font-semibold">
+                None of these work? <span className="font-normal text-[#4A5568]">(optional)</span>
+                <input className={`${fieldClass} mt-1`} value={windows} onChange={event => setWindows(event.target.value)} placeholder="e.g. weekday mornings" />
+              </label>
             </fieldset>
           </section>
         )}
@@ -531,11 +573,17 @@ export default function AssistantPanel({ frameClass, mode, nonce, onClose }: Pan
       )}
 
       {phase === 'book' && (
-        <footer className="space-y-3 border-t border-[#1A1A2E]/10 p-3 pb-[max(12px,env(safe-area-inset-bottom))]">
-          <label className="flex items-start gap-3 text-sm leading-snug">
+        <footer className="space-y-2.5 border-t border-[#1A1A2E]/10 bg-white px-4 pt-3 pb-[max(12px,env(safe-area-inset-bottom))] shadow-[0_-8px_20px_rgba(26,26,46,0.06)]">
+          <p className="flex items-center justify-between gap-2 text-sm" aria-live="polite">
+            <span className="text-[#4A5568]">Your time</span>
+            <span className={`truncate font-semibold ${chosenSlot ? 'text-[#1A1A2E]' : 'text-[#64748b]'}`}>
+              {chosenSlot ? `${shortDay(chosenSlot.day)} · ${shortTime(chosenSlot.time)} CT` : 'Not picked yet'}
+            </span>
+          </p>
+          <label className="flex items-start gap-2.5 text-xs leading-relaxed text-[#4A5568]">
             <input
               data-testid="tcpa-consent"
-              className="mt-1 h-5 w-5 shrink-0"
+              className="mt-0.5 h-4 w-4 shrink-0"
               type="checkbox"
               checked={consent}
               onChange={event => setConsent(event.target.checked)}
@@ -610,6 +658,16 @@ function Row({ label, value }: { label: string; value: string }) {
       <dd className="text-right font-semibold">{value}</dd>
     </div>
   )
+}
+
+/** "9:00 AM–10:00 AM CT" → "9:00 AM". Every slot is one hour, so the start says it all. */
+function shortTime(time: string): string {
+  return time.split(/\s*[–-]\s*/)[0].replace(/\s*C[SD]?T$/i, '').trim() || time
+}
+
+/** "Mon, Oct 26" stays as is; anything longer keeps its first two parts. */
+function shortDay(day: string): string {
+  return day.split(', ').slice(0, 2).join(', ')
 }
 
 function groupSlots(slots: Slot[]): Array<{ day: string; slots: Slot[] }> {

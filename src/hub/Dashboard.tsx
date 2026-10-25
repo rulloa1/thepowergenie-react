@@ -3,7 +3,7 @@ import type { Session } from '@supabase/supabase-js';
 import { CalendarDays, FolderOpen, Inbox, LogOut, MessageCircle } from 'lucide-react';
 import { useLeadFeed } from './useLeadFeed';
 import { arrivalAuthType, supabase } from '../lib/supabase';
-import { BrandMark, Button, Notice, NotConfigured, Spinner, cn, inputClass, labelClass } from './ui';
+import { BrandMark, Button, Notice, NotConfigured, Spinner, cn } from './ui';
 
 const ChatTab = lazy(() => import('./ChatTab'));
 const FilesTab = lazy(() => import('./FilesTab'));
@@ -105,15 +105,60 @@ function FullPageSpinner() {
   );
 }
 
+/* Sign-in chrome uses the public site's palette: navy #0B2233, orange #FF6B00,
+   ink #1A1A2E on a light field. The form side sits in the .book-page light scope
+   so the shared Notice/Button tokens stay readable on white. */
+const authInputClass =
+  'w-full rounded-xl border border-[#1A1A2E]/15 bg-white px-3.5 py-3 text-base text-[#1A1A2E] outline-none transition placeholder:text-[#64748b] hover:border-[#1A1A2E]/35 focus:border-[#FF6B00] focus:ring-4 focus:ring-[#FF6B00]/20';
+const authLabelClass = 'mb-1.5 block text-[0.84rem] font-semibold text-[#1A1A2E]';
+const authPrimaryClass =
+  'w-full rounded-full border-0 bg-[#FF6B00] text-white shadow-[0_10px_24px_rgba(255,107,0,0.35)] hover:bg-[#F25F00] hover:shadow-[0_12px_28px_rgba(255,107,0,0.42)] focus-visible:ring-[#FF6B00] focus-visible:ring-offset-white disabled:bg-[#FF6B00]/60 disabled:text-white';
+
 function AuthCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="hub-canvas flex min-h-screen items-start justify-center px-4 py-16 sm:items-center">
-      <div className="w-full max-w-sm rounded-3xl border border-white/10 bg-[#0C1E32]/95 p-7 shadow-[0_20px_50px_rgba(0,0,0,0.6)] backdrop-blur-2xl">
-        <BrandMark className="mb-6 shadow-md" />
-        <p className="m-0 text-[0.74rem] font-semibold uppercase tracking-[0.14em] text-[#FF8A2B]">Referral Hub</p>
-        <h1 className="m-0 mt-1 text-2xl font-bold tracking-tight text-white">{title}</h1>
-        <div className="mt-6">{children}</div>
-      </div>
+    <div className="flex min-h-[100dvh] flex-col bg-[#F4F6FA] font-[family:var(--sw-font-body)] lg:flex-row">
+      {/* Brand side — same navy, still and orange rule as the public site */}
+      <aside className="relative isolate flex shrink-0 flex-col overflow-hidden bg-[#0B2233] px-6 py-5 text-white shadow-[inset_0_-3px_0_#FF6B00] sm:px-10 lg:w-[46%] lg:px-14 lg:py-12 lg:shadow-[inset_-3px_0_0_#FF6B00]">
+        <img
+          src="/assets/stills/06-cta.webp"
+          alt=""
+          aria-hidden="true"
+          className="absolute inset-0 -z-10 hidden h-full w-full object-cover opacity-40 lg:block"
+        />
+        <div aria-hidden="true" className="absolute inset-0 -z-10 hidden bg-gradient-to-t from-[#0B2233] via-[#0B2233]/80 to-[#0B2233]/55 lg:block" />
+
+        <a href="/" className="flex items-center gap-3 text-white no-underline" title="The Power Genie home">
+          <img src="/assets/brand/power-genie-icon.png" alt="" className="h-10 w-10 rounded-xl bg-white/10 object-cover lg:h-12 lg:w-12" />
+          <span className="leading-tight">
+            <span className="block text-base font-bold lg:text-lg">The Power Genie</span>
+            <span className="block text-[0.7rem] font-bold uppercase tracking-[0.16em] text-[#FF8A2B]">Referral Hub</span>
+          </span>
+        </a>
+
+        <div className="mt-auto hidden max-w-lg pt-16 lg:block">
+          <h2 className="m-0 text-[clamp(2.25rem,3.6vw,3.4rem)] font-bold leading-[1.05] tracking-tight text-balance">
+            The bill, the savings, and the roof. <span className="text-[#FF8A2B]">One desk.</span>
+          </h2>
+          <p className="mt-5 max-w-md text-[1.02rem] leading-relaxed text-[#D9E6F2]">
+            Rory logs the light bill. Horace runs the numbers and the panel layout. Both see the same customer, the same files, and the same chat.
+          </p>
+        </div>
+
+        <p className="mt-auto hidden pt-12 text-[0.8rem] text-[#8EAEC7] lg:block">The Power Genie by Sunrun · Houston</p>
+      </aside>
+
+      {/* Form side */}
+      <main className="book-page flex flex-1 items-start justify-center px-5 py-10 sm:items-center sm:px-8 lg:py-12">
+        <div className="w-full max-w-[400px]">
+          <img
+            src="/assets/brand/power-genie-lockup.webp"
+            alt="The Power Genie Referral Hub"
+            className="mb-8 hidden h-auto w-60 rounded-2xl bg-[#0B2233] px-5 py-3 shadow-[inset_0_-3px_0_#FF6B00,0_10px_30px_rgba(11,34,51,0.18)] lg:block"
+          />
+          <h1 className="m-0 text-[2rem] font-bold leading-tight tracking-tight text-[#1A1A2E]">{title}</h1>
+          <div className="mt-6">{children}</div>
+        </div>
+      </main>
     </div>
   );
 }
@@ -124,6 +169,22 @@ function SignIn({ onExploreDemo }: { onExploreDemo?: () => void }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [resetSent, setResetSent] = useState(false);
+  const [linkSent, setLinkSent] = useState(false);
+
+  const emailLink = async () => {
+    if (!email.trim()) return setError('Enter your email first, then tap “Email me a sign-in link”.');
+    setError(null);
+    setResetSent(false);
+    setBusy(true);
+    const { error } = await supabase!.auth.signInWithOtp({
+      email: email.trim(),
+      options: { shouldCreateUser: false, emailRedirectTo: `${window.location.origin}/dashboard` },
+    });
+    setBusy(false);
+    // Same message either way, so the form never reveals who has access.
+    if (error && !/not allowed|signups not allowed|user not found/i.test(error.message)) return setError(error.message);
+    setLinkSent(true);
+  };
 
   const signIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -137,6 +198,7 @@ function SignIn({ onExploreDemo }: { onExploreDemo?: () => void }) {
   const reset = async () => {
     if (!email.trim()) return setError('Enter your email first, then tap “Forgot password”.');
     setError(null);
+    setLinkSent(false);
     await supabase!.auth.resetPasswordForEmail(email.trim(), { redirectTo: `${window.location.origin}/dashboard` });
     setResetSent(true);
   };
@@ -145,26 +207,42 @@ function SignIn({ onExploreDemo }: { onExploreDemo?: () => void }) {
     <AuthCard title="Sign in">
       <form onSubmit={signIn} className="grid gap-4">
         <div>
-          <label htmlFor="s-email" className={labelClass}>Email</label>
-          <input id="s-email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} className={inputClass} />
+          <label htmlFor="s-email" className={authLabelClass}>Email</label>
+          <input id="s-email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} className={authInputClass} />
         </div>
         <div>
-          <label htmlFor="s-pass" className={labelClass}>Password</label>
-          <input id="s-pass" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} className={inputClass} />
+          <div className="mb-1.5 flex items-baseline justify-between gap-3">
+            <label htmlFor="s-pass" className={cn(authLabelClass, 'mb-0')}>Password</label>
+            <button type="button" onClick={reset} className="text-[0.82rem] font-semibold text-[#0066CC] hover:underline">
+              Forgot password?
+            </button>
+          </div>
+          <input id="s-pass" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} className={authInputClass} />
         </div>
         {error && <Notice tone="error">{error}</Notice>}
         {resetSent && <Notice tone="success">If that email has access, a reset link is on its way.</Notice>}
-        <Button type="submit" disabled={busy} className="w-full">
+        {linkSent && <Notice tone="success">If that email has access, a sign-in link is on its way.</Notice>}
+        <Button type="submit" disabled={busy} className={cn(authPrimaryClass, 'mt-1 min-h-[52px] text-base')}>
           {busy ? <Spinner className="h-4 w-4" /> : 'Sign in'}
         </Button>
-        <Button type="button" variant="quiet" onClick={reset} className="justify-self-center">
-          Forgot password?
-        </Button>
-        <div className="pt-2 border-t border-hub-line flex flex-col items-center gap-2">
-          <p className="m-0 text-center text-[0.78rem] text-hub-soft">
-            Production access is by invitation only.
-          </p>
+
+        <div className="flex items-center gap-3 text-[0.78rem] font-semibold uppercase tracking-[0.12em] text-[#64748b]" aria-hidden="true">
+          <span className="h-px flex-1 bg-[#1A1A2E]/10" />
+          or
+          <span className="h-px flex-1 bg-[#1A1A2E]/10" />
         </div>
+        <button
+          type="button"
+          onClick={emailLink}
+          disabled={busy}
+          className="inline-flex min-h-[48px] w-full items-center justify-center rounded-full border border-[#1A1A2E]/15 bg-white px-5 text-[0.95rem] font-semibold text-[#1A1A2E] transition hover:border-[#1A1A2E]/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00] focus-visible:ring-offset-2 disabled:opacity-60"
+        >
+          Email me a sign-in link
+        </button>
+
+        <p className="m-0 mt-2 text-center text-[0.8rem] text-[#4A5568]">
+          Access is by invitation. Need in? Ask Horace or Rory.
+        </p>
       </form>
     </AuthCard>
   );
@@ -192,15 +270,15 @@ function SetPassword({ onDone }: { onDone: () => void }) {
     <AuthCard title="Set your password">
       <form onSubmit={save} className="grid gap-4">
         <div>
-          <label htmlFor="p1" className={labelClass}>New password</label>
-          <input id="p1" type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} className={inputClass} />
+          <label htmlFor="p1" className={authLabelClass}>New password</label>
+          <input id="p1" type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} className={authInputClass} />
         </div>
         <div>
-          <label htmlFor="p2" className={labelClass}>Confirm password</label>
-          <input id="p2" type="password" autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} className={inputClass} />
+          <label htmlFor="p2" className={authLabelClass}>Confirm password</label>
+          <input id="p2" type="password" autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} className={authInputClass} />
         </div>
         {error && <Notice tone="error">{error}</Notice>}
-        <Button type="submit" disabled={busy} className="w-full">
+        <Button type="submit" disabled={busy} className={cn(authPrimaryClass, 'min-h-[52px] text-base')}>
           {busy ? <Spinner className="h-4 w-4" /> : 'Save and continue'}
         </Button>
       </form>
@@ -211,10 +289,10 @@ function SetPassword({ onDone }: { onDone: () => void }) {
 function NotInvited({ email }: { email: string }) {
   return (
     <AuthCard title="No access yet">
-      <p className="m-0 text-hub-soft">
-        <span className="font-semibold text-hub-ink">{email}</span> isn't on the Referral Hub. Ask Horace or Rory for an invite.
+      <p className="m-0 text-[#4A5568]">
+        <span className="font-semibold text-[#1A1A2E]">{email}</span> isn't on the Referral Hub. Ask Horace or Rory for an invite.
       </p>
-      <Button variant="ghost" className="mt-6 w-full" onClick={() => supabase!.auth.signOut()}>
+      <Button variant="ghost" className="mt-6 w-full rounded-full" onClick={() => supabase!.auth.signOut()}>
         Sign out
       </Button>
     </AuthCard>
