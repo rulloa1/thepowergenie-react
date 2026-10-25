@@ -1,6 +1,6 @@
 import React, { lazy, Suspense, useEffect, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
-import { CalendarDays, FolderOpen, Inbox, LogOut, MessageCircle } from 'lucide-react';
+import { CalendarDays, FolderOpen, Inbox, LogOut, MessageCircle, Sparkles } from 'lucide-react';
 import { useLeadFeed } from './useLeadFeed';
 import { arrivalAuthType, supabase } from '../lib/supabase';
 import { BrandMark, Button, Notice, NotConfigured, Spinner, cn } from './ui';
@@ -325,7 +325,7 @@ function HubApp({
         <div className="sticky top-0 z-40 bg-gradient-to-r from-[#FF6B00]/25 via-[#FF8A2B]/20 to-[#FF6B00]/25 border-b border-[#FF6B00]/40 px-4 py-2 text-center text-xs sm:text-sm text-white backdrop-blur-xl flex flex-wrap items-center justify-center gap-2 shadow-lg shadow-black/40">
           <span className="inline-flex items-center gap-1.5 font-bold text-[#FF8A2B]">
             <span className="h-2 w-2 rounded-full bg-[#FF6B00] animate-pulse" />
-            ✨ Demo Mode:
+            <Sparkles className="h-3.5 w-3.5" /> Demo Mode:
           </span>
           <span className="text-[#E0ECF6]">Viewing live preview of Horace Lawrence's Sunrun Partner Workspace. Interactive leads, AI advisor, files, and scheduling tools.</span>
           <button onClick={onExitDemo} className="ml-2 rounded-lg bg-[#FF6B00]/20 border border-[#FF6B00]/40 px-2.5 py-0.5 text-xs font-bold text-[#FF8A2B] hover:bg-[#FF6B00]/30 hover:text-white transition cursor-pointer">

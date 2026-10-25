@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useChat } from '@ai-sdk/react'
 import { DefaultChatTransport } from 'ai'
-import { CalendarCheck, Loader2, Upload, X } from 'lucide-react'
+import { CalendarCheck, Check, Loader2, Upload, X } from 'lucide-react'
 import type { AssistantMode } from '../../lib/openAssistant'
 import { lockPageScroll } from '../../lib/scrollLock'
 import { trackInfoPageVisit } from '../../lib/visitTrack'
@@ -483,8 +483,8 @@ export default function AssistantPanel({ frameClass, mode, nonce, onClose }: Pan
 
         {phase === 'done' && confirmation && (
           <section className="space-y-3" data-testid="booking-confirmation">
-            <div className="pg-assistant-primary mx-auto flex h-14 w-14 items-center justify-center rounded-full text-2xl" aria-hidden="true">
-              ✓
+            <div className="pg-assistant-primary mx-auto flex h-14 w-14 items-center justify-center rounded-full text-white shadow-lg" aria-hidden="true">
+              <Check className="h-7 w-7 stroke-[2.5]" />
             </div>
             <h3 className="text-center text-xl font-bold">Your consult is booked</h3>
             <p className="text-center text-sm leading-relaxed text-[#4A5568]">

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   Shield,
+  ShieldCheck,
   Zap,
   Battery,
   Users,
@@ -23,7 +24,15 @@ import {
   CheckCircle2,
   Sparkles,
   Sliders,
-  CheckCircle
+  CheckCircle,
+  CloudLightning,
+  Snowflake,
+  Wifi,
+  Lightbulb,
+  Wind,
+  Utensils,
+  Car,
+  MessageSquare
 } from 'lucide-react';
 import { BrandMark } from '../hub/ui';
 import { lockPageScroll } from '../lib/scrollLock';
@@ -46,7 +55,7 @@ interface ApplianceLoad {
   name: string;
   kw: number;
   essential: boolean;
-  icon: string;
+  icon: React.ReactNode;
   desc: string;
 }
 
@@ -87,12 +96,12 @@ const INITIAL_REFERRALS: ReferralRecord[] = [
 ];
 
 const DEFAULT_APPLIANCES: ApplianceLoad[] = [
-  { id: 'fridge', name: 'Refrigerator & Deep Freezer', kw: 0.35, essential: true, icon: '❄️', desc: 'Critical food preservation & cooling' },
-  { id: 'wifi', name: 'Wi-Fi 6 Router & Security Hub', kw: 0.15, essential: true, icon: '📡', desc: 'Camera feeds, smart locks, work connection' },
-  { id: 'lights', name: 'LED Interior Lighting & Outlets', kw: 0.25, essential: true, icon: '💡', desc: 'Living areas, bedrooms, device chargers' },
-  { id: 'ac', name: 'Central Inverter Heat Pump / A/C', kw: 2.80, essential: false, icon: '🌀', desc: 'Whole-home climate comfort' },
-  { id: 'kitchen', name: 'Microwave & Induction Cooking', kw: 1.40, essential: false, icon: '🍳', desc: 'Emergency meal preparation' },
-  { id: 'ev', name: 'Tesla / EV Level 2 Charging', kw: 5.50, essential: false, icon: '🚗', desc: 'High-draw home vehicle replenishment' },
+  { id: 'fridge', name: 'Refrigerator & Deep Freezer', kw: 0.35, essential: true, icon: <Snowflake className="h-4 w-4 text-cyan-400" />, desc: 'Critical food preservation & cooling' },
+  { id: 'wifi', name: 'Wi-Fi 6 Router & Security Hub', kw: 0.15, essential: true, icon: <Wifi className="h-4 w-4 text-indigo-400" />, desc: 'Camera feeds, smart locks, work connection' },
+  { id: 'lights', name: 'LED Interior Lighting & Outlets', kw: 0.25, essential: true, icon: <Lightbulb className="h-4 w-4 text-amber-300" />, desc: 'Living areas, bedrooms, device chargers' },
+  { id: 'ac', name: 'Central Inverter Heat Pump / A/C', kw: 2.80, essential: false, icon: <Wind className="h-4 w-4 text-blue-400" />, desc: 'Whole-home climate comfort' },
+  { id: 'kitchen', name: 'Microwave & Induction Cooking', kw: 1.40, essential: false, icon: <Utensils className="h-4 w-4 text-orange-400" />, desc: 'Emergency meal preparation' },
+  { id: 'ev', name: 'Tesla / EV Level 2 Charging', kw: 5.50, essential: false, icon: <Car className="h-4 w-4 text-emerald-400" />, desc: 'High-draw home vehicle replenishment' },
 ];
 
 export default function HomeownerPortalPage() {
@@ -258,7 +267,7 @@ export default function HomeownerPortalPage() {
 
       setFormFeedback({
         type: 'success',
-        message: `🎉 Referral for ${refName.trim()} received! $${rewardTier.toLocaleString()} reward locked in. Horace Lawrence will reach out today!`,
+        message: `Referral for ${refName.trim()} received! $${rewardTier.toLocaleString()} reward locked in. Horace Lawrence will reach out today!`,
       });
 
       // Clear fields
@@ -314,8 +323,16 @@ export default function HomeownerPortalPage() {
           <div>
             <div className="flex items-center gap-2">
               <span className={`inline-flex h-2.5 w-2.5 rounded-full ${isOutageSimulated ? 'bg-[#FF6B00] animate-ping' : 'bg-[#4CAF50] animate-pulse'}`} />
-              <p className={`m-0 text-xs font-bold uppercase tracking-[0.14em] ${isOutageSimulated ? 'text-[#FF8A2B]' : 'text-[#4CAF50]'}`}>
-                {isOutageSimulated ? '⚡ Microgrid Island Mode Engaged (Protected)' : '● Tesla Energy Firewall Online & Resilient'}
+              <p className={`m-0 text-xs font-bold uppercase tracking-[0.14em] flex items-center gap-1.5 ${isOutageSimulated ? 'text-[#FF8A2B]' : 'text-[#4CAF50]'}`}>
+                {isOutageSimulated ? (
+                  <>
+                    <Zap className="h-3.5 w-3.5 text-[#FF8A2B]" /> Microgrid Island Mode Engaged (Protected)
+                  </>
+                ) : (
+                  <>
+                    <ShieldCheck className="h-3.5 w-3.5 text-[#4CAF50]" /> Tesla Energy Firewall Online & Resilient
+                  </>
+                )}
               </p>
             </div>
             <h1 className="m-0 mt-1.5 text-2xl sm:text-3xl font-black tracking-tight text-white">
@@ -440,10 +457,18 @@ export default function HomeownerPortalPage() {
               <div className="rounded-2xl border border-[#1B324B] bg-gradient-to-b from-[#0C1E32] to-[#081726] p-5 shadow-xl">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold uppercase tracking-wider text-[#7E98B0]">State of Charge</span>
-                  <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${
+                  <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold flex items-center gap-1 ${
                     isOutageSimulated ? 'bg-[#FF6B00]/20 text-[#FF9E4A]' : 'bg-[#4CAF50]/15 text-[#4CAF50]'
                   }`}>
-                    {isOutageSimulated ? '⚡ Discharging (Island)' : 'Optimal Charging'}
+                    {isOutageSimulated ? (
+                      <>
+                        <Zap className="h-3 w-3" /> Discharging (Island)
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="h-3 w-3" /> Optimal Charging
+                      </>
+                    )}
                   </span>
                 </div>
 
@@ -546,8 +571,16 @@ export default function HomeownerPortalPage() {
                       <p className={`m-0 text-lg font-bold ${isOutageSimulated ? 'text-[#FF6B00]' : 'text-[#4CAF50]'}`}>
                         {isOutageSimulated ? `-${batteryFlowKw} kW` : `+${batteryFlowKw} kW`}
                       </p>
-                      <span className={`text-[10px] ${isOutageSimulated ? 'text-[#FF8A2B] font-semibold' : 'text-[#4CAF50]'}`}>
-                        {isOutageSimulated ? '⚡ Discharging to Home' : '● Storing Solar'}
+                      <span className={`text-[10px] flex items-center justify-center gap-1 ${isOutageSimulated ? 'text-[#FF8A2B] font-semibold' : 'text-[#4CAF50]'}`}>
+                        {isOutageSimulated ? (
+                          <>
+                            <Zap className="h-2.5 w-2.5 text-[#FF8A2B]" /> Discharging to Home
+                          </>
+                        ) : (
+                          <>
+                            <span className="h-1.5 w-1.5 rounded-full bg-[#4CAF50]" /> Storing Solar
+                          </>
+                        )}
                       </span>
                     </div>
 
@@ -568,8 +601,16 @@ export default function HomeownerPortalPage() {
                       <p className={`m-0 text-lg font-bold ${isOutageSimulated ? 'text-red-400 font-mono' : 'text-[#81C784]'}`}>
                         {isOutageSimulated ? '0.0 kW' : '+1.2 kW'}
                       </p>
-                      <span className={`text-[10px] ${isOutageSimulated ? 'text-red-400 font-bold' : 'text-[#81C784]'}`}>
-                        {isOutageSimulated ? '⚡ CONTACTOR OPEN' : '● Exporting Credits'}
+                      <span className={`text-[10px] flex items-center justify-center gap-1 ${isOutageSimulated ? 'text-red-400 font-bold' : 'text-[#81C784]'}`}>
+                        {isOutageSimulated ? (
+                          <>
+                            <AlertTriangle className="h-2.5 w-2.5 text-red-400" /> CONTACTOR OPEN
+                          </>
+                        ) : (
+                          <>
+                            <span className="h-1.5 w-1.5 rounded-full bg-[#81C784]" /> Exporting Credits
+                          </>
+                        )}
                       </span>
                     </div>
                   </div>
@@ -588,13 +629,21 @@ export default function HomeownerPortalPage() {
                   </div>
                   <button
                     onClick={() => setIsOutageSimulated(!isOutageSimulated)}
-                    className={`shrink-0 rounded-xl px-4 py-2.5 text-xs font-bold uppercase tracking-wider transition cursor-pointer ${
+                    className={`shrink-0 rounded-xl px-4 py-2.5 text-xs font-bold uppercase tracking-wider transition cursor-pointer flex items-center gap-1.5 ${
                       isOutageSimulated
                         ? 'bg-[#4CAF50] text-white hover:bg-[#43A047] shadow-lg shadow-[#4CAF50]/30'
                         : 'bg-gradient-to-r from-[#FF6B00] to-[#E65100] text-white hover:brightness-110 shadow-lg shadow-[#FF6B00]/30'
                     }`}
                   >
-                    {isOutageSimulated ? '✓ Reconnect Utility Grid' : '⚡ Simulate Grid Outage'}
+                    {isOutageSimulated ? (
+                      <>
+                        <Check className="h-3.5 w-3.5" /> Reconnect Utility Grid
+                      </>
+                    ) : (
+                      <>
+                        <Zap className="h-3.5 w-3.5" /> Simulate Grid Outage
+                      </>
+                    )}
                   </button>
                 </div>
               </div>
@@ -632,7 +681,7 @@ export default function HomeownerPortalPage() {
                       }`}
                     >
                       <div className="flex items-start gap-3">
-                        <span className="text-xl shrink-0">{app.icon}</span>
+                        <span className="shrink-0 flex items-center justify-center h-8 w-8 rounded-lg bg-white/5 border border-white/10 mt-0.5">{app.icon}</span>
                         <div>
                           <div className="flex items-center gap-2">
                             <strong className="text-xs sm:text-sm font-bold text-white">{app.name}</strong>
@@ -651,7 +700,7 @@ export default function HomeownerPortalPage() {
                       <span className={`h-5 w-5 shrink-0 rounded-full flex items-center justify-center text-xs font-bold ${
                         isActive ? 'bg-[#4CAF50] text-white' : 'border border-[#38597E] text-transparent'
                       }`}>
-                        ✓
+                        {isActive ? <Check className="h-3 w-3 stroke-[3]" /> : null}
                       </span>
                     </button>
                   );
@@ -691,7 +740,9 @@ export default function HomeownerPortalPage() {
                 </div>
 
                 <div className="rounded-xl bg-[#081827] p-3 text-xs text-[#8BA4BD] space-y-1">
-                  <p className="m-0 font-semibold text-white">🌪️ Tesla Storm Watch: ENABLED</p>
+                  <p className="m-0 font-semibold text-white flex items-center gap-1.5">
+                    <CloudLightning className="h-4 w-4 text-amber-400" /> Tesla Storm Watch: ENABLED
+                  </p>
                   <p className="m-0 text-[11px]">
                     National Weather Service alerts automatically pre-charge your battery to 100% before storms hit.
                   </p>
@@ -868,23 +919,23 @@ export default function HomeownerPortalPage() {
               <div className="mt-4 flex flex-wrap gap-2 pt-4 border-t border-white/10">
                 <a
                   href={`sms:?&body=Hey!%20We%20installed%20Sunrun%20solar%20with%20a%20Tesla%20Powerwall%20and%20cut%20our%20electric%20bill%20to%20almost%20nothing.%20Check%20it%20out%20and%20get%20a%20free%20consult%20with%20our%20advisor%20Horace:%20${encodeURIComponent(referralUrl)}`}
-                  className="inline-flex items-center gap-2 rounded-lg bg-[#14314A] px-3 py-1.5 text-xs font-semibold text-[#82B1FF] hover:bg-[#1A3E5E] transition no-underline"
+                  className="inline-flex items-center gap-2 rounded-lg bg-[#14314A] px-3 py-1.5 text-xs font-semibold text-[#82B1FF] hover:bg-[#1A3E5E] transition no-underline cursor-pointer"
                 >
-                  💬 Share via Text Message (SMS)
+                  <MessageSquare className="h-3.5 w-3.5" /> Share via Text Message (SMS)
                 </a>
                 <a
                   href={`https://wa.me/?text=${encodeURIComponent(`Check out The Power Genie Sunrun solar & Tesla Powerwall: ${referralUrl}`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 rounded-lg bg-[#0F392B] px-3 py-1.5 text-xs font-semibold text-[#69F0AE] hover:bg-[#144D3A] transition no-underline"
+                  className="inline-flex items-center gap-2 rounded-lg bg-[#0F392B] px-3 py-1.5 text-xs font-semibold text-[#69F0AE] hover:bg-[#144D3A] transition no-underline cursor-pointer"
                 >
-                  🟢 Share on WhatsApp
+                  <Share2 className="h-3.5 w-3.5" /> Share on WhatsApp
                 </a>
                 <a
                   href={`mailto:?subject=${encodeURIComponent("Lower your electric bill with Sunrun & Tesla Powerwall")}&body=${encodeURIComponent(`Hi,\n\nWe installed Sunrun solar and a Tesla Powerwall through The Power Genie and cut our electric bill dramatically.\n\nTake a look here: ${referralUrl}\n\nAsk for Horace Lawrence!`)}`}
-                  className="inline-flex items-center gap-2 rounded-lg bg-[#2D1F42] px-3 py-1.5 text-xs font-semibold text-[#D1C4E9] hover:bg-[#3D2B59] transition no-underline"
+                  className="inline-flex items-center gap-2 rounded-lg bg-[#2D1F42] px-3 py-1.5 text-xs font-semibold text-[#D1C4E9] hover:bg-[#3D2B59] transition no-underline cursor-pointer"
                 >
-                  ✉️ Share via Email
+                  <Mail className="h-3.5 w-3.5" /> Share via Email
                 </a>
               </div>
             </div>
@@ -1093,7 +1144,12 @@ export default function HomeownerPortalPage() {
                             : 'bg-[#21354A] text-[#90CAF9]'
                         }`}
                       >
-                        {r.status === 'paid' ? '✓' : '●'} {r.statusLabel}
+                        {r.status === 'paid' ? (
+                          <Check className="h-3.5 w-3.5 stroke-[3]" />
+                        ) : (
+                          <span className="h-1.5 w-1.5 rounded-full bg-current" />
+                        )}
+                        <span>{r.statusLabel}</span>
                       </span>
                       <p className="m-0 mt-1 text-sm font-extrabold text-[#FFB300]">
                         ${r.reward.toLocaleString()} ({r.payoutMethod})
@@ -1234,7 +1290,7 @@ export default function HomeownerPortalPage() {
               <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
                 <div>
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-[#FF6B00]/20 px-3 py-0.5 text-xs font-bold uppercase tracking-wider text-[#FF8A2B]">
-                    ⭐ Dedicated Sunrun Solar Expert
+                    <Sparkles className="h-3.5 w-3.5 text-[#FF8A2B]" /> Dedicated Sunrun Solar Expert
                   </span>
                   <h2 className="m-0 mt-2 text-2xl sm:text-3xl font-black text-white">Horace Lawrence</h2>
                   <p className="m-0 mt-0.5 text-sm text-[#8BA4BD]">The Block Sales Expert Team Lead · Sunrun Solar Advisor</p>

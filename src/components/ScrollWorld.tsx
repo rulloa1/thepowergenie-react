@@ -344,8 +344,18 @@ function HomePowerFlowHUD({
             <ShieldCheck className="w-3.5 h-3.5" />
             Grid Draw: 0.0 kW
           </span>
-          <span className="text-slate-300">
-            {isDay ? '⚡ 100% Solar Self-Sufficiency' : '🛡️ Complete Blackout Protection'}
+          <span className="text-slate-300 flex items-center gap-1">
+            {isDay ? (
+              <>
+                <Zap className="w-3.5 h-3.5 text-amber-400" />
+                100% Solar Self-Sufficiency
+              </>
+            ) : (
+              <>
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                Complete Blackout Protection
+              </>
+            )}
           </span>
         </div>
       </div>

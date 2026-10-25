@@ -4,7 +4,7 @@
 -- Sequence state per lead
 CREATE TABLE IF NOT EXISTS hub_sequences (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  lead_id uuid NOT NULL REFERENCES powergenie_customers(id) ON DELETE CASCADE,
+  lead_id text NOT NULL REFERENCES powergenie_customers(id) ON DELETE CASCADE,
 
   -- Sequence state
   status text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'active', 'paused', 'completed', 'unsubscribed')),

@@ -859,8 +859,8 @@ export default function LeadsTab({
                 {((lead.utility && lead.utility !== 'Not provided') || lead.tdu || lead.repPuctCertificate) && (
                   <div className="mt-3 flex flex-wrap items-center gap-2 text-xs font-bold">
                     {lead.utility && lead.utility !== 'Not provided' && (
-                      <span className="rounded-md border border-[#234567] bg-[#0C2237] px-2.5 py-1 text-[#E2E8F0]">
-                        ⚡ {lead.utility}
+                      <span className="inline-flex items-center gap-1 rounded-md border border-[#234567] bg-[#0C2237] px-2.5 py-1 text-[#E2E8F0]">
+                        <Zap className="h-3 w-3 text-[#FFB300]" /> {lead.utility}
                       </span>
                     )}
                     {lead.tdu && (

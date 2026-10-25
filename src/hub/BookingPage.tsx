@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { CalendarCheck, CalendarDays, Clock, FileUp, Phone, X } from 'lucide-react';
+import { CalendarCheck, CalendarDays, Check, Clock, FileUp, Layers, Lock, Phone, X } from 'lucide-react';
 import { MeterFields, emptyMeter, meterBodyFrom, type MeterFormValues } from '../components/dashboard/MeterFields';
 import { readMeterRequest } from '../lib/esiId';
 import { callFunction, supabase } from '../lib/supabase';
@@ -164,14 +164,14 @@ export default function BookingPage() {
             </p>
 
             <div className="mt-4 flex flex-wrap items-center gap-2 text-[0.78rem] font-semibold text-[#64748B]">
-              <span className="inline-flex items-center gap-1 rounded-md bg-white border border-[#E2E8F0] px-2.5 py-1">
-                🔒 100% Free & No Obligation
+              <span className="inline-flex items-center gap-1.5 rounded-md bg-white border border-[#E2E8F0] px-2.5 py-1">
+                <Lock className="h-3.5 w-3.5 text-[#64748B]" /> 100% Free & No Obligation
               </span>
-              <span className="inline-flex items-center gap-1 rounded-md bg-white border border-[#E2E8F0] px-2.5 py-1">
-                ⏱️ 1-on-1 Screen Share or Call
+              <span className="inline-flex items-center gap-1.5 rounded-md bg-white border border-[#E2E8F0] px-2.5 py-1">
+                <Clock className="h-3.5 w-3.5 text-[#64748B]" /> 1-on-1 Screen Share or Call
               </span>
-              <span className="inline-flex items-center gap-1 rounded-md bg-white border border-[#E2E8F0] px-2.5 py-1">
-                📐 Exact CAD Blueprint Review
+              <span className="inline-flex items-center gap-1.5 rounded-md bg-white border border-[#E2E8F0] px-2.5 py-1">
+                <Layers className="h-3.5 w-3.5 text-[#64748B]" /> Exact CAD Blueprint Review
               </span>
             </div>
 
@@ -314,7 +314,7 @@ export default function BookingPage() {
                       <div className="flex items-center justify-between gap-3 rounded-2xl border border-[#86EFAC] bg-[#F0FDF4] px-4 py-3 shadow-sm">
                         <span className="flex min-w-0 items-center gap-2.5 text-[0.92rem]">
                           <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#DCFCE7] text-[#166534]">
-                            ✓
+                            <Check className="h-4 w-4 stroke-[2.5]" />
                           </span>
                           <span className="truncate">
                             <span className="font-bold text-[#14532D]">{bill.name}</span>{' '}
@@ -355,8 +355,8 @@ export default function BookingPage() {
                       </label>
                     )}
                     {fileError && <p className="mt-2 text-[0.86rem] font-bold text-[#B42318]">{fileError}</p>}
-                    <p className="mt-2 text-[0.78rem] text-[#64748B]">
-                      🔒 Stored securely and only reviewed by Horace Lawrence to analyze your past 12 months kWh consumption before the call.
+                    <p className="mt-2 text-[0.78rem] text-[#64748B] flex items-center gap-1.5">
+                      <Lock className="h-3.5 w-3.5 shrink-0 text-[#64748B]" /> Stored securely and only reviewed by Horace Lawrence to analyze your past 12 months kWh consumption before the call.
                     </p>
                   </div>
 

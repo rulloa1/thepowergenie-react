@@ -210,7 +210,9 @@ export default function ChatTab({ profile }: { profile: Profile }) {
         {error && <div className="mb-3"><Notice tone="error">{error}</Notice></div>}
         {file && (
           <div className="mb-2 flex items-center justify-between gap-2 rounded-xl bg-hub-muted px-3 py-2 text-[0.88rem]">
-            <span className="min-w-0 truncate">📎 {file.name} · {formatBytes(file.size)}</span>
+            <span className="min-w-0 truncate flex items-center gap-1.5">
+              <Paperclip className="h-3.5 w-3.5 shrink-0" /> {file.name} · {formatBytes(file.size)}
+            </span>
             <button type="button" onClick={() => setFile(null)} aria-label="Remove attachment" className="rounded-full p-1 hover:bg-hub-surface">
               <X className="h-4 w-4" />
             </button>
