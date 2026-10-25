@@ -17,6 +17,7 @@
     "@ai-sdk/react": "^4.0.152",
     "@supabase/supabase-js": "^2.118.0",
     "@tailwindcss/vite": "^4.3.3",
+    "@vercel/analytics": "^2.0.1",
     "ai": "^7.0.148",
     "clsx": "^2.1.1",
     "heic-convert": "^2.1.0",

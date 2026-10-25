@@ -5,7 +5,8 @@ import PowerGenieAssistant from './components/assistant/PowerGenieAssistant'
 import LegalFooter from './components/LegalFooter'
 import { legacyNodeRedirect, normalizePath, showMarketingAssistant, showRouterLegalFooter, sitePage } from './lib/siteRoutes'
 import PrivacyPage from './pages/PrivacyPage'
-import TermsPage from './pages/TermsPage'
+import PrivacyPage from './pages/TermsPage'
+import { Analytics } from '@vercel/analytics/react'
 import './index.css'
 
 // Referral Hub (Supabase Edge Functions) is the public /book and /dashboard.
