@@ -7,6 +7,7 @@ import {
   marketingViewFromLocation,
   marketingViewHref,
   normalizePath,
+  assistantBrandFromView,
   showMarketingAssistant,
   showRouterLegalFooter,
   sitePage,
@@ -19,8 +20,9 @@ describe('public routes', () => {
     expect(sitePage(normalizePath('/terms'))).toBe('terms');
     expect(sitePage(normalizePath('/terms/'))).toBe('terms');
     expect(sitePage('/')).toBe('marketing');
-    expect(showMarketingAssistant(sitePage('/privacy'))).toBe(false);
-    expect(showMarketingAssistant(sitePage('/terms'))).toBe(false);
+    expect(showMarketingAssistant(sitePage('/privacy'))).toBe(true);
+    expect(showMarketingAssistant(sitePage('/terms'))).toBe(true);
+    expect(showMarketingAssistant(sitePage('/'))).toBe(true);
     expect(showRouterLegalFooter('/privacy')).toBe(true);
     expect(showRouterLegalFooter('/terms')).toBe(true);
     expect(showRouterLegalFooter('/')).toBe(false);
@@ -32,7 +34,10 @@ describe('public routes', () => {
     expect(sitePage('/homeowner')).toBe('homeowner');
     expect(sitePage('/portal')).toBe('homeowner');
     expect(sitePage('/referrals')).toBe('homeowner');
-    expect(showMarketingAssistant(sitePage('/homeowner'))).toBe(false);
+    expect(showMarketingAssistant(sitePage('/book'))).toBe(true);
+    expect(showMarketingAssistant(sitePage('/homeowner'))).toBe(true);
+    expect(showMarketingAssistant(sitePage('/portal'))).toBe(true);
+    expect(showMarketingAssistant(sitePage('/dashboard'))).toBe(false);
     expect(showRouterLegalFooter('/homeowner')).toBe(true);
     expect(legacyNodeRedirect(normalizePath('/node/book'))).toBe('/book');
     expect(legacyNodeRedirect(normalizePath('/node/dashboard'))).toBe('/dashboard');
@@ -77,5 +82,10 @@ describe('public routes', () => {
     expect(marketingViewHref('celebrity-solar', branded)).toBe('/celebrity-solar?source=celebrity-solar');
     expect(marketingViewHref('journey', new URL('https://thepowergenie.theroyeffect.com/brands?view=brands'))).toBe('/');
     expect(marketingViewHref('brands', new URL('https://thepowergenie.theroyeffect.com/gas-genie'))).toBe('/brands');
+    expect(assistantBrandFromView('journey')).toBe('power-genie');
+    expect(assistantBrandFromView('celebrity-solar')).toBe('celebrity-solar');
+    expect(assistantBrandFromView('hip-hop-solar')).toBe('hip-hop-solar');
+    expect(assistantBrandFromView('gas-genie')).toBe('gas-genie');
+    expect(assistantBrandFromView('brands')).toBe('brands');
   });
 });
