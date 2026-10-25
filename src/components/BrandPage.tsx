@@ -336,6 +336,18 @@ function Header({
         >
           Our brands
         </a>
+        <a
+          href="/dashboard"
+          className="inline-flex items-center min-h-[44px] bg-transparent text-[#95dbe9] no-underline cursor-pointer hover:text-white transition-colors font-medium"
+        >
+          📊 Referral Hub
+        </a>
+        <a
+          href="/homeowner"
+          className="inline-flex items-center min-h-[44px] bg-transparent text-[#f6cf85] no-underline cursor-pointer hover:text-white transition-colors font-medium"
+        >
+          🔋 Homeowner Portal
+        </a>
         <button onClick={() => onNavigate('journey')} className="md:flex hidden items-center min-h-[44px] bg-transparent border-0 text-inherit p-0 cursor-pointer hover:text-[#f6cf85] transition-colors">Explore solar ↗</button>
       </nav>
     </header>
@@ -451,9 +463,13 @@ function Step({ number, title, body, accent }: any) {
 
 function Footer({ onNavigate }: { onNavigate: (v: string) => void }) {
   return (
-    <footer className="flex flex-wrap justify-between gap-6 mx-[7vw] py-8 border-t border-[#ffffff25] text-[13px] text-[#bacbd6]">
+    <footer className="flex flex-wrap justify-between items-center gap-6 mx-[7vw] py-8 border-t border-[#ffffff25] text-[13px] text-[#bacbd6]">
       <button onClick={() => onNavigate('journey')} className="bg-transparent border-0 text-inherit p-0 cursor-pointer hover:text-white">The Power Genie</button>
-      <span>One connected energy journey.</span>
+      <div className="flex items-center gap-4">
+        <a href="/dashboard" className="text-inherit hover:text-white font-medium no-underline">📊 Referral Hub</a>
+        <span className="opacity-40">·</span>
+        <a href="/homeowner" className="text-[#f6cf85] hover:text-white font-medium no-underline">🔋 Homeowner Portal</a>
+      </div>
       <button onClick={() => onNavigate('brands')} className="bg-transparent border-0 text-inherit p-0 cursor-pointer hover:text-white">Explore all brands</button>
     </footer>
   );
