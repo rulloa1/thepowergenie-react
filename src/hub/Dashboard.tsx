@@ -83,7 +83,7 @@ export default function Dashboard() {
 
 function FullPageSpinner() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#F6F7FB] text-[#4A5568]">
+    <div className="hub-canvas flex min-h-screen items-center justify-center text-hub-soft">
       <Spinner />
     </div>
   );
@@ -91,11 +91,11 @@ function FullPageSpinner() {
 
 function AuthCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="flex min-h-screen items-start justify-center bg-[#F6F7FB] px-4 py-16 sm:items-center">
-      <div className="w-full max-w-sm rounded-3xl bg-white p-7 shadow-[0_10px_30px_rgba(10,20,40,0.08)]">
+    <div className="hub-canvas flex min-h-screen items-start justify-center px-4 py-16 sm:items-center">
+      <div className="w-full max-w-sm rounded-3xl bg-hub-surface p-7 shadow-[0_10px_30px_rgba(10,20,40,0.08)]">
         <BrandMark className="mb-6" />
-        <p className="m-0 text-[0.74rem] font-semibold uppercase tracking-[0.14em] text-[#FF6B00]">Referral Hub</p>
-        <h1 className="m-0 mt-1 text-2xl font-bold tracking-tight text-[#1A1A2E]">{title}</h1>
+        <p className="m-0 text-[0.74rem] font-semibold uppercase tracking-[0.14em] text-hub-accent-ink">Referral Hub</p>
+        <h1 className="m-0 mt-1 text-2xl font-bold tracking-tight text-hub-ink">{title}</h1>
         <div className="mt-6">{children}</div>
       </div>
     </div>
@@ -144,7 +144,7 @@ function SignIn() {
         <Button type="button" variant="quiet" onClick={reset} className="justify-self-center">
           Forgot password?
         </Button>
-        <p className="m-0 text-center text-[0.8rem] text-[#6B7280]">Access is by invitation only.</p>
+        <p className="m-0 text-center text-[0.8rem] text-hub-soft">Access is by invitation only.</p>
       </form>
     </AuthCard>
   );
@@ -191,8 +191,8 @@ function SetPassword({ onDone }: { onDone: () => void }) {
 function NotInvited({ email }: { email: string }) {
   return (
     <AuthCard title="No access yet">
-      <p className="m-0 text-[#4A5568]">
-        <span className="font-semibold text-[#1A1A2E]">{email}</span> isn't on the Referral Hub. Ask Horace or Rory for an invite.
+      <p className="m-0 text-hub-soft">
+        <span className="font-semibold text-hub-ink">{email}</span> isn't on the Referral Hub. Ask Horace or Rory for an invite.
       </p>
       <Button variant="ghost" className="mt-6 w-full" onClick={() => supabase!.auth.signOut()}>
         Sign out
@@ -214,32 +214,32 @@ function HubApp({ profile }: { profile: Profile }) {
   };
 
   return (
-    <div className="flex min-h-[100dvh] flex-col bg-gradient-to-b from-[#F8FAFC] via-[#F8FAFC] to-[#F1F5F9] text-[#1A1A2E]">
-      <header className="sticky top-0 z-30 border-b border-[#E2E8F0] bg-white/90 shadow-[0_2px_14px_rgba(15,23,42,0.03)] backdrop-blur-md">
+    <div className="hub-canvas flex min-h-[100dvh] flex-col">
+      <header className="sticky top-0 z-30 border-b border-hub-line bg-hub-topbar shadow-[0_2px_14px_rgba(15,23,42,0.03)] backdrop-blur-md">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-2.5 sm:px-6">
           <div className="flex min-w-0 items-center gap-3">
             <BrandMark className="h-9 shadow-sm" />
             <div className="flex items-center gap-2">
-              <span className="hidden text-[0.8rem] font-bold uppercase tracking-[0.14em] text-[#FF6B00] sm:inline">Referral Hub</span>
-              <span className="hidden items-center gap-1.5 rounded-full border border-[#A7F3D0] bg-[#ECFDF5] px-2.5 py-0.5 text-[0.7rem] font-bold text-[#065F46] md:inline-flex">
-                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#10B981]" />
+              <span className="hidden text-[0.8rem] font-bold uppercase tracking-[0.14em] text-hub-accent-ink sm:inline">Referral Hub</span>
+              <span className="hidden items-center gap-1.5 rounded-full border border-hub-success-line bg-hub-success px-2.5 py-0.5 text-[0.7rem] font-bold text-hub-success-ink md:inline-flex">
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-hub-success-ink" />
                 Live Advisor
               </span>
             </div>
           </div>
           <div className="flex items-center gap-2.5">
             <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#1A1A2E] text-[0.78rem] font-bold text-white shadow-sm">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-hub-primary text-[0.78rem] font-bold text-white shadow-sm">
                 {(profile.full_name || profile.email).slice(0, 2).toUpperCase()}
               </div>
               <span className="hidden text-left text-[0.82rem] leading-tight sm:block">
-                <span className="block font-bold text-[#1A1A2E]">{profile.full_name || profile.email}</span>
-                <span className="text-[0.72rem] font-semibold text-[#64748B]">{profile.role === 'owner' ? 'Sunrun Partner' : 'Admin'}</span>
+                <span className="block font-bold text-hub-ink">{profile.full_name || profile.email}</span>
+                <span className="text-[0.72rem] font-semibold text-hub-soft">{profile.role === 'owner' ? 'Sunrun Partner' : 'Admin'}</span>
               </span>
             </div>
             <button
               onClick={() => supabase!.auth.signOut()}
-              className="flex h-9 w-9 items-center justify-center rounded-xl border border-[#E2E8F0] bg-white text-[#64748B] transition-all hover:border-[#1A1A2E] hover:bg-[#F8FAFC] hover:text-[#1A1A2E]"
+              className="flex h-9 w-9 items-center justify-center rounded-xl border border-hub-control bg-hub-surface text-hub-soft transition-all hover:border-hub-ink hover:bg-hub-muted hover:text-hub-ink"
               aria-label="Sign out"
               title="Sign out of Referral Hub"
             >
@@ -258,14 +258,14 @@ function HubApp({ profile }: { profile: Profile }) {
                 className={cn(
                   'relative flex min-h-[42px] min-w-0 flex-1 items-center justify-center gap-1.5 rounded-t-xl px-2.5 text-[0.86rem] font-bold transition-all sm:flex-none sm:gap-2 sm:px-5 sm:text-[0.9rem]',
                   active
-                    ? 'border-b-2 border-[#FF6B00] bg-[#FFFBF7] text-[#FF6B00]'
-                    : 'border-b-2 border-transparent text-[#64748B] hover:bg-[#F8FAFC] hover:text-[#1A1A2E]',
+                    ? 'border-b-2 border-hub-accent-ink bg-hub-accent-soft text-hub-accent-ink'
+                    : 'border-b-2 border-transparent text-hub-soft hover:bg-hub-muted hover:text-hub-ink',
                 )}
               >
-                <Icon className={cn('h-4 w-4 shrink-0 transition-transform', active && 'scale-110 text-[#FF6B00]')} />
+                <Icon className={cn('h-4 w-4 shrink-0 transition-transform', active && 'scale-110 text-hub-accent-ink')} />
                 <span>{label}</span>
                 {id === 'leads' && leads.unseen > 0 && (
-                  <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-[#FF6B00] px-1.5 text-[0.66rem] font-extrabold leading-5 text-white shadow-sm shadow-[#FF6B00]/30">
+                  <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-hub-accent-fill px-1.5 text-[0.66rem] font-extrabold leading-5 text-white shadow-sm">
                     {leads.unseen > 99 ? '99+' : leads.unseen}
                     <span className="sr-only"> new leads</span>
                   </span>

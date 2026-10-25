@@ -142,12 +142,12 @@ export default function ChatTab({ profile }: { profile: Profile }) {
   };
 
   return (
-    <section className="flex min-h-[60vh] flex-1 flex-col rounded-3xl bg-white shadow-[0_10px_30px_rgba(10,20,40,0.06)]" aria-label="Team chat">
+    <section className="flex min-h-[60vh] flex-1 flex-col rounded-3xl bg-hub-surface shadow-[0_10px_30px_rgba(10,20,40,0.06)]" aria-label="Team chat">
       <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6" style={{ maxHeight: 'calc(100dvh - 260px)' }}>
         {loading ? (
-          <div className="py-10 text-center text-[#6B7280]"><Spinner /></div>
+          <div className="py-10 text-center text-hub-soft"><Spinner /></div>
         ) : messages.length === 0 ? (
-          <p className="py-12 text-center text-[#6B7280]">No messages yet. Say hi to the team 👋</p>
+          <p className="py-12 text-center text-hub-soft">No messages yet. Say hi to the team 👋</p>
         ) : (
           messages.map((m, i) => {
             const mine = m.sender_id === profile.id;
@@ -158,15 +158,15 @@ export default function ChatTab({ profile }: { profile: Profile }) {
             return (
               <React.Fragment key={m.id}>
                 {newDay && (
-                  <p className="my-4 text-center text-[0.74rem] font-semibold uppercase tracking-wide text-[#8A94A3]">
+                  <p className="my-4 text-center text-[0.74rem] font-semibold uppercase tracking-wide text-hub-soft">
                     {formatDay(m.created_at)}
                   </p>
                 )}
                 <div className={cn('group mb-3 flex flex-col', mine ? 'items-end' : 'items-start')}>
-                  <span className="mb-1 px-1 text-[0.74rem] text-[#6B7280]">
+                  <span className="mb-1 px-1 text-[0.74rem] text-hub-soft">
                     {mine ? 'You' : who?.full_name || who?.email || 'Teammate'} · {formatTime(m.created_at)}
                     {mine && (
-                      <button onClick={() => remove(m)} className="ml-2 text-[#B42318] opacity-0 transition group-hover:opacity-100 focus:opacity-100">
+                      <button onClick={() => remove(m)} className="ml-2 text-hub-danger opacity-0 transition group-hover:opacity-100 focus:opacity-100">
                         Delete
                       </button>
                     )}
@@ -174,7 +174,7 @@ export default function ChatTab({ profile }: { profile: Profile }) {
                   <div
                     className={cn(
                       'max-w-[85%] overflow-hidden rounded-2xl text-[0.95rem] leading-relaxed sm:max-w-[70%]',
-                      mine ? 'rounded-br-md bg-[#1A1A2E] text-white' : 'rounded-bl-md bg-[#F1F3F7] text-[#1A1A2E]',
+                      mine ? 'rounded-br-md bg-hub-navy text-white' : 'rounded-bl-md bg-hub-muted text-hub-ink',
                     )}
                   >
                     {m.attachment_path && isImage && url && (
@@ -187,7 +187,7 @@ export default function ChatTab({ profile }: { profile: Profile }) {
                         href={url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className={cn('flex items-center gap-2.5 px-3.5 py-2.5 no-underline', mine ? 'text-white' : 'text-[#1A1A2E]')}
+                        className={cn('flex items-center gap-2.5 px-3.5 py-2.5 no-underline', mine ? 'text-white' : 'text-hub-ink')}
                       >
                         <FileText className="h-5 w-5 shrink-0 opacity-80" />
                         <span className="min-w-0">
@@ -206,12 +206,12 @@ export default function ChatTab({ profile }: { profile: Profile }) {
         <div ref={bottomRef} />
       </div>
 
-      <form onSubmit={send} className="border-t border-[#E3E8EF] p-3 sm:p-4">
+      <form onSubmit={send} className="border-t border-hub-line p-3 sm:p-4">
         {error && <div className="mb-3"><Notice tone="error">{error}</Notice></div>}
         {file && (
-          <div className="mb-2 flex items-center justify-between gap-2 rounded-xl bg-[#F1F3F7] px-3 py-2 text-[0.88rem]">
+          <div className="mb-2 flex items-center justify-between gap-2 rounded-xl bg-hub-muted px-3 py-2 text-[0.88rem]">
             <span className="min-w-0 truncate">📎 {file.name} · {formatBytes(file.size)}</span>
-            <button type="button" onClick={() => setFile(null)} aria-label="Remove attachment" className="rounded-full p-1 hover:bg-white">
+            <button type="button" onClick={() => setFile(null)} aria-label="Remove attachment" className="rounded-full p-1 hover:bg-hub-surface">
               <X className="h-4 w-4" />
             </button>
           </div>
@@ -220,7 +220,7 @@ export default function ChatTab({ profile }: { profile: Profile }) {
           <button
             type="button"
             onClick={() => fileInput.current?.click()}
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[#E3E8EF] hover:border-[#1A1A2E]"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-hub-line hover:border-hub-ink"
             aria-label="Attach a file or photo"
           >
             <Paperclip className="h-5 w-5" />
@@ -239,12 +239,12 @@ export default function ChatTab({ profile }: { profile: Profile }) {
             maxLength={4000}
             placeholder="Message the team…"
             aria-label="Message"
-            className="max-h-40 min-h-[44px] flex-1 resize-none rounded-2xl border border-[#D6DCE5] px-3.5 py-2.5 text-[1rem] outline-none focus:border-[#FF6B00]"
+            className="max-h-40 min-h-[44px] flex-1 resize-none rounded-2xl border border-hub-control bg-hub-surface px-3.5 py-2.5 text-[1rem] text-hub-ink outline-none placeholder:text-hub-faint focus:border-hub-focus focus:ring-4 focus:ring-hub-focus-soft"
           />
           <button
             type="submit"
             disabled={sending || (!text.trim() && !file)}
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#FF6B00] text-white disabled:bg-[#C9CFD8]"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-hub-accent-fill text-white disabled:bg-hub-muted disabled:text-hub-soft"
             aria-label="Send"
           >
             {sending ? <Spinner className="h-4 w-4" /> : <SendHorizontal className="h-5 w-5" />}

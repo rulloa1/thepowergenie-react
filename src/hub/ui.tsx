@@ -9,7 +9,7 @@ export function BrandMark({ className }: { className?: string }) {
     <img
       src="/assets/brand/power-genie-lockup.webp"
       alt="The Power Genie"
-      className={cn('block h-10 w-auto rounded-xl bg-[#071b27] px-2.5 py-1', className)}
+      className={cn('block h-10 w-auto rounded-xl bg-hub-logo px-2.5 py-1', className)}
     />
   );
 }
@@ -34,10 +34,10 @@ export function Notice({
   children?: React.ReactNode;
 }) {
   const tones = {
-    info: 'bg-[#EEF5FF] border-[#C9DDF7] text-[#123A63]',
-    warn: 'bg-[#FFF6E8] border-[#F5D9A8] text-[#7A4A06]',
-    error: 'bg-[#FFF0EE] border-[#F3C2BB] text-[#8A1F11]',
-    success: 'bg-[#EEF9F0] border-[#BFE3C6] text-[#185A26]',
+    info: 'bg-hub-info border-hub-info-line text-hub-info-ink',
+    warn: 'bg-hub-warn border-hub-warn-line text-hub-warn-ink',
+    error: 'bg-hub-error border-hub-error-line text-hub-error-ink',
+    success: 'bg-hub-success border-hub-success-line text-hub-success-ink',
   };
   return (
     <div className={cn('rounded-2xl border px-4 py-3 text-[0.92rem] leading-relaxed', tones[tone])} role={tone === 'error' ? 'alert' : 'status'}>
@@ -52,21 +52,21 @@ export function NotConfigured({ what }: { what: string }) {
   return (
     <div className="mx-auto max-w-md px-5 py-16 text-center">
       <BrandMark className="mx-auto mb-8" />
-      <h1 className="m-0 text-2xl font-bold tracking-tight text-[#1A1A2E]">{what} isn't configured yet</h1>
-      <p className="mt-3 text-[#4A5568]">
+      <h1 className="m-0 text-2xl font-bold tracking-tight text-hub-ink">{what} isn't configured yet</h1>
+      <p className="mt-3 text-hub-soft">
         Everything is built — it just needs its keys. Once they're added, this page will come to life.
       </p>
-      <p className="mt-6 text-sm text-[#4A5568]">
-        Want a free solar quote now? Call <a className="font-semibold text-[#0066CC]" href="tel:+15102417007">510-241-7007</a>.
+      <p className="mt-6 text-sm text-hub-soft">
+        Want a free solar quote now? Call <a className="font-semibold text-hub-link" href="tel:+15102417007">510-241-7007</a>.
       </p>
     </div>
   );
 }
 
 export const inputClass =
-  'w-full rounded-xl border border-[#D6DCE5] bg-white px-3.5 py-3 text-[0.98rem] text-[#1A1A2E] outline-none transition-all duration-150 placeholder:text-[#94A3B8] hover:border-[#CBD5E1] focus:border-[#FF6B00] focus:ring-4 focus:ring-[#FF6B00]/15';
+  'w-full rounded-xl border border-hub-control bg-hub-surface px-3.5 py-3 text-[0.98rem] text-hub-ink outline-none transition-all duration-150 placeholder:text-hub-faint hover:border-hub-ink focus:border-hub-focus focus:ring-4 focus:ring-hub-focus-soft';
 
-export const labelClass = 'mb-1.5 block text-[0.84rem] font-bold text-[#1A1A2E] tracking-tight';
+export const labelClass = 'mb-1.5 block text-[0.84rem] font-bold text-hub-ink tracking-tight';
 
 export function Button({
   variant = 'primary',
@@ -74,17 +74,17 @@ export function Button({
   ...props
 }: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'accent' | 'ghost' | 'danger' | 'quiet' }) {
   const variants = {
-    primary: 'bg-[#1A1A2E] text-white hover:bg-[#2A2A44] shadow-sm hover:shadow active:scale-[0.99] disabled:bg-[#9AA1AD]',
-    accent: 'bg-[#FF6B00] text-white hover:bg-[#E05E00] shadow-sm hover:shadow-md hover:shadow-[#FF6B00]/20 active:scale-[0.99] disabled:bg-[#FDA4AF]',
-    ghost: 'border border-[#D6DCE5] bg-white text-[#1A1A2E] hover:border-[#1A1A2E] hover:bg-[#F8FAFC] active:scale-[0.99]',
-    danger: 'border border-[#F3C2BB] bg-white text-[#B42318] hover:bg-[#FFF0EE] active:scale-[0.99]',
-    quiet: 'text-[#0066CC] hover:text-[#004C99] hover:underline px-0',
+    primary: 'bg-hub-primary text-white hover:bg-hub-primary-hover shadow-sm hover:shadow active:scale-[0.99] disabled:bg-hub-disabled',
+    accent: 'bg-hub-accent-fill text-white hover:bg-hub-accent-fill-hover shadow-sm hover:shadow-md active:scale-[0.99] disabled:bg-hub-disabled',
+    ghost: 'border border-hub-control bg-hub-surface text-hub-ink hover:border-hub-ink hover:bg-hub-muted active:scale-[0.99]',
+    danger: 'border border-hub-danger-line bg-hub-surface text-hub-danger hover:bg-hub-danger-soft active:scale-[0.99]',
+    quiet: 'text-hub-link hover:text-hub-link-hover hover:underline px-0',
   };
   return (
     <button
       {...props}
       className={cn(
-        'inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl px-5 text-[0.92rem] font-bold transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100',
+        'inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl px-5 text-[0.92rem] font-bold transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-hub-focus focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100',
         variants[variant],
         variant === 'quiet' && 'min-h-0 rounded-none',
         className,

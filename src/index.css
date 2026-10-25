@@ -1,12 +1,127 @@
 @import "tailwindcss";
 
 :root {
+  /* Marketing journey tokens. The scroll world reads these directly — keep the values. */
   --sw-bg: #E8F4FD;
   --sw-ink: #1A1A2E;
   --sw-ink-soft: #4A5568;
   --sw-accent: #0066CC;
   --sw-font-display: 'Inter', ui-rounded, system-ui, sans-serif;
   --sw-font-body: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+
+  /* Other colors used on the marketing site (hero/CTA, quote panel, logo plate, sections). */
+  --pg-orange: #FF6B00;
+  --pg-orange-hot: #FF8A2B;
+  --pg-green: #4CAF50;
+  --pg-navy: #0B2233;
+  --pg-logo: #071b27;
+
+  /*
+    Referral Hub roles. They point at the marketing tokens.
+    Orange text and white-on-orange fills use #C2410C: #FF6B00 is the brand orange,
+    and it misses WCAG AA for text (about 2.9:1 on white) and for icon buttons.
+  */
+  --hub-bg: var(--sw-bg);
+  --hub-bg-end: color-mix(in srgb, var(--sw-accent) 12%, var(--sw-bg));
+  --hub-surface: #ffffff;
+  --hub-muted: color-mix(in srgb, var(--sw-bg) 42%, var(--hub-surface));
+  --hub-ink: var(--sw-ink);
+  --hub-soft: var(--sw-ink-soft);
+  --hub-faint: #64748B;
+  --hub-line: color-mix(in srgb, var(--sw-ink) 14%, var(--hub-surface));
+  --hub-line-strong: color-mix(in srgb, var(--sw-ink) 24%, var(--hub-surface));
+  /* Ink mixed to #91919B so input and ghost borders clear 3:1 on white. */
+  --hub-control: #91919B;
+  --hub-topbar: color-mix(in srgb, var(--sw-bg) 86%, var(--hub-surface));
+  --hub-primary: var(--sw-ink);
+  --hub-primary-hover: #2A2A44;
+  --hub-disabled: #9AA1AD;
+  --hub-accent-ink: #C2410C;
+  --hub-accent-fill: #C2410C;
+  --hub-accent-fill-hover: #9A3412;
+  --hub-accent-soft: color-mix(in srgb, var(--pg-orange) 12%, var(--hub-surface));
+  --hub-accent-line: #D17049;
+  --hub-link: var(--sw-accent);
+  --hub-link-hover: #004C99;
+  --hub-focus: var(--hub-accent-ink);
+  --hub-focus-soft: color-mix(in srgb, var(--hub-focus) 28%, transparent);
+  --hub-chart: #C2410C;
+  --hub-chart-top: #E05E00;
+  --hub-on-navy: #D9E6F2;
+  --hub-scrim: color-mix(in srgb, var(--pg-navy) 72%, transparent);
+  --hub-info-bg: color-mix(in srgb, var(--sw-accent) 10%, var(--hub-surface));
+  --hub-info-line: #6F8AAD;
+  --hub-info-ink: #123A63;
+  --hub-warn-bg: color-mix(in srgb, var(--pg-orange) 12%, var(--hub-surface));
+  --hub-warn-line: #A58456;
+  --hub-warn-ink: #7A4A06;
+  --hub-error-bg: #FFF0EE;
+  --hub-error-line: #CF726B;
+  --hub-error-ink: #8A1F11;
+  --hub-success-bg: color-mix(in srgb, var(--pg-green) 14%, var(--hub-surface));
+  --hub-success-line: #699472;
+  --hub-success-ink: #185A26;
+  --hub-danger: #B42318;
+  --hub-danger-ink: #991B1B;
+  --hub-danger-soft: #FEF2F2;
+  --hub-danger-line: #CF726B;
+  --hub-danger-fill: #DC2626;
+  --hub-danger-fill-hover: #B91C1C;
+}
+
+@theme inline {
+  --color-hub-bg: var(--hub-bg);
+  --color-hub-surface: var(--hub-surface);
+  --color-hub-muted: var(--hub-muted);
+  --color-hub-ink: var(--hub-ink);
+  --color-hub-soft: var(--hub-soft);
+  --color-hub-faint: var(--hub-faint);
+  --color-hub-line: var(--hub-line);
+  --color-hub-line-strong: var(--hub-line-strong);
+  --color-hub-control: var(--hub-control);
+  --color-hub-topbar: var(--hub-topbar);
+  --color-hub-primary: var(--hub-primary);
+  --color-hub-primary-hover: var(--hub-primary-hover);
+  --color-hub-disabled: var(--hub-disabled);
+  --color-hub-accent: var(--pg-orange);
+  --color-hub-accent-ink: var(--hub-accent-ink);
+  --color-hub-accent-fill: var(--hub-accent-fill);
+  --color-hub-accent-fill-hover: var(--hub-accent-fill-hover);
+  --color-hub-accent-soft: var(--hub-accent-soft);
+  --color-hub-accent-line: var(--hub-accent-line);
+  --color-hub-link: var(--hub-link);
+  --color-hub-link-hover: var(--hub-link-hover);
+  --color-hub-focus: var(--hub-focus);
+  --color-hub-focus-soft: var(--hub-focus-soft);
+  --color-hub-chart: var(--hub-chart);
+  --color-hub-chart-top: var(--hub-chart-top);
+  --color-hub-logo: var(--pg-logo);
+  --color-hub-navy: var(--pg-navy);
+  --color-hub-on-navy: var(--hub-on-navy);
+  --color-hub-scrim: var(--hub-scrim);
+  --color-hub-info: var(--hub-info-bg);
+  --color-hub-info-line: var(--hub-info-line);
+  --color-hub-info-ink: var(--hub-info-ink);
+  --color-hub-warn: var(--hub-warn-bg);
+  --color-hub-warn-line: var(--hub-warn-line);
+  --color-hub-warn-ink: var(--hub-warn-ink);
+  --color-hub-error: var(--hub-error-bg);
+  --color-hub-error-line: var(--hub-error-line);
+  --color-hub-error-ink: var(--hub-error-ink);
+  --color-hub-success: var(--hub-success-bg);
+  --color-hub-success-line: var(--hub-success-line);
+  --color-hub-success-ink: var(--hub-success-ink);
+  --color-hub-danger: var(--hub-danger);
+  --color-hub-danger-ink: var(--hub-danger-ink);
+  --color-hub-danger-soft: var(--hub-danger-soft);
+  --color-hub-danger-line: var(--hub-danger-line);
+  --color-hub-danger-fill: var(--hub-danger-fill);
+  --color-hub-danger-fill-hover: var(--hub-danger-fill-hover);
+}
+
+@utility hub-canvas {
+  background-image: linear-gradient(180deg, var(--hub-bg) 0%, var(--hub-bg-end) 100%);
+  color: var(--hub-ink);
 }
 
 @layer base {
