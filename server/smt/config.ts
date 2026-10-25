@@ -1,4 +1,4 @@
-import { SMT_PRODUCTION_BASE } from '../../src/lib/smt';
+import { SMT_PRODUCTION_BASE } from '../../src/lib/smt.js';
 
 export type SmtConfig = {
   base: string;

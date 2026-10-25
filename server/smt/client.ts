@@ -16,9 +16,9 @@ import {
   type IntervalUsage,
   type MonthlyUsage,
   type SmtStatus,
-} from '../../src/lib/smt';
-import type { MeterRequest } from '../../src/lib/esiId';
-import type { SmtConfig } from './config';
+} from '../../src/lib/smt.js';
+import type { MeterRequest } from '../../src/lib/esiId.js';
+import type { SmtConfig } from './config.js';
 
 /**
  * HTTP adapter for the Smart Meter Texas Interface Guide REST calls.

@@ -1,7 +1,7 @@
-import type { MeterRequest } from '../../src/lib/esiId';
+import type { MeterRequest } from '../../src/lib/esiId.js';
 import { supabaseConfig, supabaseFetch } from '../supabase.js';
-import { requestAgreementStatus, requestIntervalUsage, requestMonthlyUsage, requestNewAgreement } from './client';
-import { readSmtConfig, type SmtConfig } from './config';
+import { requestAgreementStatus, requestIntervalUsage, requestMonthlyUsage, requestNewAgreement } from './client.js';
+import { readSmtConfig, type SmtConfig } from './config.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 

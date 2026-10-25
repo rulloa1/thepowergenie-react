@@ -1,4 +1,4 @@
-import { refreshSmtAuthorizations } from '../../server/smt/store';
+import { refreshSmtAuthorizations } from '../../server/smt/store.js';
 import { supabaseConfig } from '../../server/supabase.js';
 
 export const maxDuration = 60;
