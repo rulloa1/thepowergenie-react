@@ -5,7 +5,7 @@ import PowerGenieAssistant from './components/assistant/PowerGenieAssistant'
 import LegalFooter from './components/LegalFooter'
 import { legacyNodeRedirect, normalizePath, showMarketingAssistant, showRouterLegalFooter, sitePage } from './lib/siteRoutes'
 import PrivacyPage from './pages/PrivacyPage'
-import PrivacyPage from './pages/TermsPage'
+import TermsPage from './pages/TermsPage'
 import { Analytics } from '@vercel/analytics/react'
 import './index.css'
 
@@ -34,6 +34,7 @@ if (legacyTarget) {
       <Suspense fallback={null}>{page}</Suspense>
       {showRouterLegalFooter(path) ? <LegalFooter /> : null}
       {showMarketingAssistant(sitePage(path)) ? <PowerGenieAssistant /> : null}
+      <Analytics />
     </React.StrictMode>,
   )
 }
