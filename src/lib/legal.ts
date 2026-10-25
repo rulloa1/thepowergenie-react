@@ -1,7 +1,42 @@
-/** Public legal copy. Google OAuth verification reads these sentences on /privacy. */
+/** Public legal copy. Google OAuth verification and A2P 10DLC review read these sentences on /privacy and /terms. */
 export const CONTACT_EMAIL = 'roryulloa@gmail.com';
+export const CONTACT_PHONE_DISPLAY = '281-323-0450';
+export const CONTACT_PHONE_TEL = '+12813230450';
 export const SITE_URL = 'https://thepowergenie.theroyeffect.com';
-export const EFFECTIVE_DATE = 'October 22, 2026';
+export const EFFECTIVE_DATE = 'October 25, 2026';
+
+export const OPERATOR_SENTENCE =
+  'The Power Genie is operated by Rory Ulloa in Houston, Texas, and provides solar referrals in partnership with Sunrun.';
+
+export const COLLECTED_INFORMATION_SENTENCE =
+  'We collect your name, phone, email, address, uploaded electric bills and usage data, and booking details.';
+
+export const INFORMATION_USE_SENTENCE =
+  'We use this information to schedule your savings consult, prepare a savings estimate, and share it with the Sunrun representative handling your consult.';
+
+export const SECURITY_SENTENCE =
+  'We protect this information by serving the site over HTTPS, storing uploaded electric bills and usage data in private storage that is not published on the website, and limiting access to Rory Ulloa, the Sunrun representative handling the consult, and the providers that host the site and database.';
+
+/** Exact sentence required for A2P 10DLC privacy review. Do not paraphrase. */
+export const SMS_NO_SHARE_SENTENCE =
+  'No mobile information will be shared with third parties or affiliates for marketing or promotional purposes. Text messaging originator opt-in data and consent will not be shared with any third parties.';
+
+export const SMS_PROGRAM_NAME = 'Power Genie Alerts';
+
+export const SMS_PROGRAM_DESCRIPTION =
+  'Power Genie Alerts sends account login links and new-lead/appointment alerts for Rory Ulloa’s team members.';
+
+export const SMS_FREQUENCY = 'Message frequency varies.';
+
+export const SMS_RATES = 'Message and data rates may apply.';
+
+export const SMS_STOP_HELP = 'Reply STOP to cancel, HELP for help.';
+
+export const SMS_CARRIER_LIABILITY =
+  'Carriers are not liable for delayed or undelivered messages.';
+
+export const SMS_OPT_OUT_SENTENCE =
+  'Reply STOP to opt out of text messages.';
 export const GOOGLE_POLICY_URL = 'https://developers.google.com/terms/api-services-user-data-policy';
 export const CALENDAR_EVENTS_SCOPE = 'https://www.googleapis.com/auth/calendar.events';
 export const CALENDAR_FREEBUSY_SCOPE = 'https://www.googleapis.com/auth/calendar.freebusy';
