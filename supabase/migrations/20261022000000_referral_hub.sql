@@ -26,7 +26,8 @@ alter table public.hub_allowlist enable row level security;
 
 insert into public.hub_allowlist (email, role, full_name) values
   ('horace.lawrence@sunrun.com', 'owner', 'Horace Lawrence'),
-  ('roryulloa@gmail.com',        'admin', 'Rory Ulloa')
+  ('roryulloa@gmail.com',        'admin', 'Rory Ulloa'),
+  ('mike.rcccon@yahoo.com',      'admin', 'Mike')
 on conflict (email) do nothing;
 
 create table if not exists public.hub_profiles (

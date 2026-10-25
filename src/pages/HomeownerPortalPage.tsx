@@ -95,6 +95,22 @@ const DEFAULT_APPLIANCES: ApplianceLoad[] = [
 ];
 
 export default function HomeownerPortalPage() {
+  useEffect(() => {
+    let meta = document.querySelector('meta[name="robots"]') as HTMLMetaElement | null;
+    const created = !meta;
+    if (!meta) {
+      meta = document.createElement('meta');
+      meta.name = 'robots';
+      document.head.appendChild(meta);
+    }
+    const prior = meta.content;
+    meta.content = 'noindex, nofollow';
+    return () => {
+      if (created) meta?.remove();
+      else if (meta) meta.content = prior;
+    };
+  }, []);
+
   const [activeTab, setActiveTab] = useState<'powerwall' | 'referrals' | 'savings' | 'concierge'>('powerwall');
 
   // Powerwall / Energy Firewall state
@@ -274,13 +290,6 @@ export default function HomeownerPortalPage() {
           </div>
 
           <div className="flex items-center gap-2.5">
-            <a
-              href="/dashboard"
-              className="inline-flex items-center gap-1.5 rounded-full border border-[#0066CC]/50 bg-[#0066CC]/20 px-3.5 py-1.5 text-xs font-bold text-[#64B5F6] hover:bg-[#0066CC]/30 transition shadow-sm no-underline"
-              title="Open Sunrun Partner & Advisor Referral Hub"
-            >
-              📊 Rep Referral Hub
-            </a>
             <a
               href="tel:+15102417007"
               className="inline-flex items-center gap-2 rounded-full border border-[#234567] bg-[#0E253B] px-3.5 py-1.5 text-xs font-semibold text-[#90CAF9] hover:bg-[#143452] transition shadow-sm"

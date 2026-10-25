@@ -9,6 +9,7 @@ import { assertBillBytes } from './files.js'
 import { assistantAvailabilityBusy, syncAssistantConsult } from './google-calendar.js'
 import { insertRow, downloadObject, moveObject, takenAppointments, hubBusyIntervals } from './supabase.js'
 import { openReceipt, type UploadReceipt } from './receipt.js'
+import { refreshSmtAuthorizations } from './smt/store.js'
 
 /**
  * Hub assumptions (schema in powergenie-hub-schema.sql):
@@ -315,6 +316,37 @@ export async function saveLead(body: unknown, now = new Date()): Promise<Confirm
   if (prepared.file) await insertRow('powergenie_files', prepared.file)
   await insertRow('powergenie_activity', prepared.activity)
   if (customerWrite === 'created') {
+    const appointmentId = randomUUID()
+    try {
+      await insertRow('hub_appointments', {
+        id: appointmentId,
+        starts_at: slotStart,
+        ends_at: slotEnd,
+        status: 'booked',
+        source: 'public',
+        customer_name: prepared.confirmation.name,
+        phone: prepared.confirmation.phone,
+        email: prepared.confirmation.email,
+        address: String(prepared.customer.service_address || ''),
+        note: String(prepared.customer.notes || '').slice(0, 1000),
+      })
+      if (prepared.customer.esiid && prepared.customer.meter_number && prepared.customer.email) {
+        await insertRow('smt_authorizations', {
+          id: randomUUID(),
+          appointment_id: appointmentId,
+          esi_id: String(prepared.customer.esiid),
+          meter_number: String(prepared.customer.meter_number),
+          customer_email: String(prepared.customer.email).toLowerCase(),
+          consent_at: new Date().toISOString(),
+          consent_text: 'Customer consented to Smart Meter Texas historical electric usage request via Power Genie.',
+          status: 'pending_setup',
+        })
+        refreshSmtAuthorizations().catch((err) => console.error('Failed to trigger SMT agreement:', err))
+      }
+    } catch (hubError) {
+      console.error('Failed to create hub appointment or SMT authorization:', hubError)
+    }
+
     await syncAssistantConsult({
       id: prepared.confirmation.id,
       customerName: prepared.confirmation.name,
