@@ -24,6 +24,10 @@ export function notConfigured(missing: string[]) {
   return fail(503, 'not_configured', 'This feature is not configured yet. Please check back soon.');
 }
 
+export function unauthorized() {
+  return fail(401, 'unauthorized', 'Unauthorized.');
+}
+
 export function preflight(req: Request) {
   return req.method === 'OPTIONS' ? new Response('ok', { headers: corsHeaders }) : null;
 }

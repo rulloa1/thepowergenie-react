@@ -28,11 +28,16 @@ Deno.serve(async (req: Request) => {
   }
 
   const key = serviceKey();
+  const cronSecret = Deno.env.get('CRON_SECRET')?.trim();
   const authHeader = req.headers.get('authorization') || '';
   const token = authHeader.replace(/^Bearer\s+/i, '').trim();
 
-  // Verify caller has service role access
-  if (!key || token !== key) {
+  // Allow: service role key, CRON_SECRET, or internal pg_cron (no auth, checks x-forwarded-for)
+  const isServiceRole = key && token === key;
+  const isCronSecret = cronSecret && token === cronSecret;
+  const isInternal = !authHeader && req.headers.get('x-forwarded-for')?.includes('127.0.0.1');
+
+  if (!isServiceRole && !isCronSecret && !isInternal) {
     return unauthorized();
   }
 

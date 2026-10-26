@@ -24,3 +24,6 @@ verify_jwt = false
 
 [functions.google-oauth]
 verify_jwt = false
+
+[functions.sequence-cron]
+verify_jwt = false
