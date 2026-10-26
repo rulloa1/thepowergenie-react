@@ -129,7 +129,8 @@ const DESIGN_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000
 const BASELINE_AGE_MS = 2 * 60 * 60 * 1000
 
 export function origin(): string {
-  return siteOrigin(process.env.SITE_URL || process.env.PUBLIC_SITE_URL)
+  // Same origin the lead alerts use, so every link points at the live site.
+  return siteOrigin(process.env.SITE_URL)
 }
 
 export function proposalUrl(token: string): string {
@@ -660,9 +661,15 @@ export async function tick(limits = { leads: 8, messages: 25 }): Promise<{ leads
     { select: 'id,created_at,updated_at,stage', order: 'created_at.desc', limit: 500 },
   )
   const ids = leads.map(lead => lead.id)
-  const flows = ids.length
-    ? await selectRows<Pick<WorkflowRow, 'lead_id' | 'last_stage' | 'updated_at'>>('hub_lead_workflow', { lead_id: inList(ids) }, { select: 'lead_id,last_stage,updated_at', limit: 1000 })
-    : []
+  const flows: Array<Pick<WorkflowRow, 'lead_id' | 'last_stage' | 'updated_at'>> = []
+  // Keep each request URL short.
+  for (let start = 0; start < ids.length; start += 80) {
+    flows.push(...await selectRows<Pick<WorkflowRow, 'lead_id' | 'last_stage' | 'updated_at'>>(
+      'hub_lead_workflow',
+      { lead_id: inList(ids.slice(start, start + 80)) },
+      { select: 'lead_id,last_stage,updated_at', limit: 1000 },
+    ))
+  }
   const byLead = new Map(flows.map(flow => [flow.lead_id, flow]))
   const due = leads.filter(lead => {
     const flow = byLead.get(lead.id)

@@ -11,7 +11,6 @@ import {
   loadSettings,
   markProposalShared,
   openTasks,
-  origin,
   recordInterest,
   recordView,
   reopenTask,
@@ -69,8 +68,9 @@ async function proposalByToken(token: string | null): Promise<ProposalRow | null
   return selectOne<ProposalRow>('hub_proposals', { public_token: `eq.${token}` })
 }
 
-function imageUrl(token: string): string {
-  return `${origin()}/api/assistant?route=workflow&action=roof&t=${token}`
+/** Relative on the customer's page (same origin, allowed by its CSP); absolute for the dashboard preview frame. */
+function imageUrl(token: string, base = ''): string {
+  return `${base}/api/assistant?route=workflow&action=roof&t=${token}`
 }
 
 /** /api/assistant?route=workflow&action=… */
@@ -114,7 +114,7 @@ export async function handleWorkflow(request: Request, url: URL): Promise<Respon
       return json({
         html: renderProposalHtml(proposal.snapshot, {
           mode: proposal.status === 'draft' ? 'preview' : 'customer',
-          imageUrl: proposal.snapshot.roof.status === 'ok' && googleKey() ? imageUrl(proposal.public_token) : null,
+          imageUrl: proposal.snapshot.roof.status === 'ok' && googleKey() ? imageUrl(proposal.public_token, url.origin) : null,
           interestedAction: null,
           interestedAt: proposal.interested_at,
         }),
