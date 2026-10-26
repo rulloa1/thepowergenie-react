@@ -130,7 +130,7 @@ function HomePowerFlowHUD({
   const isDay = mode === 'day';
 
   return (
-    <div className="sw-power-hud mt-5 w-full rounded-2xl bg-[rgba(8,20,32,0.92)] backdrop-blur-xl border border-[rgba(255,255,255,0.14)] p-4 sm:p-5 shadow-[0_16px_40px_rgba(0,0,0,0.5)] text-white pointer-events-auto transition-all duration-300">
+    <div className="sw-power-hud max-md:hidden mt-5 w-full rounded-2xl bg-[rgba(8,20,32,0.92)] backdrop-blur-xl border border-[rgba(255,255,255,0.14)] p-4 sm:p-5 shadow-[0_16px_40px_rgba(0,0,0,0.5)] text-white pointer-events-auto transition-all duration-300">
       {/* Top Header & Mode Toggle Pills */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/10">
         <div>
@@ -1160,7 +1160,7 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
             )}
             style={{ '--sw-accent': s.accent || '', '--sw-accent-ink': accentInk(s.accent) } as React.CSSProperties}
           >
-            <p className={cn("sw-copy__step flex items-center gap-1 font-mono text-[0.74rem] tracking-[0.12em] text-[var(--sw-ink-soft)]", s.id === 'home' ? "mb-1" : "mb-4")}>
+            <p className={cn("sw-copy__step max-md:hidden flex items-center gap-1 font-mono text-[0.74rem] tracking-[0.12em] text-[var(--sw-ink-soft)]", s.id === 'home' ? "mb-1" : "mb-4")}>
               <span>{pad(i + 1)}</span>
               <span aria-hidden="true">/</span>
               <span>{pad(config.sections.length)}</span>
@@ -1206,7 +1206,7 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
               />
             )}
             {s.id !== 'home' && s.tags && s.tags.length > 0 && (
-              <ul className="sw-copy__benefits flex flex-wrap gap-2 mt-6 p-0 list-none" aria-label={`${s.title} benefits`}>
+              <ul className="sw-copy__benefits max-md:hidden flex flex-wrap gap-2 mt-6 p-0 list-none" aria-label={`${s.title} benefits`}>
                 {s.tags.map(tag => (
                   <li key={tag} className="text-[0.82rem] font-semibold text-[color-mix(in_srgb,var(--sw-accent-ink)_70%,#000)] px-3.5 py-1.5 rounded-full bg-[color-mix(in_srgb,var(--sw-accent-ink)_14%,#fff)] border border-[color-mix(in_srgb,var(--sw-accent-ink)_30%,transparent)]">
                     {tag}
@@ -1215,7 +1215,7 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
               </ul>
             )}
             {s.cta && (
-              <div className="sw-copy__cta flex flex-wrap gap-3 mt-7 pointer-events-auto">
+              <div className="sw-copy__cta max-md:hidden flex flex-wrap gap-3 mt-7 pointer-events-auto">
                 {s.cta.primary && (
                   <a href={s.cta.primary.href} className="sw-btn sw-btn--primary no-underline font-semibold text-[0.95rem] px-6 py-3 rounded-full text-white bg-[var(--sw-ink)] hover:-translate-y-0.5 transition-transform">
                     {s.cta.primary.label}
@@ -1233,7 +1233,7 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
       </div>
 
       {/* Progress Rail (Side Dots) */}
-      <nav className="sw-route fixed right-[clamp(14px,2.4vw,30px)] top-1/2 z-40 -translate-y-1/2 flex flex-col gap-[22px] p-[18px_10px] max-md:right-1.5 max-md:gap-4" aria-label="Journey progress">
+      <nav className="sw-route max-md:hidden fixed right-[clamp(14px,2.4vw,30px)] top-1/2 z-40 -translate-y-1/2 flex flex-col gap-[22px] p-[18px_10px] max-md:right-1.5 max-md:gap-4" aria-label="Journey progress">
         <div className="absolute left-1/2 top-[22px] bottom-[22px] w-[2px] -translate-x-1/2 bg-[var(--sw-accent)] opacity-28" />
         {config.sections.map((s, i) => (
           <button

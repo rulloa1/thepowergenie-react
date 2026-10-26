@@ -276,8 +276,10 @@ html[data-pg-brand="brands"] {
 }
 
 @media (max-width: 639px) {
+  /* On phones the fixed Upload Light Bill bar opens the assistant, so the
+     bubble stays out of the story screens until the quote panel. */
   html.pg-mobile-cta .pg-assistant-launcher {
-    bottom: calc(76px + env(safe-area-inset-bottom));
+    display: none;
   }
 
   html.quote-in-view .pg-assistant-launcher {
