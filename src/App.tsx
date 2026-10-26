@@ -23,7 +23,7 @@ const config: Config = {
   hint: 'scroll to explore',
   nav: true,
   atmosphere: true,
-  cta: { label: 'Get a Quote', href: '#quote' },
+  cta: { label: 'Upload Light Bill', href: '#bill' },
   sections: [
     {
       id: 'sun',
@@ -118,7 +118,7 @@ const config: Config = {
       body: 'Own your power with $0 down Sunrun solar + Tesla Powerwall battery storage. Charge your EV on sunlight, enjoy 24/7 whole-home backup, and earn monthly gas credits.',
       tags: ['Zero Down', 'Tesla Powerwall Included', 'Gas Credits Active'],
       cta: {
-        primary: { label: 'Get My Free Quote', href: '#quote' },
+        primary: { label: 'Upload Light Bill', href: '#bill' },
         secondary: { label: 'Book a free savings consult', href: '#consult' },
       }
     }
@@ -297,15 +297,14 @@ export default function App() {
       {!quoteInView && (
       <div className="sm:hidden fixed z-60 left-4 right-4 bottom-[max(12px,env(safe-area-inset-bottom))] pointer-events-none">
         <a 
-          href="#quote" 
+          href="#bill"
           onClick={(e) => {
             e.preventDefault();
-            triggerToast();
-            document.getElementById('quote')?.scrollIntoView({ behavior: 'smooth' });
+            openAssistant('bill');
           }}
           className="quote-cta-mobile flex items-center justify-center min-h-[52px] w-full bg-[#1A1A2E] text-white font-bold rounded-full shadow-lg pointer-events-auto no-underline"
         >
-          Get a Free Quote
+          Upload Light Bill
         </a>
       </div>
       )}

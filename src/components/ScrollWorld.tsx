@@ -749,10 +749,10 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
   const applyLocationHash = useCallback(() => {
     const hash = window.location.hash.replace(/^#/, '');
     if (!hash) return;
-    if (hash === 'consult') {
+    if (hash === 'consult' || hash === 'bill') {
       if (consultFromHash.current) return;
       consultFromHash.current = true;
-      openAssistant('book');
+      openAssistant(hash === 'bill' ? 'bill' : 'book');
       return;
     }
     consultFromHash.current = false;
@@ -815,6 +815,9 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
     } else if (id === 'consult') {
       event.preventDefault();
       openAssistant('book');
+    } else if (id === 'bill') {
+      event.preventDefault();
+      openAssistant('bill');
     }
   }, [config.sections, jumpTo, onQuoteClick]);
 
