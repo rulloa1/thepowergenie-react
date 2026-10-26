@@ -20,6 +20,7 @@ import {
   Printer,
   RefreshCw,
   RotateCcw,
+  Settings2,
   Share2,
   ShieldCheck,
   X,
@@ -41,22 +42,22 @@ import type { Lead, LeadFeed } from './useLeadFeed';
 import { leadsForView } from './useLeadFeed';
 import ArchiveLeadDialog from './ArchiveLeadDialog';
 import LeadForm from './LeadForm';
+import PricingDialog from './PricingDialog';
+import TasksStrip from './TasksStrip';
+import WorkflowPanel from './WorkflowPanel';
+import { announceWorkflowChange, workflowApi } from './workflowApi';
 import { archiveCustomerLead, createManualLead, restoreCustomerLead, updateManualLead } from './leadActions';
 import { stageLabel, type LeadActor, type LeadDraft } from './leadRecord';
 import { Button, Notice, Spinner, cn } from './ui';
 import { formatDateTime } from './time';
 import {
   downloadFile,
-  generateProposalEmailUrl,
-  generateProposalSmsUrl,
   generateTwoStepReviewEmail,
   generateTwoStepReviewEmailUrl,
   generateTwoStepReviewSmsText,
   generateTwoStepReviewSmsUrl,
-  getProposalUrl,
   leadsToCsvString,
   leadsToJsonString,
-  solarProposalScheduleToCsv,
 } from './leadExports';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -595,6 +596,7 @@ export default function LeadsTab({
   const [archiveError, setArchiveError] = useState<string | null>(null);
   const [archiving, setArchiving] = useState(false);
   const [actionNote, setActionNote] = useState<string | null>(null);
+  const [pricingOpen, setPricingOpen] = useState(false);
   const marked = useRef(new Set<string>());
   const scrolled = useRef<string | null>(null);
   const actor: LeadActor = { id: profile.id, fullName: profile.full_name, email: profile.email };
@@ -631,6 +633,14 @@ export default function LeadsTab({
     void feed.markSeen(lead);
   };
 
+  const openLeadById = (leadId: string) => {
+    const lead = feed.leads.find((item) => item.id === leadId && item.source === 'customer') || feed.leads.find((item) => item.id === leadId);
+    if (!lead) return;
+    if (lead.archived) setView('archived');
+    scrolled.current = null;
+    select(lead);
+  };
+
   const openBill = async (lead: Lead) => {
     if (!lead.bill || !supabase) return;
     setOpening(`${lead.source}:${lead.id}`);
@@ -661,6 +671,11 @@ export default function LeadsTab({
     setActionNote(result.warning || (editor.mode === 'create' ? 'Lead added.' : 'Lead updated.'));
     if (editor.mode === 'create') setView('active');
     feed.refresh();
+    const savedId = editor.mode === 'create' || !editor.lead ? result.id : editor.lead.id;
+    if (savedId) {
+      // Build the savings and proposal right away instead of waiting for the next automatic run.
+      void workflowApi.run(savedId).then(() => announceWorkflowChange(savedId)).catch(() => undefined);
+    }
   };
 
   const confirmArchive = async () => {
@@ -706,6 +721,9 @@ export default function LeadsTab({
               <Plus className="h-4 w-4" /> Add lead
             </Button>
           )}
+          <Button type="button" variant="ghost" className="min-h-[40px] px-3 text-[0.84rem]" onClick={() => setPricingOpen(true)}>
+            <Settings2 className="h-4 w-4" /> Pricing
+          </Button>
           {shown.length > 0 && (
             <>
               <button
@@ -735,6 +753,8 @@ export default function LeadsTab({
           </button>
         </div>
       </div>
+
+      <TasksStrip onOpenLead={openLeadById} onOpenPricing={() => setPricingOpen(true)} />
 
       <div className="mt-4 flex gap-2" role="tablist" aria-label="Lead lists">
         <button
@@ -887,6 +907,15 @@ export default function LeadsTab({
                   <UsageHistory points={lead.usageHistory} />
                 </div>
 
+                {lead.source === 'customer' && !lead.archived && (
+                  <WorkflowPanel
+                    leadId={lead.id}
+                    leadName={lead.name}
+                    autoOpen={selected}
+                    onOpenPricing={() => setPricingOpen(true)}
+                  />
+                )}
+
                 {/* Sunrun Option B Workflow Integration for Option B Leads */}
                 {(lead.source === 'customer' || lead.workflowOption === 'option_b_ownership') && (
                   <SunrunOptionBWorkflow lead={lead} />
@@ -972,6 +1001,7 @@ export default function LeadsTab({
           onSubmit={(draft, file) => void saveLead(draft, file)}
         />
       )}
+      {pricingOpen && <PricingDialog onClose={() => setPricingOpen(false)} />}
       {archiveTarget && (
         <ArchiveLeadDialog
           name={archiveTarget.name}

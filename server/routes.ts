@@ -15,6 +15,7 @@ import { createSignedUpload, deleteObject, downloadObject, hubBusyIntervals, ser
 import { requireHubMember } from './hub-member.js'
 import { notifyPageVisit } from './notify.js'
 import { inviteDashboardMember } from './admin-invite.js'
+import { handleProposalPage, handleWorkflow } from './workflow/routes.js'
 import { handleSequenceStatus, handleSequenceStart, handleSequencePause, handleSequenceResume, handleUnsubscribe } from './sequence.js'
 
 const TEN_MINUTES = 10 * 60 * 1000
@@ -223,7 +224,7 @@ export async function handleInvite(request: Request): Promise<Response> {
   return json(result)
 }
 
-const ASSISTANT_ROUTES = new Set(['chat', 'uploads', 'bill', 'lead', 'slots', 'extract', 'hub-bill', 'visit', 'invite'])
+const ASSISTANT_ROUTES = new Set(['chat', 'uploads', 'bill', 'lead', 'slots', 'extract', 'hub-bill', 'visit', 'invite', 'workflow', 'proposal'])
 
 /** One function serves every assistant route. The widget calls /api/assistant?route=. */
 function assistantRoute(url: URL): string {
@@ -253,6 +254,8 @@ export async function handleApi(request: Request): Promise<Response> {
     if (pathname === '/api/hub-bill' && request.method === 'POST') return await handleHubBill(request)
     if (pathname === '/api/visit' && request.method === 'POST') return await handleVisit(request)
     if (pathname === '/api/invite' && request.method === 'POST') return await handleInvite(request)
+    if (pathname === '/api/workflow') return await handleWorkflow(request, url)
+    if (pathname === '/api/proposal' && (request.method === 'GET' || request.method === 'POST')) return await handleProposalPage(request, url)
     // Sequence management routes
     if (pathname === '/api/sequence' && request.method === 'GET') return await handleSequenceStatus(request)
     if (pathname === '/api/sequence/start' && request.method === 'POST') return await handleSequenceStart(request)

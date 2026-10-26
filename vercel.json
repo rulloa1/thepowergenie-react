@@ -12,6 +12,14 @@
       "destination": "/api/assistant?route=$1"
     },
     {
+      "source": "/proposal/:token/interested",
+      "destination": "/api/assistant?route=proposal&t=:token&action=interested"
+    },
+    {
+      "source": "/proposal/:token",
+      "destination": "/api/assistant?route=proposal&t=:token"
+    },
+    {
       "source": "/privacy",
       "destination": "/privacy.html"
     },

@@ -12,7 +12,7 @@ import {
   type LeadDraft,
 } from './leadRecord';
 
-export type LeadWriteResult = { ok: true; warning?: string } | { ok: false; error: string };
+export type LeadWriteResult = { ok: true; warning?: string; id?: string } | { ok: false; error: string };
 
 const BILL_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'application/pdf']);
 
@@ -88,7 +88,7 @@ export async function createManualLead(draft: LeadDraft, actor: LeadActor, file:
     message: file && !warning ? 'Lead added from the Referral Hub. Bill attached.' : 'Lead added from the Referral Hub.',
     now,
   }));
-  return warning ? { ok: true, warning } : { ok: true };
+  return warning ? { ok: true, warning, id } : { ok: true, id };
 }
 
 export async function updateManualLead(leadId: string, draft: LeadDraft, actor: LeadActor, file: File | null, now = new Date()): Promise<LeadWriteResult> {
