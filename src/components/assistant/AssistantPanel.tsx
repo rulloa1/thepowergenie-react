@@ -14,6 +14,7 @@ import {
   type ReferralSource,
   type Slot,
   REFERRAL_SOURCES,
+  SMT_CONSENT_TEXT,
 } from '../../../shared/types'
 
 type Phase = 'chat' | 'bill' | 'confirm' | 'book' | 'done'
@@ -55,6 +56,8 @@ export default function AssistantPanel({ frameClass, mode, nonce, onClose }: Pan
   const [slotStart, setSlotStart] = useState('')
   const [activeDay, setActiveDay] = useState('')
   const [consent, setConsent] = useState(false)
+  const [smtConsent, setSmtConsent] = useState(false)
+  const [smtEmail, setSmtEmail] = useState('')
   const [confirmation, setConfirmation] = useState<Confirmation | null>(null)
   const phaseRef = useRef(phase)
   phaseRef.current = phase
@@ -154,6 +157,8 @@ export default function AssistantPanel({ frameClass, mode, nonce, onClose }: Pan
     setWindows('')
     setSlotStart('')
     setConsent(false)
+    setSmtConsent(false)
+    setSmtEmail('')
     setConfirmation(null)
     setError('')
   }
@@ -229,6 +234,8 @@ export default function AssistantPanel({ frameClass, mode, nonce, onClose }: Pan
         referralSource,
         receipt,
         bill,
+        smtConsent,
+        smtEmail: smtConsent ? smtEmail.trim() : '',
       })
       setConfirmation(result.confirmation)
       setPhase('done')
@@ -320,6 +327,9 @@ export default function AssistantPanel({ frameClass, mode, nonce, onClose }: Pan
             <p className="text-sm leading-relaxed text-[#4A5568]">
               A photo or PDF is enough. Horace uses it for the savings estimate. JPEG, PNG, WEBP, HEIC, or PDF, up to 10 MB.
             </p>
+            <p className="text-sm leading-relaxed text-[#4A5568]">
+              Next, we’ll use the ESI ID and meter number on your bill to connect Smart Meter Texas, so Horace can see a full year of your usage.
+            </p>
             <label className={`${primaryClass} w-full cursor-pointer`}>
               Take a photo
               <input
@@ -360,18 +370,50 @@ export default function AssistantPanel({ frameClass, mode, nonce, onClose }: Pan
               Please correct anything that’s off. These details are what Horace receives — not a solar quote.
             </p>
             {warning && <p className="rounded-xl bg-[#FFF4E8] px-3 py-2 text-sm text-[#7A3E00]">{warning}</p>}
+            <div id="assistant-smt" className="space-y-3 rounded-2xl bg-white p-3.5 ring-2 ring-[var(--pg-assistant,#FF6B00)]/40" data-testid="smt-step">
+              <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#4A5568]">Smart Meter Texas</p>
+              <h4 className="text-base font-bold">Connect your usage history</h4>
+              <p className="text-sm leading-relaxed text-[#4A5568]">
+                With your OK, Smart Meter Texas shares your past year of electricity use, so Horace sizes your system from real numbers. We filled in your ESI ID and meter number from the bill. Check them below.
+              </p>
+              <BillField
+                label="ESI ID"
+                hint="Digits only, usually 17–22."
+                value={bill.esiid}
+                onChange={value => setBill({ ...bill, esiid: value ? value.replace(/\D/g, '').slice(0, 22) : null })}
+                inputMode="numeric"
+              />
+              <BillField label="Meter number" value={bill.meterNumber} onChange={value => setBill({ ...bill, meterNumber: value })} />
+              <label className="flex items-start gap-2.5 text-sm leading-relaxed text-[#1A1A2E]">
+                <input
+                  data-testid="smt-consent"
+                  className="mt-1 h-4 w-4 shrink-0"
+                  type="checkbox"
+                  checked={smtConsent}
+                  onChange={event => setSmtConsent(event.target.checked)}
+                />
+                <span>{SMT_CONSENT_TEXT}</span>
+              </label>
+              {smtConsent && (
+                <label className="block text-sm font-semibold">
+                  Email for the approval <span className="font-normal text-[#4A5568]">(optional)</span>
+                  <input
+                    className={`${fieldClass} mt-1`}
+                    type="email"
+                    inputMode="email"
+                    autoComplete="email"
+                    value={smtEmail}
+                    onChange={event => setSmtEmail(event.target.value)}
+                    placeholder="Leave blank to use your contact email"
+                  />
+                </label>
+              )}
+            </div>
+            <p className="pt-1 text-xs font-bold uppercase tracking-[0.12em] text-[#4A5568]">Bill details</p>
             <BillField label="Name on the bill" value={bill.customerName} onChange={value => setBill({ ...bill, customerName: value })} />
             <BillField label="Service address" value={bill.serviceAddress} onChange={value => setBill({ ...bill, serviceAddress: value })} />
             <BillField label="Utility" value={bill.utility} onChange={value => setBill({ ...bill, utility: value })} />
             <BillField label="Account number" value={bill.accountNumber} onChange={value => setBill({ ...bill, accountNumber: value })} />
-            <BillField
-              label="ESI ID"
-              hint="Digits only, usually 17–22."
-              value={bill.esiid}
-              onChange={value => setBill({ ...bill, esiid: value ? value.replace(/\D/g, '').slice(0, 22) : null })}
-              inputMode="numeric"
-            />
-            <BillField label="Meter number" value={bill.meterNumber} onChange={value => setBill({ ...bill, meterNumber: value })} />
             <BillField label="Bill date" value={bill.billDate} onChange={value => setBill({ ...bill, billDate: value })} />
             <BillField label="Rate plan" value={bill.ratePlan} onChange={value => setBill({ ...bill, ratePlan: value })} />
             <BillField label="kWh this period" value={numToText(bill.kwhThisPeriod)} onChange={value => setBill({ ...bill, kwhThisPeriod: textToNum(value) })} inputMode="decimal" />
@@ -418,6 +460,11 @@ export default function AssistantPanel({ frameClass, mode, nonce, onClose }: Pan
                 Utility <span className="font-normal text-[#4A5568]">(optional)</span>
                 <input className={`${fieldClass} mt-1`} value={utility} onChange={event => setUtility(event.target.value)} placeholder="Entergy, CenterPoint…" />
               </label>
+              {smtConsent && (
+                <p className="rounded-xl bg-[#EEF6FF] px-3 py-2 text-xs leading-relaxed text-[#1A1A2E]">
+                  Smart Meter Texas will email {smtEmail.trim() || email.trim() || 'you'} to approve sharing your usage. Approve it before the call so Horace has your numbers.
+                </p>
+              )}
             </div>
 
             {/* 2 — Time: pick a day, then a start time. No nested scroll box. */}
@@ -496,7 +543,13 @@ export default function AssistantPanel({ frameClass, mode, nonce, onClose }: Pan
               <Row label="Phone" value={confirmation.phone} />
               <Row label="Email" value={confirmation.email} />
               <Row label="Bill" value={confirmation.billAttached ? 'Attached for Horace' : 'Not attached yet'} />
+              <Row label="Smart Meter Texas" value={confirmation.smtEmail ? 'Approval email on its way' : ''} />
             </dl>
+            {confirmation.smtEmail && (
+              <p className="rounded-xl bg-[#EEF6FF] px-3 py-2 text-center text-sm leading-relaxed text-[#1A1A2E]" data-testid="smt-next">
+                Watch {confirmation.smtEmail} for an email from Smart Meter Texas and approve it, so Horace can review your usage before the call.
+              </p>
+            )}
             <p className="text-center text-xs text-[#4A5568]">Reference {confirmation.id.slice(0, 8)}</p>
             <button
               type="button"
@@ -561,6 +614,13 @@ export default function AssistantPanel({ frameClass, mode, nonce, onClose }: Pan
             type="button"
             className={`${primaryClass} flex-1`}
             onClick={() => {
+              const smtProblem = smtConsent ? smtFieldsProblem(bill) : null
+              if (smtProblem) {
+                setError(smtProblem)
+                document.getElementById('assistant-smt')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                return
+              }
+              setError('')
               if (bill.customerName) setName(bill.customerName)
               if (bill.serviceAddress) setAddress(bill.serviceAddress)
               if (bill.utility) setUtility(bill.utility)
@@ -678,6 +738,16 @@ function groupSlots(slots: Slot[]): Array<{ day: string; slots: Slot[] }> {
     else last.slots.push(slot)
   }
   return groups
+}
+
+function smtFieldsProblem(bill: BillFields): string | null {
+  if (!/^\d{17,22}$/.test((bill.esiid || '').replace(/[\s-]/g, ''))) {
+    return 'Enter the ESI ID from your bill to connect Smart Meter Texas, or uncheck that box.'
+  }
+  if (!/^[A-Za-z0-9-]{1,30}$/.test((bill.meterNumber || '').trim())) {
+    return 'Enter the meter number from your bill to connect Smart Meter Texas, or uncheck that box.'
+  }
+  return null
 }
 
 function numToText(value: number | null): string | null {

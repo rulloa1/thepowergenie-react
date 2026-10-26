@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { normalizeBill, billAmount } from '../supabase/functions/_shared/bill.js'
-import { TCPA_VERSION, type BillFields, type Confirmation, type LeadPayload, type Slot } from '../shared/types.js'
+import { SMT_CONSENT_TEXT, TCPA_VERSION, type BillFields, type Confirmation, type LeadPayload, type Slot } from '../shared/types.js'
 import { HttpError, honeypotTripped, isRecord } from './http.js'
 import { notifyNewLead } from './notify.js'
 import { loadSlotRules } from './slot-rules.js'
@@ -51,6 +51,8 @@ export type PreparedLead = {
   confirmation: Confirmation
   pendingPath: string | null
   finalPath: string | null
+  /** Set only when the visitor checked the Smart Meter Texas box. */
+  smt: { email: string } | null
 }
 
 function text(value: unknown, max: number): string {
@@ -94,6 +96,7 @@ export function buildLeadRecords(input: {
   slot: Slot
   bill: Partial<BillFields>
   receipt: UploadReceipt | null
+  smtEmail?: string | null
   now: Date
   timeZone: string
 }): PreparedLead {
@@ -122,6 +125,7 @@ export function buildLeadRecords(input: {
     bill.esiid ? `ESI ID: ${bill.esiid}` : null,
     bill.meterNumber ? `Meter: ${bill.meterNumber}` : null,
     'TCPA consent: yes',
+    input.smtEmail ? `Smart Meter Texas consent: yes (approval email to ${input.smtEmail})` : null,
     `Consent version: ${TCPA_VERSION}`,
     `Consent at: ${createdAt}`,
     input.receipt ? 'Bill: attached' : 'Bill: not attached',
@@ -214,7 +218,9 @@ export function buildLeadRecords(input: {
       phone: input.phone,
       email: input.email,
       billAttached: Boolean(input.receipt),
+      smtEmail: input.smtEmail ?? null,
     },
+    smt: input.smtEmail ? { email: input.smtEmail } : null,
   }
 }
 
@@ -244,6 +250,19 @@ export function parseLead(body: unknown, slots: Slot[], now = new Date()): Prepa
   if (!slot) throw new HttpError(400, 'Please pick an open time.')
   const referralRaw = text(payload.referralSource, 40)
   const referralSource = referralRaw === 'celebrity-solar' || referralRaw === 'hip-hop-solar' || referralRaw === 'gas-genie' ? referralRaw : null
+  const bill = optionalBill(payload.bill)
+  let smtEmail: string | null = null
+  if (payload.smtConsent === true) {
+    const esi = typeof bill.esiid === 'string' ? bill.esiid.replace(/[\s-]/g, '') : ''
+    const meter = typeof bill.meterNumber === 'string' ? bill.meterNumber.trim() : ''
+    if (!/^\d{17,22}$/.test(esi)) throw new HttpError(400, 'Enter the ESI ID from your bill to connect Smart Meter Texas, or uncheck that box.')
+    if (!/^[A-Za-z0-9-]{1,30}$/.test(meter)) throw new HttpError(400, 'Enter the meter number from your bill to connect Smart Meter Texas, or uncheck that box.')
+    const requested = text(payload.smtEmail, 64).toLowerCase()
+    smtEmail = requested || email
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(smtEmail) || smtEmail.length > 64) {
+      throw new HttpError(400, 'Enter the email Smart Meter Texas should use.')
+    }
+  }
   const rules = loadSlotRules()
   return buildLeadRecords({
     clientRequestId,
@@ -255,7 +274,8 @@ export function parseLead(body: unknown, slots: Slot[], now = new Date()): Prepa
     preferredWindows,
     referralSource,
     slot,
-    bill: optionalBill(payload.bill),
+    bill,
+    smtEmail,
     receipt: typeof payload.receipt === 'string' && payload.receipt ? openReceipt(payload.receipt) : null,
     now,
     timeZone: rules.timeZone,
@@ -333,15 +353,16 @@ export async function saveLead(body: unknown, now = new Date()): Promise<Confirm
       })
       // Auto-pause any active sequence when a new booking is made
       await pauseSequenceOnBooking(String(prepared.customer.id))
-      if (prepared.customer.esiid && prepared.customer.meter_number && prepared.customer.email) {
+      // Only when the visitor checked the Smart Meter Texas box.
+      if (prepared.smt && prepared.customer.esiid && prepared.customer.meter_number) {
         await insertRow('smt_authorizations', {
           id: randomUUID(),
           appointment_id: appointmentId,
           esi_id: String(prepared.customer.esiid),
           meter_number: String(prepared.customer.meter_number),
-          customer_email: String(prepared.customer.email).toLowerCase(),
+          customer_email: prepared.smt.email,
           consent_at: new Date().toISOString(),
-          consent_text: 'Customer consented to Smart Meter Texas historical electric usage request via Power Genie.',
+          consent_text: SMT_CONSENT_TEXT,
           status: 'pending_setup',
         })
         refreshSmtAuthorizations().catch((err) => console.error('Failed to trigger SMT agreement:', err))

@@ -1,5 +1,6 @@
-export const METER_CONSENT_TEXT =
-  'I agree to share my Smart Meter Texas electricity usage with The Power Genie so Horace can review it before our call. Smart Meter Texas will email me to approve this. I can say no and still book the call.';
+import { SMT_CONSENT_TEXT } from '../../shared/types';
+
+export const METER_CONSENT_TEXT = SMT_CONSENT_TEXT;
 
 export type MeterRequest = {
   esiId: string;

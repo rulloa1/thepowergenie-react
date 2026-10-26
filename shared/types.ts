@@ -2,6 +2,9 @@
 
 export const TCPA_VERSION = 'tcpa-2026-10-22'
 
+export const SMT_CONSENT_TEXT =
+  'I agree to share my Smart Meter Texas electricity usage with The Power Genie so Horace can review it before our call. Smart Meter Texas will email me to approve this. I can say no and still book the call.'
+
 export const TCPA_TEXT =
   'I agree that The Power Genie and Sunrun consultant Horace Lawrence may call, text, and email me about this solar inquiry, including with autodialed or prerecorded messages. Consent is not required to purchase anything. Message and data rates may apply, and I can opt out later.'
 
@@ -84,6 +87,10 @@ export type LeadPayload = {
   referralSource?: string | null
   receipt?: string | null
   bill?: Partial<BillFields> | null
+  /** The visitor checked the Smart Meter Texas box. Needs the bill's ESI ID and meter number. */
+  smtConsent?: boolean
+  /** Email Smart Meter Texas sends the approval to. Blank means the contact email. */
+  smtEmail?: string
 }
 
 export type Confirmation = {
@@ -93,6 +100,8 @@ export type Confirmation = {
   phone: string
   email: string
   billAttached: boolean
+  /** Smart Meter Texas will email this address to approve sharing usage. */
+  smtEmail?: string | null
 }
 
 export const MAX_BILL_BYTES = 10 * 1024 * 1024

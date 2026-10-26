@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { buildLeadRecords } from '../server/lead'
+import { buildLeadRecords, parseLead } from '../server/lead'
 import { listSlots } from '../server/slots'
 import { loadSlotRules } from '../server/slot-rules'
 import type { UploadReceipt } from '../server/receipt'
@@ -110,4 +110,39 @@ test('a consult with no bill still uses the first pipeline stage', () => {
   assert.equal(prepared.customer.usage_history, null)
   assert.match(String(prepared.activity.message), /No bill attached yet/)
   assert.match(String(prepared.customer.notes), /Bill: not attached/)
+})
+
+function leadBody(extra: Record<string, unknown>) {
+  return {
+    clientRequestId: '22222222-2222-4222-8222-222222222222',
+    consent: true,
+    name: 'Pat Example',
+    phone: '713-555-0100',
+    email: 'pat@example.com',
+    serviceAddress: '100 Main St, Spring, TX',
+    utility: 'CenterPoint',
+    slotStart: slot!.start,
+    bill: { esiid: '1044-3720-0123-45678', meterNumber: 'M123456' },
+    ...extra,
+  }
+}
+
+test('Smart Meter Texas is requested only when the visitor checks the box', () => {
+  const without = parseLead(leadBody({}), [slot!], now)
+  assert.equal(without.smt, null)
+  assert.equal(without.confirmation.smtEmail, null)
+  assert.doesNotMatch(String(without.customer.notes), /Smart Meter Texas consent/)
+
+  const withBox = parseLead(leadBody({ smtConsent: true }), [slot!], now)
+  assert.deepEqual(withBox.smt, { email: 'pat@example.com' })
+  assert.equal(withBox.confirmation.smtEmail, 'pat@example.com')
+  assert.match(String(withBox.customer.notes), /Smart Meter Texas consent: yes/)
+
+  const otherEmail = parseLead(leadBody({ smtConsent: true, smtEmail: 'Meter@Example.com' }), [slot!], now)
+  assert.deepEqual(otherEmail.smt, { email: 'meter@example.com' })
+})
+
+test('Smart Meter Texas consent needs the ESI ID and meter number', () => {
+  assert.throws(() => parseLead(leadBody({ smtConsent: true, bill: { meterNumber: 'M1' } }), [slot!], now), /ESI ID/)
+  assert.throws(() => parseLead(leadBody({ smtConsent: true, bill: { esiid: '10443720012345678' } }), [slot!], now), /meter number/)
 })
