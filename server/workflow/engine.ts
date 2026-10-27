@@ -24,7 +24,7 @@ import { HttpError } from '../http.js'
 import { sendCustomEmail, sendCustomSms } from '../notify.js'
 import { inList, insertReturning, patchRows, selectOne, selectRows, upsertRow } from './db.js'
 import { googleKey, lookupRoof } from './google.js'
-import { billRequestFollowups, billTask, followupsForStage, proposalMessages, tasksForStage, type FollowupPlan, type MessageContext } from './plan.js'
+import { billRequestFollowups, billTask, followupsForStage, interestedMessages, perkFromNotes, proposalMessages, tasksForStage, type FollowupPlan, type MessageContext } from './plan.js'
 
 export type LeadRow = {
   id: string
@@ -113,10 +113,14 @@ const LEAD_COLUMNS =
 
 const SYSTEM: Actor = { id: null, name: 'Automatic' }
 
-/** Which stage each automatic task belongs to. Others (like "interested") are kept. */
+/**
+ * Which stage each automatic task belongs to. Others (like "interested" and the
+ * launch-page perk tasks) stay open until someone finishes them.
+ */
 const TASK_STAGE: Record<string, string> = {
   approve_proposal: 'proposal_ready',
   call_after_proposal: 'presented',
+  decide_quiet_lead: 'presented',
   schedule_survey: 'signed',
   submit_permits: 'site_survey',
   schedule_install: 'permits',
@@ -285,6 +289,7 @@ function messageContext(lead: LeadRow, wf: WorkflowRow, pricing: PricingSettings
     origin: origin(),
     proposalUrl: proposalToken ? proposalUrl(proposalToken) : null,
     unsubscribeUrl: unsubscribeUrl(wf.contact_token),
+    perk: perkFromNotes(lead.notes),
   }
 }
 
@@ -333,7 +338,7 @@ async function enterStage(lead: LeadRow, wf: WorkflowRow, stage: string, pricing
   // Bill reminders (note only_without_usage) are not tied to a stage.
   await patchRows('hub_followups', { lead_id: `eq.${lead.id}`, status: 'eq.scheduled', stage: `neq.${stage}`, note: 'is.null' }, { status: 'cancelled', note: 'Lead moved to another stage' })
   const name = firstName(lead.customer_name || 'there')
-  for (const task of tasksForStage(stage, { firstName: name })) {
+  for (const task of tasksForStage(stage, { firstName: name, perk: perkFromNotes(lead.notes) })) {
     await insertReturning('hub_tasks', {
       lead_id: lead.id,
       kind: task.kind,
@@ -644,6 +649,16 @@ export async function recordInterest(token: string): Promise<ProposalRow | null>
     cancelled_at: null,
   }, 'lead_id,kind')
   await logActivity(lead.id, SYSTEM, 'proposal_interested', `${lead.customer_name || 'The customer'} tapped "I'm interested" on the proposal.`)
+  // Tell the customer right away that a call is coming, with a link to book a time.
+  try {
+    const wf = (await ensureWorkflow(lead.id)).row
+    if (!wf.opted_out_at && !lead.archived_at) {
+      const pricing = await loadSettings()
+      await scheduleFollowups(lead, 'presented', interestedMessages(messageContext(lead, wf, pricing, proposal.public_token), smsConsent(lead)))
+    }
+  } catch (error) {
+    console.error('interested_reply_failed', error instanceof Error ? error.message : 'unknown')
+  }
   const alertTo = (process.env.NOTIFY_EMAIL_TO || '').split(',').map(value => value.trim()).filter(Boolean)
   const text = `${lead.customer_name || 'A customer'} wants to move forward on their solar proposal. Call ${lead.phone || 'them'} now. ${origin()}/dashboard?tab=leads&id=${encodeURIComponent(lead.id)}`
   for (const to of alertTo) await sendCustomEmail(to, `${lead.customer_name || 'A customer'} is interested in their proposal`, text)

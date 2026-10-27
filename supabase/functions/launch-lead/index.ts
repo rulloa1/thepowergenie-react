@@ -98,11 +98,13 @@ export function parseLaunchLead(body: unknown): LaunchLead | 'honeypot' {
   const phone = text(b.phone, 30)
   const digits = phone.replace(/\D/g, '')
   if (digits.length < 10 || digits.length > 15) throw new BadRequest('Please enter your phone number.')
+  const email = text(b.email, 200).toLowerCase()
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new BadRequest('Please enter your email so we can send your proposal.')
   const address = text(b.address, 200)
   if (address.length < 6 || !/\d/.test(address)) throw new BadRequest('Please enter your home address.')
   const billRange = BILL_RANGES[text(b.bill, 20)]
   if (!billRange) throw new BadRequest('Please pick your monthly electric bill.')
-  return { site, name, phone, email: null, zip, address, billRange, choice, pageUrl }
+  return { site, name, phone, email, zip, address, billRange, choice, pageUrl }
 }
 
 /** Full service address for the roof lookup: adds the ZIP when it is not already there. */
@@ -121,6 +123,7 @@ export function hubRecords(lead: LaunchLead, id: string, now: Date) {
     lead.choice ? `Picked: ${lead.choice}` : null,
     `Electric bill: ${lead.billRange}`,
     `Phone: ${lead.phone}`,
+    `Email: ${lead.email}`,
     'TCPA consent: yes',
     `Consent version: ${CONSENT_VERSION}`,
     `Consent at: ${createdAt}`,
@@ -133,7 +136,7 @@ export function hubRecords(lead: LaunchLead, id: string, now: Date) {
     created_by: null,
     customer_name: lead.name,
     phone: lead.phone,
-    email: null,
+    email: lead.email,
     service_address: serviceAddress(lead),
     utility: 'Not provided',
     notes,

@@ -14,7 +14,7 @@ import {
   type ProposalSnapshot,
   type RoofDesign,
 } from '../shared/workflow'
-import { billRequestFollowups, billTask, followupsForStage, tasksForStage } from '../server/workflow/plan'
+import { billRequestFollowups, billTask, followupsForStage, interestedMessages, perkFromNotes, tasksForStage } from '../server/workflow/plan'
 import { renderProposalHtml } from '../server/workflow/proposalHtml'
 import { nextTextWindow, smsConsent } from '../server/workflow/engine'
 
@@ -193,4 +193,47 @@ test('the sign-in email has the dashboard link and the member email', async () =
   assert.match(message.body, /^Hi Horace,/)
   assert.match(message.body, /https:\/\/thepowergenie\.theroyeffect\.com\/dashboard/)
   assert.match(message.body, /Enter your email: horace\.lawrence@sunrun\.com/)
+})
+
+test('launch-page leads carry their perk through signing and install', () => {
+  const notes = 'Launch page lead: Hip Hop Solar\nReferral source: hip-hop-solar\nPicked: H-Town Legend\nElectric bill: $150-$200\nTCPA consent: yes'
+  const perk = perkFromNotes(notes)
+  assert.deepEqual(perk, { brand: 'Hip Hop Solar', reward: '2 tickets to see H-Town Legend live' })
+  assert.equal(perkFromNotes('Referral source: sport-and-solar\nPicked: Basketball')?.reward, '2 tickets to a basketball game')
+  assert.equal(perkFromNotes('Referral source: celebrity-solar\nPicked: Surprise me')?.reward, 'personal welcome from your star')
+  assert.equal(perkFromNotes('Website assistant lead\nReferral source: gas-genie'), null)
+  assert.equal(perkFromNotes(null), null)
+
+  const signed = tasksForStage('signed', { firstName: 'Pat', perk })
+  assert.deepEqual(signed.map(task => task.kind), ['schedule_survey', 'perk_confirm'])
+  assert.deepEqual(tasksForStage('signed', { firstName: 'Pat' }).map(task => task.kind), ['schedule_survey'])
+  assert.ok(tasksForStage('installed', { firstName: 'Pat', perk }).some(task => task.kind === 'perk_deliver'))
+
+  const ctx = { firstName: 'Pat', advisorName: 'Horace Lawrence', advisorPhone: '510-241-7007', origin: 'https://example.test', proposalUrl: null, unsubscribeUrl: 'https://example.test/u', perk }
+  const welcome = followupsForStage('signed', ctx, true)
+  assert.match(welcome[0].body, /H-Town Legend/)
+  assert.ok(welcome.some(plan => plan.key === 'signed:perk' && plan.channel === 'sms'))
+  assert.equal(followupsForStage('signed', ctx, false).some(plan => plan.channel === 'sms'), false)
+  assert.ok(followupsForStage('installed', ctx, true).some(plan => plan.key === 'installed:perk'))
+  assert.equal(followupsForStage('installed', { ...ctx, perk: null }, true).some(plan => plan.key === 'installed:perk'), false)
+})
+
+test('quiet proposals get a last check-in and a keep-or-lose task', () => {
+  const ctx = { firstName: 'Pat', advisorName: 'Horace Lawrence', advisorPhone: '510-241-7007', origin: 'https://example.test', proposalUrl: 'https://example.test/proposal/t', unsubscribeUrl: 'https://example.test/u' }
+  const last = followupsForStage('presented', ctx, false).find(plan => plan.key === 'presented:last_call')
+  assert.equal(last?.delayHours, 240)
+  assert.match(last?.body || '', /proposal\/t/)
+  const quiet = tasksForStage('presented', { firstName: 'Pat' }).find(task => task.kind === 'decide_quiet_lead')
+  assert.equal(quiet?.dueHours, 240)
+})
+
+test('tapping "I\'m interested" answers the customer with a booking link', () => {
+  const ctx = { firstName: 'Pat', advisorName: 'Horace Lawrence', advisorPhone: '510-241-7007', origin: 'https://example.test', proposalUrl: null, unsubscribeUrl: 'https://example.test/u' }
+  const plans = interestedMessages(ctx, true)
+  assert.deepEqual(plans.map(plan => plan.channel), ['email', 'sms'])
+  for (const plan of plans) {
+    assert.ok(plan.key.startsWith('proposal:'))
+    assert.match(plan.body, /https:\/\/example\.test\/book/)
+  }
+  assert.deepEqual(interestedMessages(ctx, false).map(plan => plan.channel), ['email'])
 })

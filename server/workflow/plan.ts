@@ -11,6 +11,31 @@ export type MessageContext = {
   origin: string
   proposalUrl: string | null
   unsubscribeUrl: string
+  /** The launch-page promise (tickets or a star's welcome), when the lead came from one. */
+  perk?: Perk | null
+}
+
+/** What a launch-page lead was promised, read from the lead's notes. */
+export type Perk = {
+  brand: string
+  /** Short phrase that fits "your ___", for example "2 tickets to see H-Town Legend live". */
+  reward: string
+}
+
+const PERK_BRANDS: Record<string, { brand: string; reward: (pick: string | null) => string }> = {
+  'hip-hop-solar': { brand: 'Hip Hop Solar', reward: pick => `2 tickets to see ${pick || 'your artist'} live` },
+  'sport-and-solar': { brand: 'Sport & Solar', reward: pick => (pick ? `2 tickets to a ${pick.toLowerCase()} game` : '2 tickets to a game') },
+  'celebrity-solar': { brand: 'Celebrity Solar', reward: pick => `personal welcome from ${pick && pick !== 'Surprise me' ? pick.replace(/^The /, 'the ') : 'your star'}` },
+}
+
+/** "Referral source: hip-hop-solar" and "Picked: H-Town Legend" lines written by the launch pages. */
+export function perkFromNotes(notes: string | null | undefined): Perk | null {
+  if (!notes) return null
+  const source = notes.match(/^Referral source:\s*([a-z-]+)\s*$/m)?.[1]
+  const brand = source ? PERK_BRANDS[source] : undefined
+  if (!brand) return null
+  const pick = notes.match(/^Picked:\s*(.+?)\s*$/m)?.[1]?.slice(0, 60) || null
+  return { brand: brand.brand, reward: brand.reward(pick) }
 }
 
 export type TaskPlan = {
@@ -59,8 +84,9 @@ export function billTask(ctx: { firstName: string }, hasRoughUsage: boolean): Ta
   }
 }
 
-export function tasksForStage(stage: string, ctx: { firstName: string }): TaskPlan[] {
+export function tasksForStage(stage: string, ctx: { firstName: string; perk?: Perk | null }): TaskPlan[] {
   const name = ctx.firstName
+  const perk = ctx.perk || null
   switch (stage) {
     case 'proposal_ready':
       return [{
@@ -70,20 +96,36 @@ export function tasksForStage(stage: string, ctx: { firstName: string }): TaskPl
         dueHours: 24,
       }]
     case 'presented':
-      return [{
-        kind: 'call_after_proposal',
-        title: `Call ${name} about the proposal`,
-        detail: 'Walk through the numbers and answer questions. Mark the lead Signed once the Sunrun agreement is signed.',
-        dueHours: 48,
-      }]
+      return [
+        {
+          kind: 'call_after_proposal',
+          title: `Call ${name} about the proposal`,
+          detail: 'Walk through the numbers and answer questions. Mark the lead Signed once the Sunrun agreement is signed.',
+          dueHours: 48,
+        },
+        {
+          kind: 'decide_quiet_lead',
+          title: `${name} has gone quiet: keep or mark lost`,
+          detail: 'No signature 10 days after the proposal, and the last automatic check-in has gone out. Call once more, then keep the lead open or mark it Lost.',
+          dueHours: 24 * 10,
+        },
+      ]
     case 'signed':
-      return [{
-        kind: 'schedule_survey',
-        title: `Schedule ${name}'s site survey`,
-        detail: 'Finishing this moves the lead to Site survey.',
-        dueHours: 48,
-        advancesTo: 'site_survey',
-      }]
+      return [
+        {
+          kind: 'schedule_survey',
+          title: `Schedule ${name}'s site survey`,
+          detail: 'Finishing this moves the lead to Site survey.',
+          dueHours: 48,
+          advancesTo: 'site_survey',
+        },
+        ...(perk ? [{
+          kind: 'perk_confirm',
+          title: `Confirm ${name}'s ${perk.brand} perk`,
+          detail: `${name} came from ${perk.brand} and was promised ${perk.reward}. Confirm the pick with them and note the event or date you're aiming for.`,
+          dueHours: 72,
+        }] : []),
+      ]
     case 'site_survey':
       return [{
         kind: 'submit_permits',
@@ -109,12 +151,20 @@ export function tasksForStage(stage: string, ctx: { firstName: string }): TaskPl
         },
       ]
     case 'installed':
-      return [{
-        kind: 'ask_review',
-        title: `Ask ${name} for a review and referrals`,
-        detail: 'A happy customer is the best source of the next lead.',
-        dueHours: 24 * 7,
-      }]
+      return [
+        {
+          kind: 'ask_review',
+          title: `Ask ${name} for a review and referrals`,
+          detail: 'A happy customer is the best source of the next lead.',
+          dueHours: 24 * 7,
+        },
+        ...(perk ? [{
+          kind: 'perk_deliver',
+          title: `Send ${name}'s ${perk.brand} perk`,
+          detail: `The install is done, so ${name}'s ${perk.reward} is due. Get it to them and finish this task when it's delivered.`,
+          dueHours: 24 * 7,
+        }] : []),
+      ]
     default:
       return []
   }
@@ -216,6 +266,21 @@ export function followupsForStage(stage: string, ctx: MessageContext, smsAllowed
               ].join('\n'),
             },
       )
+      plans.push({
+        key: 'presented:last_call',
+        channel: 'email',
+        delayHours: 24 * 10,
+        subject: `Should we keep your solar proposal open, ${name}?`,
+        body: [
+          `Hi ${name},`,
+          '',
+          `We haven't heard back about your solar proposal, so this is the last automatic check-in. It's still here if you want it:`,
+          ctx.proposalUrl || ctx.origin,
+          '',
+          `If the timing isn't right, no problem. Reply "later" and ${ctx.advisorName} will reach out in a few months instead.`,
+          emailFooter(ctx),
+        ].join('\n'),
+      })
       return plans
     case 'signed':
       plans.push({
@@ -234,9 +299,19 @@ export function followupsForStage(stage: string, ctx: MessageContext, smsAllowed
           '4. Power on: your system turns on after the final inspection.',
           '',
           `${ctx.advisorName} will reach out to schedule the site survey.`,
+          ...(ctx.perk ? ['', `Your ${ctx.perk.brand} perk is locked in: ${ctx.perk.reward}, delivered once your system is installed.`] : []),
           emailFooter(ctx),
         ].join('\n'),
       })
+      if (ctx.perk && smsAllowed) {
+        plans.push({
+          key: 'signed:perk',
+          channel: 'sms',
+          delayHours: 1,
+          subject: null,
+          body: sms(`Congrats on going solar, ${name}! Your ${ctx.perk.brand} perk is locked in: ${ctx.perk.reward}, once your system is installed.`),
+        })
+      }
       return plans
     case 'site_survey':
       plans.push({
@@ -276,9 +351,19 @@ export function followupsForStage(stage: string, ctx: MessageContext, smsAllowed
           `Hi ${name},`,
           '',
           'Congratulations, your system is installed. Thank you for trusting us with your home.',
+          ...(ctx.perk ? ['', `Your ${ctx.perk.brand} perk, ${ctx.perk.reward}, is on its way. ${ctx.advisorName} will reach out with the details.`] : []),
           emailFooter(ctx),
         ].join('\n'),
       })
+      if (ctx.perk && smsAllowed) {
+        plans.push({
+          key: 'installed:perk',
+          channel: 'sms',
+          delayHours: 2,
+          subject: null,
+          body: sms(`You're solar powered, ${name}! Your ${ctx.perk.brand} perk (${ctx.perk.reward}) is on its way. ${ctx.advisorName} will be in touch.`),
+        })
+      }
       plans.push({
         key: 'installed:referral',
         channel: 'email',
@@ -324,6 +409,39 @@ export function proposalMessages(ctx: MessageContext & { savingsMonthly: number;
       delayHours: 0,
       subject: null,
       body: sms(`Hi ${name}, ${ctx.advisorName} here. Your solar proposal is ready: ${ctx.proposalUrl}`),
+    })
+  }
+  return plans
+}
+
+/**
+ * Sent right after the customer taps "I'm interested" on the proposal.
+ * Keys start with "proposal:" so they still go out if the stage moves on.
+ */
+export function interestedMessages(ctx: MessageContext, smsAllowed: boolean): FollowupPlan[] {
+  const name = ctx.firstName
+  const bookUrl = `${ctx.origin}/book`
+  const plans: FollowupPlan[] = [{
+    key: 'proposal:interested',
+    channel: 'email',
+    delayHours: 0,
+    subject: `Great news, ${name}. Let's set up your call`,
+    body: [
+      `Hi ${name},`,
+      '',
+      `Thanks for letting us know you're interested. ${ctx.advisorName} will call you shortly to go over the next steps.`,
+      '',
+      `Rather pick a time yourself? Book it here: ${bookUrl}`,
+      emailFooter(ctx),
+    ].join('\n'),
+  }]
+  if (smsAllowed) {
+    plans.push({
+      key: 'proposal:interested',
+      channel: 'sms',
+      delayHours: 0,
+      subject: null,
+      body: sms(`Thanks ${name}! ${ctx.advisorName} will call you shortly about your solar proposal. Or pick a time: ${bookUrl}`),
     })
   }
   return plans
