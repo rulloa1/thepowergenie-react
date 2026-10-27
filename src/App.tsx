@@ -5,7 +5,6 @@ import BrandPage from './components/BrandPage';
 import Toast from './components/Toast';
 import { Config } from './types';
 import LegalFooter from './components/LegalFooter';
-import IntroAnimation from './components/IntroAnimation';
 import { openAssistant } from './lib/openAssistant';
 import {
   assistantBrandFromView,
@@ -26,25 +25,6 @@ const config: Config = {
   atmosphere: true,
   cta: { label: 'Upload Light Bill', href: '#bill' },
   sections: [
-    {
-      id: 'genie',
-      label: 'Meet the Genie',
-      still: 'assets-v2/stills/00-genie.webp',
-      stillMobile: 'assets-v2/stills/00-genie-m.webp',
-      clip: 'assets-v2/vid/encoded/00-genie-loop.mp4',
-      clipMobile: 'assets-v2/vid/mobile/00-genie-loop.mp4',
-      scroll: 2.8,
-      linger: 0.5,
-      accent: '#3B82F6',
-      eyebrow: 'Introducing',
-      title: 'The Power Genie',
-      body: 'Your personal guide to solar savings. The Power Genie grants your wish for lower energy bills, backup power, and a cleaner planet — all with $0 down.',
-      tags: ['$0 Down Solar', 'Tesla Powerwall', 'Sunrun Backed'],
-      cta: {
-        primary: { label: 'Get Your Free Quote', href: '#quote' },
-        secondary: { label: 'See How It Works', href: '#sun' },
-      }
-    },
     {
       id: 'sun',
       label: 'The Source',
@@ -131,7 +111,7 @@ const config: Config = {
       still: 'assets-v2/stills/06-cta.webp',
       stillMobile: 'assets-v2/stills/06-cta-m.webp',
       clip: 'assets-v2/vid/encoded/06-cta-loop.mp4',
-      clipMobile: 'assets-v2/vid/mobile/06-cta-dive.mp4',
+      clipMobile: 'assets-v2/vid/mobile/06-cta-loop.mp4',
       accent: '#FF6B00',
       eyebrow: 'Energy Independence',
       title: 'Your Zero-Down Solar Sanctuary',
@@ -293,7 +273,6 @@ export default function App() {
 
   return (
     <div className="relative">
-      <IntroAnimation />
       <main id="world">
         <ScrollWorld
           config={config}

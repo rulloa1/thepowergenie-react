@@ -103,6 +103,42 @@ export function sequentialCopyOpacity(
   return fadeIn * fadeOut;
 }
 
+type StageSpan = { start?: number; end?: number; empty?: boolean };
+
+/**
+ * How visible each scene is at scroll position y. A transition with no clip
+ * for this device is never shown: the scene before it holds its last frame and
+ * the next scene dissolves in over it across the transition's whole scroll,
+ * so the picture keeps changing instead of parking on a still.
+ */
+export function stageOpacity(y: number, i: number, segs: StageSpan[], imageFade: number): number {
+  const s = segs[i];
+  if (!s || s.empty) return 0;
+  const last = segs.length - 1;
+  const prev = i > 0 ? segs[i - 1] : null;
+  const next = i < last ? segs[i + 1] : null;
+  const start = s.start || 0;
+  const end = s.end || 0;
+  let fadeIn = 1;
+  if (prev?.empty) {
+    const a = prev.start || 0;
+    fadeIn = smoothstep((y - a) / Math.max(1, (prev.end || 0) - a));
+  } else if (prev) {
+    fadeIn = smoothstep((y - start + imageFade) / (2 * imageFade));
+  }
+  let fadeOut = 1;
+  if (next?.empty) {
+    // Covered by the next scene by the time it is fully in.
+    fadeOut = y < (next.end || 0) ? 1 : 0;
+  } else if (next) {
+    fadeOut = 1 - smoothstep((y - (end - imageFade)) / (2 * imageFade));
+  }
+  return fadeIn * fadeOut;
+}
+
+/** Screens of scroll for a dissolve between two scenes with no transition clip. */
+const DISSOLVE_SCROLL = 0.75;
+
 interface ScrollWorldProps {
   config: Config;
   onQuoteClick?: () => void;
@@ -369,7 +405,6 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
       .filter((span) => span > 0);
     const minSpan = spans.length ? Math.min(...spans) : vh;
     const imageFade = imageFadePx(vh, minSpan, config.crossfade);
-    const last = segmentsRef.current.length - 1;
     let current = 0;
     segmentsRef.current.forEach((s, i) => {
       if (y >= (s.start || 0)) current = i;
@@ -384,16 +419,19 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
     const exitPx = Math.max(0, rawY - totalW * vh);
     const exitFade = 1 - smoothstep(exitPx / ((isMobile ? 0.16 : 0.3) * vh));
 
+    // Position-based, so scrolling back uses the same blend as scrolling down.
+    const spansForFade: StageSpan[] = segmentsRef.current.map((s) => ({
+      start: s.start,
+      end: s.end,
+      empty: s.kind === 'conn' && !clipUrl(s, isMobile),
+    }));
+
     segmentsRef.current.forEach((s, i) => {
       const span = Math.max(1, (s.end || 0) - (s.start || 0));
       const local = clamp((y - (s.start || 0)) / span, 0, 1);
       s.target = s.linger ? lingerEase(local, s.linger) : local;
 
-      // Symmetric edge blend: outgoing falls 1→0 while the next rises 0→1.
-      // Position-based, so scrolling back uses the same window as scrolling down.
-      const fadeIn = i === 0 ? 1 : smoothstep((y - (s.start || 0) + imageFade) / (2 * imageFade));
-      const fadeOut = i === last ? 1 : 1 - smoothstep((y - ((s.end || 0) - imageFade)) / (2 * imageFade));
-      const op = fadeIn * fadeOut;
+      const op = stageOpacity(y, i, spansForFade, imageFade);
       const inRange = op > 0.001;
 
       if (s.el) {
@@ -630,17 +668,19 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
 
       if (i < config.sections.length - 1) {
         const next = config.sections[i + 1];
-        // A null desktop connector (home -> community) still needs a stage.
-        // Mobile can play its own clip; desktop keeps the next still until then.
+        const clip = config.connectors?.[i] || null;
+        const clipM = config.connectorsMobile?.[i] || null;
+        // Without a transition clip the two scenes dissolve into each other
+        // over a shorter stretch of scroll (see stageOpacity).
         newSegments.push({
           kind: 'conn',
           si: i,
-          clip: config.connectors?.[i] || null,
-          clipM: config.connectorsMobile?.[i] || null,
+          clip,
+          clipM,
           still: s.still,
           stillM: s.stillMobile || null,
           accent: next.accent,
-          w: config.connScroll ?? 1.1,
+          w: clip || clipM ? (config.connScroll ?? 1.1) : DISSOLVE_SCROLL,
           cur: 0,
           target: 0,
           linger: 0
