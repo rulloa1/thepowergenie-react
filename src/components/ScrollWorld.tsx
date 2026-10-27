@@ -76,11 +76,12 @@ function imageFadePx(vh: number, minSpan: number, configured?: number) {
 }
 
 /**
- * Outgoing copy finishes fading before the incoming copy leaves 0.
- * Each fade occupies the outer 42% of the connector between two dives,
- * leaving a short gap where neither line is visible.
+ * Copy swaps near the middle of the connector between two sections: the
+ * outgoing line stays fully readable through the first quarter of the
+ * transition, fades over the next fifth, and the incoming line fades in
+ * just after the midpoint. The blank moment is about 6% of a connector.
  */
-function sequentialCopyOpacity(
+export function sequentialCopyOpacity(
   y: number,
   segStart: number,
   segEnd: number,
@@ -90,12 +91,14 @@ function sequentialCopyOpacity(
   let fadeIn = 1;
   let fadeOut = 1;
   if (prevEnd != null) {
-    const len = Math.max(1, (segStart - prevEnd) * 0.42);
-    fadeIn = smoothstep((y - (segStart - len)) / len);
+    const conn = Math.max(1, segStart - prevEnd);
+    const mid = prevEnd + conn / 2;
+    fadeIn = smoothstep((y - (mid + conn * 0.03)) / (conn * 0.22));
   }
   if (nextStart != null) {
-    const len = Math.max(1, (nextStart - segEnd) * 0.42);
-    fadeOut = 1 - smoothstep((y - segEnd) / len);
+    const conn = Math.max(1, nextStart - segEnd);
+    const mid = segEnd + conn / 2;
+    fadeOut = 1 - smoothstep((y - (mid - conn * 0.03 - conn * 0.22)) / (conn * 0.22));
   }
   return fadeIn * fadeOut;
 }
@@ -150,6 +153,10 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
   });
 
   const segmentsRef = useRef<Segment[]>([]);
+  /** Clips download a few at a time, nearest to the visitor first. */
+  const loaderRef = useRef({ active: 0, current: 0 });
+  const pumpRef = useRef<() => void>(() => {});
+  const accentIndexRef = useRef(-1);
 
   // Helpers
   const clamp = (x: number, a = 0, b = 1) => Math.min(b, Math.max(a, x));
@@ -162,6 +169,9 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
 
   const updateActiveIndex = useCallback((index: number) => {
     setActiveIndex(index);
+    // Setting the same custom property every frame restyles the whole page.
+    if (accentIndexRef.current === index) return;
+    accentIndexRef.current = index;
     const accent = config.sections[index]?.accent || '';
     if (containerRef.current) {
       containerRef.current.style.setProperty('--sw-accent', accent);
@@ -220,10 +230,10 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
     if (moving) wake();
   }, [isMobile, wake]);
 
-  const loadClip = useCallback((s: Segment, preload: 'auto' | 'metadata' = 'metadata') => {
-    if (readingMode || s.failed || !s.el) return;
+  const loadClip = useCallback((s: Segment, preload: 'auto' | 'metadata' = 'metadata'): boolean => {
+    if (readingMode || s.failed || !s.el) return false;
     const url = clipUrl(s, isMobile);
-    if (!url) return;
+    if (!url) return false;
 
     if (s.video) {
       if (s.preloadMode !== preload) {
@@ -235,9 +245,9 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
           try { s.video.load(); } catch (e) {}
         }
       }
-      return;
+      return false;
     }
-    if (s.loading) return;
+    if (s.loading) return false;
     s.loading = true;
     s.preloadMode = preload;
 
@@ -303,8 +313,41 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
         if (v.isConnected) {
           v.src = url;
         }
+      })
+      .finally(() => {
+        loaderRef.current.active = Math.max(0, loaderRef.current.active - 1);
+        pumpRef.current();
       });
+    return true;
   }, [readingMode, isMobile, primeVideo, wake]);
+
+  // Downloading every clip at once left the section in view on a still
+  // image for seconds on a phone. Two downloads at a time (three on a
+  // computer), the section in view first, then the ones just ahead.
+  pumpRef.current = () => {
+    const loader = loaderRef.current;
+    const segs = segmentsRef.current;
+    // While the clip in view is still downloading it gets the whole connection.
+    const limit = () => {
+      const inView = segs[loader.current];
+      return inView?.loading && inView.video && !inView.video.src ? 1 : isMobile ? 2 : 3;
+    };
+    while (loader.active < limit()) {
+      let best: Segment | null = null;
+      let bestScore = Infinity;
+      segs.forEach((seg, index) => {
+        if (seg.video || seg.loading || seg.failed || !seg.el || !clipUrl(seg, isMobile)) return;
+        const distance = index - loader.current;
+        const score = distance >= 0 ? distance : 0.5 - distance * 1.5;
+        if (score < bestScore) {
+          bestScore = score;
+          best = seg;
+        }
+      });
+      if (!best || !loadClip(best, 'auto')) break;
+      loader.active += 1;
+    }
+  };
 
   const read = useCallback(() => {
     const rawY = window.scrollY || 0;
@@ -332,16 +375,16 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
       if (y >= (s.start || 0)) current = i;
     });
 
-    segmentsRef.current.forEach((s, i) => {
-      const inPrefetch = y > (s.start || 0) - 1.6 * vh && y < (s.end || 0) + 1.6 * vh;
-      const adjacent = Math.abs(i - current) <= 1;
-      if (inPrefetch || adjacent) loadClip(s, adjacent ? 'auto' : 'metadata');
-      else if (s.video && s.preloadMode !== 'metadata') {
-        s.preloadMode = 'metadata';
-        s.video.preload = 'metadata';
-        s.video.setAttribute('preload', 'metadata');
-      }
+    if (loaderRef.current.current !== current) {
+      loaderRef.current.current = current;
+      pumpRef.current();
+    }
 
+    // How far the quote panel has slid up over the last scene, in px.
+    const exitPx = Math.max(0, rawY - totalW * vh);
+    const exitFade = 1 - smoothstep(exitPx / ((isMobile ? 0.16 : 0.3) * vh));
+
+    segmentsRef.current.forEach((s, i) => {
       const span = Math.max(1, (s.end || 0) - (s.start || 0));
       const local = clamp((y - (s.start || 0)) / span, 0, 1);
       s.target = s.linger ? lingerEase(local, s.linger) : local;
@@ -376,13 +419,14 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
         const pr = clamp((y - (seg.start || 0)) / Math.max(1, (seg.end || 0) - (seg.start || 0)), 0, 1);
         const previous = i > 0 ? config.sections[i - 1]._seg : null;
         const next = i < config.sections.length - 1 ? config.sections[i + 1]._seg : null;
+        // The last line fades as the quote panel arrives instead of sitting under it.
         const cop = sequentialCopyOpacity(
           y,
           seg.start || 0,
           seg.end || 0,
           previous ? (previous.end ?? null) : null,
           next ? (next.start ?? null) : null,
-        );
+        ) * exitFade;
 
         const c = copies[i] as HTMLElement;
         if (c) {
@@ -418,7 +462,7 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
 
     stateRef.current.ticking = false;
     wake();
-  }, [readingMode, isMobile, config.sections, config.crossfade, updateActiveIndex, loadClip, wake]);
+  }, [readingMode, isMobile, config.sections, config.crossfade, updateActiveIndex, wake]);
 
   const requestRead = useCallback(() => {
     if (!stateRef.current.ticking) {
@@ -527,7 +571,9 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
 
     const top = i === 0 ? 0 : (seg.start || 0) + ((seg.end || 0) - (seg.start || 0)) * 0.5;
     
-    loadClip(seg, 'auto');
+    // Jumping from the menu: fetch the destination's clip next.
+    loaderRef.current.current = segmentsRef.current.indexOf(seg);
+    pumpRef.current();
     updateActiveIndex(i);
     
     stateRef.current.jumpTarget = i;
@@ -538,7 +584,7 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
     }, 1600);
     
     window.scrollTo({ top, behavior: 'smooth' });
-  }, [readingMode, isMobile, config.sections, layout, loadClip, updateActiveIndex, requestRead]);
+  }, [readingMode, isMobile, config.sections, layout, updateActiveIndex, requestRead]);
 
   const onClick = useCallback((event: React.MouseEvent) => {
     const link = (event.target as HTMLElement).closest('a[href^="#"]');
@@ -645,12 +691,9 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
   });
 
   useEffect(() => {
-    // Preload all video clips as in-memory Blobs so scrolling never stalls or shows static images
-    segmentsRef.current.forEach((s) => {
-      if (s.el && !s.video && !s.loading) {
-        loadClip(s, 'auto');
-      }
-    });
+    // Clips still end up as in-memory Blobs for smooth scrubbing, but they
+    // arrive in order instead of all competing at once.
+    pumpRef.current();
   }, [segments, loadClip]);
 
   // Event listeners

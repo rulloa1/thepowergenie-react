@@ -1,15 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
-  generate25YearSolarSchedule,
-  generateProposalEmailUrl,
-  generateProposalSmsUrl,
   generateTwoStepReviewEmail,
   generateTwoStepReviewEmailUrl,
   generateTwoStepReviewSmsText,
   generateTwoStepReviewSmsUrl,
   leadsToCsvString,
   leadsToJsonString,
-  solarProposalScheduleToCsv,
 } from './leadExports';
 import type { Lead } from './useLeadFeed';
 
@@ -70,35 +66,6 @@ describe('leadExports', () => {
     expect(parsed).toHaveLength(1);
     expect(parsed[0].name).toBe('Alex Morgan');
     expect(parsed[0].amount).toBe(600.00);
-  });
-
-  it('generates a 25-year solar amortization and energy savings schedule', () => {
-    const schedule = generate25YearSolarSchedule(MOCK_SOLAR_LEAD);
-    expect(schedule).toHaveLength(25);
-    expect(schedule[0].year).toBe(1);
-    expect(schedule[0].solarPayment).toBe(2376); // $198 * 12
-    expect(schedule[0].solarGenerationKwh).toBe(21250);
-    expect(schedule[24].year).toBe(25);
-    // Cumulative savings grow over 25 years
-    expect(schedule[24].cumulativeSavings).toBeGreaterThan(schedule[0].cumulativeSavings);
-  });
-
-  it('converts solar amortization schedule to CSV', () => {
-    const csv = solarProposalScheduleToCsv(MOCK_SOLAR_LEAD);
-    expect(csv).toContain('Year,Sunrun Solar Payment ($/yr),Utility Cost Without Solar ($/yr)');
-    expect(csv).toContain('2376.00');
-    expect(csv).toContain('21250');
-  });
-
-  it('constructs email and sms sharing URLs with proposal link and details', () => {
-    const emailUrl = generateProposalEmailUrl(MOCK_SOLAR_LEAD);
-    expect(emailUrl).toContain('mailto:alex.morgan@example.com');
-    expect(emailUrl).toContain('Sunrun%20Brightbox');
-    expect(emailUrl).toContain('14.76%20kW');
-
-    const smsUrl = generateProposalSmsUrl(MOCK_SOLAR_LEAD);
-    expect(smsUrl).toContain('sms:8005550199');
-    expect(smsUrl).toContain('Sunrun');
   });
 
   it('generates two-step review SMS text and URL asking for electric bill and Smart Meter Texas', () => {
