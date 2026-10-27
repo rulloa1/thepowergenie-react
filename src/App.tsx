@@ -5,6 +5,7 @@ import BrandPage from './components/BrandPage';
 import Toast from './components/Toast';
 import { Config } from './types';
 import LegalFooter from './components/LegalFooter';
+import IntroAnimation from './components/IntroAnimation';
 import { openAssistant } from './lib/openAssistant';
 import {
   assistantBrandFromView,
@@ -285,6 +286,7 @@ export default function App() {
 
   return (
     <div className="relative">
+      <IntroAnimation />
       <main id="world">
         <ScrollWorld
           config={config}
