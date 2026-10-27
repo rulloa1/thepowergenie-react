@@ -24,6 +24,7 @@ import {
 } from './engine.js'
 import { fetchRoofImage, googleKey } from './google.js'
 import { renderMessagePage, renderProposalHtml } from './proposalHtml.js'
+import { emailSignInSteps } from './memberEmail.js'
 
 const TEN_MINUTES = 10 * 60 * 1000
 const PUBLIC_TOKEN = /^[0-9a-f]{48}$/
@@ -100,6 +101,11 @@ export async function handleWorkflow(request: Request, url: URL): Promise<Respon
     return json({ ok: true, ...(await tick()) })
   }
 
+  if (action === 'signin-email' && request.method === 'POST' && cronAuthorized(request)) {
+    const body = await readWebJson(request, 4_000)
+    return json({ ok: true, ...(await emailSignInSteps(isRecord(body) ? body.emails : null)) })
+  }
+
   const member = await requireHubMember(request)
   enforceRateLimit(`wf:${member.id}`, 120, TEN_MINUTES)
   const actor = actorOf(member)
@@ -154,6 +160,9 @@ export async function handleWorkflow(request: Request, url: URL): Promise<Respon
       else await completeTask(taskId, actor)
       return json({ ok: true })
     }
+    case 'signin-email':
+      if (member.role !== 'owner' && member.role !== 'admin') throw new HttpError(403, 'Only dashboard admins can send this.')
+      return json({ ok: true, ...(await emailSignInSteps(body.emails)) })
     case 'cancel-followup':
       await cancelFollowup(idFrom(body.followupId, 'message'))
       return json({ ok: true })

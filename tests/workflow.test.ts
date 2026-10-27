@@ -186,3 +186,11 @@ test('the proposal page escapes customer text and has no scripts', () => {
   assert.match(preview, /Draft preview/)
   assert.equal(/Have Horace call me/.test(preview), false)
 })
+
+test('the sign-in email has the dashboard link and the member email', async () => {
+  const { signInEmail } = await import('../server/workflow/memberEmail')
+  const message = signInEmail({ email: 'horace.lawrence@sunrun.com', fullName: 'Horace Lawrence' }, 'https://thepowergenie.theroyeffect.com/dashboard')
+  assert.match(message.body, /^Hi Horace,/)
+  assert.match(message.body, /https:\/\/thepowergenie\.theroyeffect\.com\/dashboard/)
+  assert.match(message.body, /Enter your email: horace\.lawrence@sunrun\.com/)
+})
