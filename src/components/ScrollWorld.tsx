@@ -442,8 +442,10 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
       s.visible = inRange;
       
       if (!s.frameVisible && s.img) {
-        const sc = 1.03 + local * 0.14;
-        s.img.style.transform = `translateX(${stateRef.current.stageX - 2}vw) scale(${sc.toFixed(3)})`;
+        // A slow, slight push-in while the clip loads. It stays close to the
+        // video's own framing so nothing jumps when the video takes over.
+        const sc = 1 + local * 0.03;
+        s.img.style.transform = `scale(${sc.toFixed(3)})`;
       }
     });
 
@@ -1122,6 +1124,22 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
         .sw-copy__body,
         .sw-copy__benefits li {
           text-shadow: 0 1px 0 rgba(255,255,255,0.72), 0 8px 18px rgba(232,244,253,0.92);
+        }
+
+        /* Phones: the scenes are wide (16:9) shots. Filling a tall phone
+           screen cropped them to about a quarter of their width. Show them in
+           a band under the bar instead (two-thirds of the width or more),
+           fading into the page above the headline. */
+        @media (max-width: 767px) {
+          .sw-stage {
+            top: calc(64px + env(safe-area-inset-top));
+            bottom: auto;
+            height: min(84vw, 42vh);
+            /* Ends just above the headline: the text block needs ~460px. */
+            height: clamp(160px, calc(100svh - 494px), 84vw);
+            -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 80%, transparent 100%);
+            mask-image: linear-gradient(180deg, #000 0%, #000 80%, transparent 100%);
+          }
         }
 
         @media (max-width: 640px) {
