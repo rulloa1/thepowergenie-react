@@ -14,7 +14,7 @@ import {
   type ProposalSnapshot,
   type RoofDesign,
 } from '../shared/workflow'
-import { followupsForStage, tasksForStage } from '../server/workflow/plan'
+import { billRequestFollowups, billTask, followupsForStage, tasksForStage } from '../server/workflow/plan'
 import { renderProposalHtml } from '../server/workflow/proposalHtml'
 import { nextTextWindow, smsConsent } from '../server/workflow/engine'
 
@@ -135,9 +135,10 @@ test('texts only go to leads who agreed to them, and only in the daytime', () =>
   assert.equal(smsConsent({ phone: '+17135550100', notes: 'TCPA consent: yes' }), true)
   assert.equal(smsConsent({ phone: '+17135550100', notes: 'Quote request form' }), false)
   const ctx = { firstName: 'Pat', advisorName: 'Horace Lawrence', advisorPhone: '510-241-7007', origin: 'https://example.test', proposalUrl: null, unsubscribeUrl: 'https://example.test/u' }
-  assert.equal(followupsForStage('bill_received', ctx, false).some(plan => plan.channel === 'sms'), false)
-  assert.equal(followupsForStage('bill_received', ctx, true).some(plan => plan.channel === 'sms'), true)
-  for (const plan of followupsForStage('bill_received', ctx, false)) assert.match(plan.body, /Stop these emails/)
+  assert.equal(billRequestFollowups(ctx, false).some(plan => plan.channel === 'sms'), false)
+  assert.equal(billRequestFollowups(ctx, true).some(plan => plan.channel === 'sms'), true)
+  for (const plan of billRequestFollowups(ctx, false)) assert.match(plan.body, /Stop these emails/)
+  for (const plan of followupsForStage('presented', ctx, false)) assert.equal(plan.channel, 'email')
   // 03:00 Central is 08:00 UTC in the summer; the next window opens at 9 AM Central.
   const night = nextTextWindow(new Date('2026-07-01T08:00:00Z'))
   assert.ok(night && night.getTime() > Date.parse('2026-07-01T08:00:00Z'))
@@ -145,9 +146,9 @@ test('texts only go to leads who agreed to them, and only in the daytime', () =>
 })
 
 test('each stage gives the team its next task', () => {
-  assert.equal(tasksForStage('bill_received', { firstName: 'Pat' }, false)[0]?.kind, 'get_bill')
-  assert.equal(tasksForStage('bill_received', { firstName: 'Pat' }, true).length, 0)
-  assert.equal(tasksForStage('signed', { firstName: 'Pat' }, true)[0]?.advancesTo, 'site_survey')
+  assert.equal(billTask({ firstName: 'Pat' }, false).kind, 'get_bill')
+  assert.equal(tasksForStage('bill_received', { firstName: 'Pat' }).length, 0)
+  assert.equal(tasksForStage('signed', { firstName: 'Pat' })[0]?.advancesTo, 'site_survey')
 })
 
 test('the proposal page escapes customer text and has no scripts', () => {

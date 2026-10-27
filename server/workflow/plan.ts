@@ -47,18 +47,21 @@ function sms(textValue: string): string {
   return `${textValue} Reply STOP to opt out.`
 }
 
-export function tasksForStage(stage: string, ctx: { firstName: string }, hasUsage: boolean): TaskPlan[] {
+/** Asked for until a real bill or Smart Meter Texas usage is in, whatever the stage. */
+export function billTask(ctx: { firstName: string }, hasRoughUsage: boolean): TaskPlan {
+  return {
+    kind: 'get_bill',
+    title: `Get ${ctx.firstName}'s light bill`,
+    detail: hasRoughUsage
+      ? 'Numbers so far come from a rough estimate. A real bill or Smart Meter Texas usage makes the proposal exact.'
+      : 'No usage yet. The proposal builds itself once a bill or Smart Meter Texas usage is in.',
+    dueHours: 24,
+  }
+}
+
+export function tasksForStage(stage: string, ctx: { firstName: string }): TaskPlan[] {
   const name = ctx.firstName
   switch (stage) {
-    case 'bill_received':
-      return hasUsage
-        ? []
-        : [{
-            kind: 'get_bill',
-            title: `Get ${name}'s light bill`,
-            detail: 'No usage yet. The customer was sent the bill upload and Smart Meter Texas steps. The proposal builds itself once a bill or usage is in.',
-            dueHours: 24,
-          }]
     case 'proposal_ready':
       return [{
         kind: 'approve_proposal',
@@ -117,54 +120,62 @@ export function tasksForStage(stage: string, ctx: { firstName: string }, hasUsag
   }
 }
 
-export function followupsForStage(stage: string, ctx: MessageContext, smsAllowed: boolean): FollowupPlan[] {
+/**
+ * Bill upload and Smart Meter Texas reminders. Sent until a real bill or
+ * usage arrives; they do not depend on the stage.
+ */
+export function billRequestFollowups(ctx: MessageContext, smsAllowed: boolean): FollowupPlan[] {
   const name = ctx.firstName
   const billLink = `${ctx.origin}/#bill`
   const plans: FollowupPlan[] = []
+  plans.push({
+    key: 'bill_received:steps',
+    channel: 'email',
+    delayHours: 0.25,
+    subject: `${name}, 2 quick steps for your solar savings`,
+    body: [
+      `Hi ${name},`,
+      '',
+      'Thanks for your interest in solar. Two quick steps let us build your savings estimate from your real usage:',
+      '',
+      `1. Upload a recent electric bill (a phone photo is fine): ${billLink}`,
+      '2. Connect your Smart Meter Texas usage on that same page, then approve the email Smart Meter Texas sends you.',
+      '',
+      'Each takes about two minutes.',
+      emailFooter(ctx),
+    ].join('\n'),
+    onlyWithoutUsage: true,
+  })
+  if (smsAllowed) {
+    plans.push({
+      key: 'bill_received:sms',
+      channel: 'sms',
+      delayHours: 24,
+      subject: null,
+      body: sms(`Hi ${name}, it's The Power Genie. To finish your solar savings estimate, upload a photo of your electric bill here: ${billLink}`),
+      onlyWithoutUsage: true,
+    })
+  }
+  plans.push({
+    key: 'bill_received:reminder',
+    channel: 'email',
+    delayHours: 72,
+    subject: `Still want your solar savings estimate, ${name}?`,
+    body: [
+      `Hi ${name},`,
+      '',
+      `We're holding your spot. Upload a recent electric bill and ${ctx.advisorName} will build your numbers: ${billLink}`,
+      emailFooter(ctx),
+    ].join('\n'),
+    onlyWithoutUsage: true,
+  })
+  return plans
+}
+
+export function followupsForStage(stage: string, ctx: MessageContext, smsAllowed: boolean): FollowupPlan[] {
+  const name = ctx.firstName
+  const plans: FollowupPlan[] = []
   switch (stage) {
-    case 'bill_received':
-      plans.push({
-        key: 'bill_received:steps',
-        channel: 'email',
-        delayHours: 0.25,
-        subject: `${name}, 2 quick steps for your solar savings`,
-        body: [
-          `Hi ${name},`,
-          '',
-          'Thanks for your interest in solar. Two quick steps let us build your savings estimate from your real usage:',
-          '',
-          `1. Upload a recent electric bill (a phone photo is fine): ${billLink}`,
-          '2. Connect your Smart Meter Texas usage on that same page, then approve the email Smart Meter Texas sends you.',
-          '',
-          'Each takes about two minutes.',
-          emailFooter(ctx),
-        ].join('\n'),
-        onlyWithoutUsage: true,
-      })
-      if (smsAllowed) {
-        plans.push({
-          key: 'bill_received:sms',
-          channel: 'sms',
-          delayHours: 24,
-          subject: null,
-          body: sms(`Hi ${name}, it's The Power Genie. To finish your solar savings estimate, upload a photo of your electric bill here: ${billLink}`),
-          onlyWithoutUsage: true,
-        })
-      }
-      plans.push({
-        key: 'bill_received:reminder',
-        channel: 'email',
-        delayHours: 72,
-        subject: `Still want your solar savings estimate, ${name}?`,
-        body: [
-          `Hi ${name},`,
-          '',
-          `We're holding your spot. Upload a recent electric bill and ${ctx.advisorName} will build your numbers: ${billLink}`,
-          emailFooter(ctx),
-        ].join('\n'),
-        onlyWithoutUsage: true,
-      })
-      return plans
     case 'presented':
       plans.push({
         key: 'presented:check_in',

@@ -236,8 +236,27 @@ test('with a rate a draft waits for approval, then goes out and follow-ups start
 test('a lead the team already worked is not emailed on its first run', async () => {
   const lead = addLead({ created_at: new Date(Date.now() - 3 * 24 * 3600 * 1000).toISOString() })
   await engine.runLead(String(lead.id))
-  assert.equal(db.rows('hub_followups').length, 0)
-  assert.equal(db.rows('hub_tasks').length, 1)
+  await engine.runLead(String(lead.id))
+  assert.equal(db.rows('hub_followups').some(row => row.status === 'scheduled'), false)
+  assert.ok(db.rows('hub_followups').every(row => row.status === 'skipped'))
+  assert.deepEqual(db.rows('hub_tasks').map(task => task.kind), ['get_bill'])
+})
+
+test('a bill range gives rough numbers but keeps asking for the real bill', async () => {
+  const lead = addLead({ notes: 'Quote request form\nElectric bill: $300-$400/month' })
+  const result = await engine.runLead(String(lead.id))
+  assert.equal(result.usage?.source, 'bill_range')
+  assert.equal(result.stage, 'panel_design')
+  assert.ok(db.rows('hub_tasks').some(task => task.kind === 'get_bill' && task.done_at == null))
+  assert.ok(db.rows('hub_followups').some(row => row.key === 'bill_received:steps' && row.status === 'scheduled'))
+  // The real bill arrives: the task closes and the reminders stop.
+  db.rows('powergenie_customers')[0].avg_monthly_kwh = 2400
+  await engine.runLead(String(lead.id))
+  assert.ok(db.rows('hub_tasks').some(task => task.kind === 'get_bill' && task.done_by_name === 'Automatic'))
+  for (const row of db.rows('hub_followups')) row.send_at = new Date(Date.now() - 1000).toISOString()
+  const ticked = await engine.tick()
+  assert.equal(ticked.messages.sent, 0)
+  assert.equal(sent.length, 0)
 })
 
 test('due follow-ups send, and stop once the bill is in or the customer opts out', async () => {

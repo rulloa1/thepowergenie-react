@@ -24,7 +24,7 @@ import { HttpError } from '../http.js'
 import { sendCustomEmail, sendCustomSms } from '../notify.js'
 import { inList, insertReturning, patchRows, selectOne, selectRows, upsertRow } from './db.js'
 import { googleKey, lookupRoof } from './google.js'
-import { followupsForStage, proposalMessages, tasksForStage, type FollowupPlan, type MessageContext } from './plan.js'
+import { billRequestFollowups, billTask, followupsForStage, proposalMessages, tasksForStage, type FollowupPlan, type MessageContext } from './plan.js'
 
 export type LeadRow = {
   id: string
@@ -115,7 +115,6 @@ const SYSTEM: Actor = { id: null, name: 'Automatic' }
 
 /** Which stage each automatic task belongs to. Others (like "interested") are kept. */
 const TASK_STAGE: Record<string, string> = {
-  get_bill: 'bill_received',
   approve_proposal: 'proposal_ready',
   call_after_proposal: 'presented',
   schedule_survey: 'signed',
@@ -331,9 +330,10 @@ async function enterStage(lead: LeadRow, wf: WorkflowRow, stage: string, pricing
     await patchRows('hub_followups', { lead_id: `eq.${lead.id}`, status: 'eq.scheduled' }, { status: 'cancelled', note: 'Lead marked lost' })
     return
   }
-  await patchRows('hub_followups', { lead_id: `eq.${lead.id}`, status: 'eq.scheduled', stage: `neq.${stage}` }, { status: 'cancelled', note: 'Lead moved to another stage' })
+  // Bill reminders (note only_without_usage) are not tied to a stage.
+  await patchRows('hub_followups', { lead_id: `eq.${lead.id}`, status: 'eq.scheduled', stage: `neq.${stage}`, note: 'is.null' }, { status: 'cancelled', note: 'Lead moved to another stage' })
   const name = firstName(lead.customer_name || 'there')
-  for (const task of tasksForStage(stage, { firstName: name }, opts.hasUsage)) {
+  for (const task of tasksForStage(stage, { firstName: name })) {
     await insertReturning('hub_tasks', {
       lead_id: lead.id,
       kind: task.kind,
@@ -345,6 +345,47 @@ async function enterStage(lead: LeadRow, wf: WorkflowRow, stage: string, pricing
   if (opts.baseline || wf.opted_out_at || lead.archived_at) return
   const plans = followupsForStage(stage, messageContext(lead, wf, pricing, opts.proposalToken), smsConsent(lead))
   await scheduleFollowups(lead, stage, plans)
+}
+
+/**
+ * Until a real bill or Smart Meter Texas usage is in (a bill range is only a
+ * rough guess), keep a "get the bill" task open and send the bill reminders.
+ * Leads that were already in the list before the workflow started get the
+ * task but no emails; their reminder rows are saved as skipped, so they are
+ * never sent later either.
+ */
+async function requestBillIfNeeded(lead: LeadRow, wf: WorkflowRow, stage: string, usage: UsageEstimate | null, pricing: PricingSettings, createdNow: boolean): Promise<void> {
+  const needsBill = !usage || !usage.confident
+  const open = stage !== 'lost' && !lead.archived_at && stageIndex(stage) >= 0 && stageIndex(stage) <= stageIndex('presented')
+  if (!needsBill || !open) {
+    await patchRows('hub_tasks', { lead_id: `eq.${lead.id}`, kind: 'eq.get_bill', done_at: 'is.null', cancelled_at: 'is.null' }, needsBill
+      ? { cancelled_at: nowIso() }
+      : { done_at: nowIso(), done_by_name: SYSTEM.name })
+    return
+  }
+  const plan = billTask({ firstName: firstName(lead.customer_name || 'there') }, Boolean(usage))
+  await insertReturning('hub_tasks', { lead_id: lead.id, kind: plan.kind, title: plan.title, detail: plan.detail, due_at: addHours(plan.dueHours) }, true)
+  const age = Date.now() - Date.parse(lead.created_at)
+  const existedBefore = createdNow && Number.isFinite(age) && age > BASELINE_AGE_MS
+  const plans = billRequestFollowups(messageContext(lead, wf, pricing, null), smsConsent(lead))
+  if (existedBefore) {
+    for (const item of plans) {
+      await insertReturning('hub_followups', {
+        lead_id: lead.id,
+        key: item.key,
+        stage: 'bill_received',
+        channel: item.channel,
+        send_at: nowIso(),
+        status: 'skipped',
+        subject: item.subject,
+        body: item.body,
+        note: 'Lead was in the list before automatic messages started',
+      }, true)
+    }
+    return
+  }
+  if (wf.opted_out_at) return
+  await scheduleFollowups(lead, 'bill_received', plans)
 }
 
 async function setStage(leadId: string, stage: string): Promise<void> {
@@ -452,7 +493,7 @@ export async function runLead(leadId: string): Promise<RunResult> {
     const baseline = ensured.created && Number.isFinite(age) && age > BASELINE_AGE_MS
     const token = live?.public_token || null
     await enterStage(lead, wf, stage, pricing, { baseline, hasUsage: Boolean(usage), proposalToken: token })
-    await patchRows('hub_lead_workflow', { lead_id: `eq.${leadId}` }, { last_stage: stage })
+    await patchRows('hub_lead_workflow', { lead_id: `eq.${leadId}` }, { last_stage: stage, updated_at: nowIso() })
   } else if (newDraft && stage !== 'lost') {
     // A new draft for a lead past the first proposal (a new bill, say) still needs Horace's review.
     await upsertRow('hub_tasks', {
@@ -469,6 +510,8 @@ export async function runLead(leadId: string): Promise<RunResult> {
       cancelled_at: null,
     }, 'lead_id,kind')
   }
+
+  await requestBillIfNeeded(lead, wf, stage, usage, pricing, ensured.created)
 
   return {
     stage,
@@ -567,7 +610,7 @@ export async function completeTask(taskId: string, actor: Actor): Promise<void> 
   if (task.done_at || task.cancelled_at) return
   await patchRows('hub_tasks', { id: `eq.${taskId}` }, { done_at: nowIso(), done_by: actor.id, done_by_name: actor.name })
   const lead = await loadLead(task.lead_id)
-  const plan = tasksForStage(TASK_STAGE[task.kind] || '', { firstName: firstName(lead.customer_name || 'there') }, true).find(item => item.kind === task.kind)
+  const plan = tasksForStage(TASK_STAGE[task.kind] || '', { firstName: firstName(lead.customer_name || 'there') }).find(item => item.kind === task.kind)
   if (plan?.advancesTo && stageIndex(plan.advancesTo) > stageIndex(lead.stage) && lead.stage !== 'lost') {
     await setStage(lead.id, plan.advancesTo)
     await logActivity(lead.id, actor, 'stage_advanced', `${task.title} done. Moved to the next stage.`)
@@ -634,8 +677,12 @@ async function sendFollowup(row: FollowupRow): Promise<'sent' | 'skipped' | 'fai
   }
   if (!lead || lead.archived_at) return skip('Lead archived')
   if (wf?.opted_out_at) return skip('Customer opted out')
-  if (lead.stage !== row.stage && !(row.stage === 'presented' && row.key.startsWith('proposal:'))) return skip('Lead moved to another stage')
-  if (row.note === 'only_without_usage' && wf?.usage) return skip('Usage arrived')
+  if (row.note === 'only_without_usage') {
+    if (wf?.usage?.confident) return skip('Bill or usage arrived')
+    if (lead.stage === 'lost' || stageIndex(lead.stage) > stageIndex('presented')) return skip('Lead moved past the proposal')
+  } else if (lead.stage !== row.stage && !(row.stage === 'presented' && row.key.startsWith('proposal:'))) {
+    return skip('Lead moved to another stage')
+  }
   if (row.channel === 'sms') {
     if (!smsConsent(lead)) return skip('No text consent on file')
     const wait = nextTextWindow()
