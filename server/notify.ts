@@ -56,6 +56,11 @@ export async function sendCustomEmail(to: string, subject: string, text: string)
         text,
       }),
     })
+    if (!res.ok) {
+      // Resend explains refusals (unverified domain, bad key) in the body. No secrets in it.
+      const detail = await res.text().catch(() => '')
+      console.error('sendCustomEmail_rejected', res.status, detail.slice(0, 300))
+    }
     return res.ok
   } catch (error) {
     console.error('sendCustomEmail failed:', error instanceof Error ? error.name : 'unknown')
@@ -81,6 +86,10 @@ export async function sendCustomSms(to: string, text: string): Promise<boolean> 
       },
       body: new URLSearchParams({ To: cleanTo, From: from, Body: text }).toString(),
     })
+    if (!res.ok) {
+      const detail = await res.text().catch(() => '')
+      console.error('sendCustomSms_rejected', res.status, detail.slice(0, 300))
+    }
     return res.ok
   } catch (error) {
     console.error('sendCustomSms failed:', error instanceof Error ? error.name : 'unknown')
