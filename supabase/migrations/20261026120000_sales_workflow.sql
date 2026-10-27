@@ -94,6 +94,11 @@ alter table public.hub_followups enable row level security;
 -- server, which checks the dashboard sign-in first. Tokens never leave it.
 revoke all on table public.hub_settings, public.hub_lead_workflow, public.hub_proposals, public.hub_tasks, public.hub_followups
   from public, anon, authenticated;
+-- This project does not grant new tables to the service role by default.
+grant select, insert, update, delete on table public.hub_settings, public.hub_lead_workflow, public.hub_proposals, public.hub_tasks, public.hub_followups
+  to service_role;
+grant select, insert, update, delete on table public.smt_authorizations, public.smt_usage_monthly, public.smt_usage_intervals
+  to service_role;
 
 comment on table public.hub_proposals is
   'Proposal snapshots. Drafts wait for Horace; only approved or sent ones are visible at /proposal/{public_token}.';
