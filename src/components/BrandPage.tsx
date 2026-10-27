@@ -90,7 +90,7 @@ export default function BrandPage({ id, onNavigate, getSalesforceUrl, onQuoteCli
               </p>
               <button
                 onClick={() => onNavigate('journey')}
-                className="inline-flex items-center gap-2 min-h-[44px] text-sm text-[#f4f8fb] border-b border-[#ffffff55] hover:border-[#f6cf85] hover:text-[#f6cf85] transition-all cursor-pointer font-medium"
+                className="inline-flex items-center gap-2 min-h-[44px] text-sm text-[#f4f8fb] border-b border-[#ffffff55] hover:border-[#f6cf85] hover:text-[#f6cf85] transition-all cursor-pointer font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f6cf85] focus-visible:ring-offset-2 focus-visible:ring-offset-[#071b27] rounded-sm"
               >
                 <span>Start The Power Genie solar journey</span>
                 <span className="text-base">↗</span>
@@ -143,7 +143,7 @@ export default function BrandPage({ id, onNavigate, getSalesforceUrl, onQuoteCli
                 </p>
                 <button
                   onClick={() => onNavigate('journey')}
-                  className="inline-flex justify-center items-center bg-[#f6cf85] text-[#102029] text-sm font-bold px-7 min-h-[48px] rounded-full hover:brightness-110 shadow-[0_4px_20px_rgba(246,207,133,0.35)] transition-all cursor-pointer"
+                  className="inline-flex justify-center items-center bg-[#f6cf85] text-[#102029] text-sm font-bold px-7 min-h-[48px] rounded-full hover:brightness-110 shadow-[0_4px_20px_rgba(246,207,133,0.35)] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f6cf85] focus-visible:ring-offset-2 focus-visible:ring-offset-[#071b27]"
                 >
                   Explore The Power Genie
                 </button>
@@ -212,7 +212,7 @@ export default function BrandPage({ id, onNavigate, getSalesforceUrl, onQuoteCli
           />
           <div className="absolute inset-0 bg-[linear-gradient(90deg,#071b27f5,#071b27cb_40%,#071b2744)] z-[-1]" />
           <div className="max-w-[780px]">
-            <button onClick={() => onNavigate('brands')} className="inline-block text-xs text-[#d1e0e8] mb-7 min-h-[32px] hover:text-white transition-colors cursor-pointer">
+            <button onClick={() => onNavigate('brands')} className="inline-block text-xs text-[#d1e0e8] mb-7 min-h-[32px] hover:text-white transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white rounded px-1 -mx-1">
               ← The Power Genie family
             </button>
             <p className="text-[11px] font-bold tracking-[2px] text-[var(--accent)] uppercase" style={{ '--accent': content.accent } as any}>
@@ -236,7 +236,7 @@ export default function BrandPage({ id, onNavigate, getSalesforceUrl, onQuoteCli
                 <a 
                   href={getSalesforceUrl(`https://sunrun.my.salesforce-sites.com/purl/?srep=/powergenie&utm_source=${id}`)}
                   onClick={() => onQuoteClick?.("Wonderful!", "Taking you to our personalized inquiry form.")}
-                  className="inline-flex justify-center items-center bg-[var(--accent)] text-[#102029] text-sm font-bold px-6 min-h-[48px] rounded-full hover:brightness-110 transition-all no-underline"
+                  className="inline-flex justify-center items-center bg-[var(--accent)] text-[#102029] text-sm font-bold px-6 min-h-[48px] rounded-full hover:brightness-110 shadow-[0_4px_20px_color-mix(in_srgb,var(--accent)_35%,transparent)] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] transition-all no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[#071b27]"
                   style={{ '--accent': content.accent } as any}
                 >
                   Explore my solar options ↗
@@ -244,7 +244,7 @@ export default function BrandPage({ id, onNavigate, getSalesforceUrl, onQuoteCli
               ) : (
                 <button 
                   onClick={() => onNavigate('brands')}
-                  className="inline-flex justify-center items-center bg-[var(--accent)] text-[#102029] text-sm font-bold px-6 min-h-[48px] rounded-full hover:brightness-110 transition-all cursor-pointer"
+                  className="inline-flex justify-center items-center bg-[var(--accent)] text-[#102029] text-sm font-bold px-6 min-h-[48px] rounded-full hover:brightness-110 shadow-[0_4px_20px_color-mix(in_srgb,var(--accent)_35%,transparent)] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[#071b27]"
                   style={{ '--accent': content.accent } as any}
                 >
                   Explore the brand family
@@ -253,13 +253,13 @@ export default function BrandPage({ id, onNavigate, getSalesforceUrl, onQuoteCli
               <button
                 type="button"
                 onClick={() => openAssistant('book')}
-                className="inline-flex justify-center items-center border border-white/40 text-sm font-bold px-6 min-h-[48px] rounded-full hover:bg-white/10 transition-all cursor-pointer"
+                className="inline-flex justify-center items-center border border-white/40 text-sm font-bold px-6 min-h-[48px] rounded-full hover:bg-white/10 hover:border-white hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#071b27]"
               >
                 Book a free savings consult
               </button>
               <button 
                 onClick={() => onNavigate('journey')}
-                className="inline-flex items-center min-h-[44px] text-sm border-b border-[#ffffff55] hover:border-white transition-colors cursor-pointer"
+                className="inline-flex items-center min-h-[44px] text-sm border-b border-[#ffffff55] hover:border-white transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#071b27] rounded-sm"
               >
                 {id === 'gas-genie' ? 'Explore solar with The Power Genie ↗' : 'Take the solar journey'}
               </button>
@@ -305,7 +305,7 @@ function Header({
       'flex items-center justify-between border-b border-[#ffffff20] bg-[#071b27]',
       lockup ? 'gap-3 px-4 py-3 sm:gap-5 sm:px-[5vw]' : 'gap-5 px-[5vw] py-[18px]',
     )}>
-      <button onClick={() => onNavigate('journey')} className="flex shrink-0 items-center gap-[10px] bg-transparent border-0 p-0 font-semibold text-xl tracking-[-0.6px] text-inherit cursor-pointer">
+      <button onClick={() => onNavigate('journey')} className="flex shrink-0 items-center gap-[10px] bg-transparent border-0 p-0 font-semibold text-xl tracking-[-0.6px] text-inherit cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f6cf85] rounded-xl">
         <img
           src={logo.src}
           alt={logo.alt}
@@ -332,11 +332,11 @@ function Header({
             event.preventDefault();
             onNavigate('brands');
           }}
-          className="inline-flex items-center min-h-[44px] bg-transparent text-inherit no-underline cursor-pointer hover:text-[#f6cf85] transition-colors"
+          className="inline-flex items-center min-h-[44px] bg-transparent text-inherit no-underline cursor-pointer hover:text-[#f6cf85] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f6cf85] rounded-lg px-2"
         >
           Our brands
         </a>
-        <button onClick={() => onNavigate('journey')} className="md:flex hidden items-center min-h-[44px] bg-transparent border-0 text-inherit p-0 cursor-pointer hover:text-[#f6cf85] transition-colors">Explore solar ↗</button>
+        <button onClick={() => onNavigate('journey')} className="md:flex hidden items-center min-h-[44px] bg-transparent border-0 text-inherit p-0 cursor-pointer hover:text-[#f6cf85] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f6cf85] rounded-lg px-2">Explore solar ↗</button>
       </nav>
     </header>
   );
@@ -371,7 +371,7 @@ function BrandCard({
         event.preventDefault();
         onClick();
       }}
-      className="group relative flex flex-col text-left text-inherit no-underline min-h-[420px] p-8 border border-white/15 rounded-[26px] overflow-hidden transition-all duration-300 hover:-translate-y-2 hover:border-[var(--accent)] hover:shadow-[0_22px_50px_rgba(0,0,0,0.6)] cursor-pointer"
+      className="group relative flex flex-col text-left text-inherit no-underline min-h-[420px] p-8 border border-white/15 rounded-[26px] overflow-hidden transition-all duration-300 hover:-translate-y-2 hover:border-[var(--accent)] hover:shadow-[0_22px_50px_rgba(0,0,0,0.6)] active:scale-[0.99] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[#071b27]"
       style={{ '--accent': accent } as React.CSSProperties}
     >
       {/* Full-bleed Card Background Image */}
@@ -452,8 +452,8 @@ function Step({ number, title, body, accent }: any) {
 function Footer({ onNavigate }: { onNavigate: (v: string) => void }) {
   return (
     <footer className="flex flex-wrap justify-between items-center gap-6 mx-[7vw] py-8 border-t border-[#ffffff25] text-[13px] text-[#bacbd6]">
-      <button onClick={() => onNavigate('journey')} className="bg-transparent border-0 text-inherit p-0 cursor-pointer hover:text-white">The Power Genie</button>
-      <button onClick={() => onNavigate('brands')} className="bg-transparent border-0 text-inherit p-0 cursor-pointer hover:text-white">Explore all brands</button>
+      <button onClick={() => onNavigate('journey')} className="bg-transparent border-0 text-inherit p-0 cursor-pointer hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f6cf85] rounded px-2 py-1">The Power Genie</button>
+      <button onClick={() => onNavigate('brands')} className="bg-transparent border-0 text-inherit p-0 cursor-pointer hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f6cf85] rounded px-2 py-1">Explore all brands</button>
     </footer>
   );
 }

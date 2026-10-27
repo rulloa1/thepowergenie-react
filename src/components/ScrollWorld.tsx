@@ -1,12 +1,11 @@
 import React, { useEffect, useLayoutEffect, useRef, useState, useCallback } from 'react';
-import { Config, Section, Segment } from '../types';
+import { Config, Segment } from '../types';
 import { openAssistant } from '../lib/openAssistant';
 import { lockPageScroll } from '../lib/scrollLock';
 import { preservedScrollTop } from '../lib/scrollPosition';
 import { shouldHandleClientNavigation } from '../lib/siteRoutes';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { Sun, Moon, Battery, BatteryCharging, Zap, Home as HomeIcon, ShieldCheck, ArrowRight, Sparkles } from 'lucide-react';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -107,7 +106,7 @@ interface ScrollWorldProps {
   onNavigateBrands?: () => void;
 }
 
-const navLinkClass = 'sw-nav__item whitespace-nowrap font-inherit text-[0.82rem] no-underline border-0 bg-transparent cursor-pointer px-3.5 py-1.5 rounded-full transition-colors duration-200 text-[var(--sw-ink-soft)] hover:text-[var(--sw-ink)]';
+const navLinkClass = 'sw-nav__item whitespace-nowrap font-inherit text-[0.82rem] no-underline border-0 bg-transparent cursor-pointer px-3.5 py-1.5 rounded-full transition-all duration-200 text-[var(--sw-ink-soft)] hover:text-[var(--sw-ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-accent)]';
 
 function followBrands(
   event: React.MouseEvent<HTMLAnchorElement>,
@@ -118,249 +117,6 @@ function followBrands(
   onNavigateBrands();
   const details = event.currentTarget.closest('details');
   if (details) details.open = false;
-}
-
-function HomePowerFlowHUD({
-  mode,
-  onToggle,
-}: {
-  mode: 'day' | 'night';
-  onToggle: (mode: 'day' | 'night') => void;
-}) {
-  const isDay = mode === 'day';
-
-  return (
-    <div className="sw-power-hud max-md:hidden mt-5 w-full rounded-2xl bg-[rgba(8,20,32,0.92)] backdrop-blur-xl border border-[rgba(255,255,255,0.14)] p-4 sm:p-5 shadow-[0_16px_40px_rgba(0,0,0,0.5)] text-white pointer-events-auto transition-all duration-300">
-      {/* Top Header & Mode Toggle Pills */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/10">
-        <div>
-          <span className="text-[0.68rem] font-mono tracking-[0.14em] uppercase text-emerald-400 font-semibold flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            Live Power Flow Simulation
-          </span>
-          <h4 className="text-[0.92rem] font-bold text-white mt-0.5">
-            {isDay ? 'Solar Surplus Charging Powerwall' : 'Stored Battery Powering Home'}
-          </h4>
-        </div>
-
-        {/* Segmented Day / Night Toggle */}
-        <div className="flex items-center gap-1 bg-black/45 p-1 rounded-full border border-white/10 shrink-0 self-start sm:self-auto">
-          <button
-            type="button"
-            onClick={() => onToggle('day')}
-            className={cn(
-              "flex items-center gap-1.5 px-3 py-1 rounded-full text-[0.74rem] font-semibold transition-all duration-200 cursor-pointer border-0",
-              isDay
-                ? "bg-amber-500 text-slate-950 shadow-[0_0_12px_rgba(245,158,11,0.5)] font-bold"
-                : "text-slate-300 hover:text-white bg-transparent"
-            )}
-          >
-            <Sun className={cn("w-3.5 h-3.5", isDay && "text-slate-950 animate-[sw-spin-slow_12s_linear_infinite]")} />
-            <span>Day: Storing</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => onToggle('night')}
-            className={cn(
-              "flex items-center gap-1.5 px-3 py-1 rounded-full text-[0.74rem] font-semibold transition-all duration-200 cursor-pointer border-0",
-              !isDay
-                ? "bg-cyan-500 text-slate-950 shadow-[0_0_12px_rgba(6,182,212,0.5)] font-bold"
-                : "text-slate-300 hover:text-white bg-transparent"
-            )}
-          >
-            <Moon className="w-3.5 h-3.5" />
-            <span>Night: Using</span>
-          </button>
-        </div>
-      </div>
-
-      {/* 3-Node Energy Schematic with Live Flow Conduits */}
-      <div className="relative my-3 pt-1">
-        <svg
-          viewBox="0 0 320 125"
-          className="w-full h-auto overflow-visible select-none pointer-events-none"
-        >
-          <defs>
-            <linearGradient id="sw-solar-charge-grad" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#F59E0B" />
-              <stop offset="100%" stopColor="#10B981" />
-            </linearGradient>
-            <linearGradient id="sw-battery-home-grad" x1="100%" y1="0%" x2="50%" y2="100%">
-              <stop offset="0%" stopColor="#06B6D4" />
-              <stop offset="100%" stopColor="#10B981" />
-            </linearGradient>
-            <linearGradient id="sw-solar-home-grad" x1="0%" y1="0%" x2="50%" y2="100%">
-              <stop offset="0%" stopColor="#F59E0B" />
-              <stop offset="100%" stopColor="#38BDF8" />
-            </linearGradient>
-          </defs>
-
-          {/* Conduit: Solar (55, 28) -> Powerwall (265, 28) */}
-          <path
-            d="M 68 28 L 252 28"
-            fill="none"
-            stroke="rgba(255,255,255,0.12)"
-            strokeWidth="3"
-            strokeLinecap="round"
-          />
-          {isDay && (
-            <path
-              d="M 68 28 L 252 28"
-              fill="none"
-              stroke="url(#sw-solar-charge-grad)"
-              strokeWidth="4"
-              strokeDasharray="8 6"
-              strokeLinecap="round"
-              className="animate-[sw-flow-dash-right_1.1s_linear_infinite]"
-            />
-          )}
-
-          {/* Conduit: Solar (55, 28) -> Home (160, 100) */}
-          <path
-            d="M 68 36 Q 110 92 145 100"
-            fill="none"
-            stroke="rgba(255,255,255,0.12)"
-            strokeWidth="3"
-            strokeLinecap="round"
-          />
-          {isDay && (
-            <path
-              d="M 68 36 Q 110 92 145 100"
-              fill="none"
-              stroke="url(#sw-solar-home-grad)"
-              strokeWidth="4"
-              strokeDasharray="8 6"
-              strokeLinecap="round"
-              className="animate-[sw-flow-dash-down_1.3s_linear_infinite]"
-            />
-          )}
-
-          {/* Conduit: Powerwall (265, 28) -> Home (160, 100) */}
-          <path
-            d="M 252 36 Q 210 92 175 100"
-            fill="none"
-            stroke="rgba(255,255,255,0.12)"
-            strokeWidth="3"
-            strokeLinecap="round"
-          />
-          {!isDay && (
-            <path
-              d="M 252 36 Q 210 92 175 100"
-              fill="none"
-              stroke="url(#sw-battery-home-grad)"
-              strokeWidth="4"
-              strokeDasharray="8 6"
-              strokeLinecap="round"
-              className="animate-[sw-flow-dash-down_1.1s_linear_infinite]"
-            />
-          )}
-        </svg>
-
-        {/* Nodes Overlaid on Schematic */}
-        {/* Node 1: Solar Roof */}
-        <div className="absolute left-0 top-0 -translate-y-1 flex flex-col items-center w-24">
-          <div
-            className={cn(
-              "w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 shadow-lg",
-              isDay
-                ? "bg-amber-500/25 text-amber-400 border border-amber-400/70 shadow-[0_0_18px_rgba(245,158,11,0.45)]"
-                : "bg-slate-800/80 text-slate-500 border border-slate-700/60"
-            )}
-          >
-            <Sun className={cn("w-5 h-5", isDay && "animate-[sw-solar-pulse_3s_ease-in-out_infinite]")} />
-          </div>
-          <span className="text-[0.72rem] font-semibold text-slate-200 mt-1">Solar Roof</span>
-          <span
-            className={cn(
-              "text-[0.76rem] font-bold font-mono",
-              isDay ? "text-amber-400" : "text-slate-500"
-            )}
-          >
-            {isDay ? '8.6 kW' : '0.0 kW'}
-          </span>
-        </div>
-
-        {/* Node 2: Tesla Powerwall */}
-        <div className="absolute right-0 top-0 -translate-y-1 flex flex-col items-center w-28">
-          <div
-            className={cn(
-              "w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 shadow-lg",
-              isDay
-                ? "bg-emerald-500/25 text-emerald-400 border border-emerald-400/70 shadow-[0_0_18px_rgba(16,185,129,0.45)]"
-                : "bg-cyan-500/25 text-cyan-400 border border-cyan-400/70 shadow-[0_0_18px_rgba(6,182,212,0.45)]"
-            )}
-          >
-            {isDay ? (
-              <BatteryCharging className="w-5 h-5 animate-pulse text-emerald-400" />
-            ) : (
-              <Battery className="w-5 h-5 text-cyan-400" />
-            )}
-          </div>
-          <span className="text-[0.72rem] font-semibold text-slate-200 mt-1">Tesla Powerwall</span>
-          <span
-            className={cn(
-              "text-[0.76rem] font-bold font-mono",
-              isDay ? "text-emerald-400" : "text-cyan-400"
-            )}
-          >
-            {isDay ? '+5.4 kW Storing' : '3.2 kW Powering'}
-          </span>
-        </div>
-
-        {/* Node 3: Home & Family Load */}
-        <div className="absolute left-1/2 bottom-0 -translate-x-1/2 translate-y-2 flex flex-col items-center w-28">
-          <div className="w-10 h-10 rounded-full flex items-center justify-center bg-sky-500/25 text-sky-400 border border-sky-400/70 shadow-[0_0_18px_rgba(56,189,248,0.4)]">
-            <HomeIcon className="w-5 h-5" />
-          </div>
-          <span className="text-[0.72rem] font-semibold text-slate-200 mt-1">Living Room & AC</span>
-          <span className="text-[0.76rem] font-bold font-mono text-sky-400">
-            3.2 kW Load
-          </span>
-        </div>
-      </div>
-
-      {/* Narrative Explanation Banner */}
-      <div className="mt-7 pt-3 border-t border-white/10 flex flex-col gap-2">
-        <div className="flex items-start gap-2.5 bg-white/5 rounded-xl p-2.5 border border-white/10">
-          <Zap className={cn("w-4 h-4 shrink-0 mt-0.5", isDay ? "text-amber-400" : "text-cyan-400")} />
-          <p className="text-[0.78rem] text-slate-300 leading-snug m-0">
-            {isDay ? (
-              <>
-                <strong className="text-white font-semibold">Surplus Saved to Battery: </strong>
-                Your 32 panels produce <span className="text-amber-400 font-mono font-bold">8.6 kW</span>. Your home uses 3.2 kW, and <span className="text-emerald-400 font-mono font-bold">+5.4 kW</span> clean energy is stored in your Tesla Powerwall (now at <span className="text-emerald-300 font-bold">96%</span>).
-              </>
-            ) : (
-              <>
-                <strong className="text-white font-semibold">100% Stored Power at Night: </strong>
-                With solar resting, your Powerwall seamlessly discharges <span className="text-cyan-400 font-mono font-bold">3.2 kW</span> to run your air conditioning, TV, and pool with <span className="text-emerald-400 font-bold">zero grid power</span> used.
-              </>
-            )}
-          </p>
-        </div>
-
-        {/* Grid Protection Footer */}
-        <div className="flex items-center justify-between text-[0.7rem] font-mono text-slate-400 px-1">
-          <span className="flex items-center gap-1 text-emerald-400">
-            <ShieldCheck className="w-3.5 h-3.5" />
-            Grid Draw: 0.0 kW
-          </span>
-          <span className="text-slate-300 flex items-center gap-1">
-            {isDay ? (
-              <>
-                <Zap className="w-3.5 h-3.5 text-amber-400" />
-                100% Solar Self-Sufficiency
-              </>
-            ) : (
-              <>
-                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                Complete Blackout Protection
-              </>
-            )}
-          </span>
-        </div>
-      </div>
-    </div>
-  );
 }
 
 export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: ScrollWorldProps) {
@@ -378,8 +134,6 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
   const [readingMode, setReadingMode] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [segments, setSegments] = useState<Segment[]>([]);
-  const [homeMode, setHomeMode] = useState<'day' | 'night'>('day');
-  const homeOverrideRef = useRef(false);
   
   const stateRef = useRef({
     totalW: 0,
@@ -640,19 +394,6 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
           c.setAttribute('aria-hidden', String(cop <= 0.5));
         }
 
-        // Automatic scroll-sync demonstration for the Home section:
-        // Day mode in the first half (solar saving to battery),
-        // Night mode in the second half (battery powering home).
-        if (s.id === 'home') {
-          if (cop > 0.08) {
-            if (!homeOverrideRef.current) {
-              const targetMode = pr < 0.48 ? 'day' : 'night';
-              setHomeMode((prev) => (prev === targetMode ? prev : targetMode));
-            }
-          } else {
-            homeOverrideRef.current = false;
-          }
-        }
       });
     }
 
@@ -1001,7 +742,7 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
       {/* Top Bar */}
       <div className="sw-topbar fixed bg-[color-mix(in_srgb,var(--sw-bg)_78%,transparent)] backdrop-blur-md border-b border-[color-mix(in_srgb,var(--sw-ink)_8%,transparent)] top-0 left-0 right-0 z-50 flex items-center justify-between gap-4 p-[clamp(10px,1.6vw,18px)_clamp(18px,5vw,64px)]">
         {config.brand && (
-          <button onClick={() => jumpTo(0)} className="sw-brand shrink-0 flex items-center gap-[10px] no-underline text-[var(--sw-ink)] bg-transparent border-0 p-0 cursor-pointer group" aria-label={`${config.brand.name} home`}>
+          <button onClick={() => jumpTo(0)} className="sw-brand shrink-0 flex items-center gap-[10px] no-underline text-[var(--sw-ink)] bg-transparent border-0 p-0 cursor-pointer group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-accent)] rounded-xl" aria-label={`${config.brand.name} home`}>
             {config.brand.logo ? (
               <img src={config.brand.logo} alt="" className="sw-brand__logo block h-11 w-auto max-w-[150px] max-sm:h-10 max-sm:max-w-[130px] shrink-0 object-contain rounded-xl bg-[#071b27] px-2.5 py-1 shadow-[0_4px_12px_rgba(7,27,39,0.18)]" />
             ) : (
@@ -1020,7 +761,7 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
                     key={s.id}
                     onClick={() => jumpTo(i)}
                     className={cn(
-                      "sw-nav__item whitespace-nowrap font-inherit text-[0.82rem] border-0 bg-transparent cursor-pointer px-3.5 py-1.5 rounded-full transition-colors duration-200",
+                      "sw-nav__item whitespace-nowrap font-inherit text-[0.82rem] border-0 bg-transparent cursor-pointer px-3.5 py-1.5 rounded-full transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-accent)]",
                       activeIndex === i ? "text-white" : "text-[var(--sw-ink-soft)] hover:text-[var(--sw-ink)]"
                     )}
                     style={activeIndex === i ? { backgroundColor: accentInk(s.accent), color: '#ffffff' } : undefined}
@@ -1040,7 +781,7 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
 
               {/* Mobile Menu */}
               <details ref={menuRef} className="sw-mobile-menu xl:hidden group">
-                <summary className="list-none cursor-pointer flex items-center justify-center w-11 h-11 bg-[color-mix(in_srgb,#fff_55%,transparent)] backdrop-blur-[10px] border border-[color-mix(in_srgb,var(--sw-accent)_16%,transparent)] rounded-full focus:outline-none" aria-label="Open navigation menu">
+                <summary className="list-none cursor-pointer flex items-center justify-center w-11 h-11 bg-[color-mix(in_srgb,#fff_55%,transparent)] backdrop-blur-[10px] border border-[color-mix(in_srgb,var(--sw-accent)_16%,transparent)] rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-accent)]" aria-label="Open navigation menu">
                   <div className="relative w-5 h-4">
                     <span className="absolute top-0 left-0 w-full h-0.5 bg-[var(--sw-ink)] rounded-full group-open:rotate-45 group-open:top-2 transition-all duration-300"></span>
                     <span className="absolute top-1.5 left-0 w-full h-0.5 bg-[var(--sw-ink)] rounded-full group-open:opacity-0 transition-all duration-300"></span>
@@ -1056,7 +797,7 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
                         (e.currentTarget.closest('details') as HTMLDetailsElement).open = false;
                       }}
                       className={cn(
-                        "block w-full text-left px-5 py-3 text-[0.9rem] font-medium transition-colors",
+                        "block w-full text-left px-5 py-3 text-[0.9rem] font-medium transition-colors focus-visible:outline-none focus-visible:bg-gray-100",
                         activeIndex === i ? "text-[var(--sw-accent-ink)] bg-[color-mix(in_srgb,var(--sw-accent-ink)_10%,white)]" : "text-[var(--sw-ink)] active:bg-gray-50"
                       )}
                     >
@@ -1067,7 +808,7 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
                   <a
                     href="/brands"
                     onClick={(event) => followBrands(event, onNavigateBrands)}
-                    className="block w-full px-5 py-3 text-left text-[0.9rem] font-medium text-[var(--sw-ink)] no-underline active:bg-gray-50"
+                    className="block w-full px-5 py-3 text-left text-[0.9rem] font-medium text-[var(--sw-ink)] no-underline active:bg-gray-50 focus-visible:outline-none focus-visible:bg-gray-100"
                   >
                     Our brands
                   </a>
@@ -1077,7 +818,7 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
           )}
 
           {config.cta && (
-            <a href={config.cta.href || '#'} className="sw-topcta hidden sm:block no-underline font-semibold text-[0.9rem] text-white bg-[var(--sw-ink)] px-5 py-2.5 rounded-full whitespace-nowrap">
+            <a href={config.cta.href || '#'} className="sw-topcta hidden sm:inline-flex items-center justify-center no-underline font-semibold text-[0.9rem] text-white bg-[var(--sw-ink)] hover:bg-[#262642] px-5 py-2.5 rounded-full whitespace-nowrap shadow-[0_4px_14px_rgba(26,26,46,0.2)] hover:shadow-[0_6px_18px_rgba(26,26,46,0.3)] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-accent)] focus-visible:ring-offset-2">
               {config.cta.label}
             </a>
           )}
@@ -1126,16 +867,6 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
               <div className="sw-sun-live-fx absolute inset-0 pointer-events-none z-[3]">
                 <div className="absolute -top-[14%] left-1/2 -translate-x-1/2 w-[140vw] h-[75vh] rounded-full bg-[radial-gradient(ellipse_at_center,rgba(255,180,50,0.18)_0%,rgba(255,107,0,0.06)_45%,transparent_75%)] animate-[sw-solar-pulse_6s_ease-in-out_infinite]" />
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(255,225,130,0.12)_0%,transparent_65%)] animate-[sw-ray-shimmer_7s_ease-in-out_infinite]" />
-              </div>
-            )}
-            {s.kind === 'dive' && s.si === 3 && (
-              <div
-                className={cn(
-                  "sw-home-day-ambient absolute inset-0 pointer-events-none z-[3] transition-opacity duration-700",
-                  homeMode === 'day' ? "opacity-100" : "opacity-0"
-                )}
-              >
-                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_65%_35%,rgba(255,215,130,0.14)_0%,rgba(255,165,60,0.05)_50%,transparent_80%)] mix-blend-screen" />
               </div>
             )}
           </div>
@@ -1195,17 +926,7 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
               </p>
             )}
 
-            {/* Interactive Day / Night Power Demonstration for Home */}
-            {s.id === 'home' && (
-              <HomePowerFlowHUD
-                mode={homeMode}
-                onToggle={(nextMode) => {
-                  homeOverrideRef.current = true;
-                  setHomeMode(nextMode);
-                }}
-              />
-            )}
-            {s.id !== 'home' && s.tags && s.tags.length > 0 && (
+            {s.tags && s.tags.length > 0 && (
               <ul className="sw-copy__benefits max-md:hidden flex flex-wrap gap-2 mt-6 p-0 list-none" aria-label={`${s.title} benefits`}>
                 {s.tags.map(tag => (
                   <li key={tag} className="text-[0.82rem] font-semibold text-[color-mix(in_srgb,var(--sw-accent-ink)_70%,#000)] px-3.5 py-1.5 rounded-full bg-[color-mix(in_srgb,var(--sw-accent-ink)_14%,#fff)] border border-[color-mix(in_srgb,var(--sw-accent-ink)_30%,transparent)]">
@@ -1217,12 +938,12 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
             {s.cta && (
               <div className="sw-copy__cta max-md:hidden flex flex-wrap gap-3 mt-7 pointer-events-auto">
                 {s.cta.primary && (
-                  <a href={s.cta.primary.href} className="sw-btn sw-btn--primary no-underline font-semibold text-[0.95rem] px-6 py-3 rounded-full text-white bg-[var(--sw-ink)] hover:-translate-y-0.5 transition-transform">
+                  <a href={s.cta.primary.href} className="sw-btn sw-btn--primary no-underline font-semibold text-[0.95rem] px-6 py-3 rounded-full text-white bg-[var(--sw-ink)] hover:bg-[#262642] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] transition-all duration-200 shadow-[0_6px_20px_rgba(26,26,46,0.2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-accent)] focus-visible:ring-offset-2">
                     {s.cta.primary.label}
                   </a>
                 )}
                 {s.cta.secondary && (
-                  <a href={s.cta.secondary.href} className="sw-btn sw-btn--ghost no-underline font-semibold text-[0.95rem] px-6 py-3 rounded-full text-[var(--sw-ink)] border-[1.5px] border-[color-mix(in_srgb,var(--sw-ink)_25%,transparent)] hover:-translate-y-0.5 transition-transform">
+                  <a href={s.cta.secondary.href} className="sw-btn sw-btn--ghost no-underline font-semibold text-[0.95rem] px-6 py-3 rounded-full text-[var(--sw-ink)] bg-white/60 backdrop-blur-sm border-[1.5px] border-[color-mix(in_srgb,var(--sw-ink)_25%,transparent)] hover:border-[var(--sw-ink)] hover:bg-white/90 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-accent)] focus-visible:ring-offset-2">
                     {s.cta.secondary.label}
                   </a>
                 )}
@@ -1240,7 +961,7 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
             key={s.id}
             onClick={() => jumpTo(i)}
             className={cn(
-              "sw-route__dot relative border-0 bg-transparent cursor-pointer w-3.5 h-3.5 md:w-3.5 md:h-3.5 flex items-center justify-center group",
+              "sw-route__dot relative border-0 bg-transparent cursor-pointer w-3.5 h-3.5 md:w-3.5 md:h-3.5 flex items-center justify-center group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-accent-ink)] rounded-full",
               activeIndex === i && "is-active",
               "pointer-coarse:w-7 pointer-coarse:h-7"
             )}

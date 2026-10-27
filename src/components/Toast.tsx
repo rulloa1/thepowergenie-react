@@ -35,26 +35,30 @@ export default function Toast({ message, submessage, isVisible, onClose, duratio
       )}
       aria-hidden={isVisible ? undefined : true}
     >
-      <div className={cn(
-        "bg-white/95 backdrop-blur-md border border-[var(--sw-ink)/10] rounded-2xl shadow-2xl p-4 sm:p-5 flex items-start gap-4 min-w-[300px] max-w-[90vw]",
-        isVisible ? "pointer-events-auto" : "pointer-events-none"
-      )}>
-        <div className="flex-none w-10 h-10 rounded-full bg-green-50 flex items-center justify-center">
-          <CheckCircle2 className="w-6 h-6 text-green-600" />
+      <div
+        role="status"
+        aria-live="polite"
+        className={cn(
+          "bg-white/95 backdrop-blur-md border border-[rgba(26,26,46,0.08)] rounded-2xl shadow-[0_20px_50px_rgba(10,20,40,0.2)] p-4 sm:p-5 flex items-start gap-4 min-w-[300px] max-w-[90vw]",
+          isVisible ? "pointer-events-auto" : "pointer-events-none"
+        )}
+      >
+        <div className="flex-none w-10 h-10 rounded-full bg-green-50 border border-green-100 flex items-center justify-center">
+          <CheckCircle2 className="w-5 h-5 text-green-600" />
         </div>
         <div className="flex-1 min-w-0 pr-6">
-          <p className="text-[var(--sw-ink)] font-bold text-[0.95rem] leading-snug">
+          <p className="text-[#1A1A2E] font-bold text-[0.95rem] leading-snug">
             {message}
           </p>
           {submessage && (
-            <p className="text-[var(--sw-ink-soft)] text-[0.82rem] mt-1 font-medium leading-relaxed">
+            <p className="text-[#4A5568] text-[0.82rem] mt-1 font-medium leading-relaxed">
               {submessage}
             </p>
           )}
         </div>
         <button
           onClick={onClose}
-          className="absolute top-3 right-3 p-1.5 text-[var(--sw-ink-soft)] hover:text-[var(--sw-ink)] hover:bg-gray-100 rounded-lg transition-colors"
+          className="absolute top-3 right-3 p-1.5 text-[#4A5568] hover:text-[#1A1A2E] hover:bg-gray-100 active:scale-95 rounded-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600 focus-visible:ring-offset-1"
           aria-label="Close notification"
         >
           <X className="w-4 h-4" />

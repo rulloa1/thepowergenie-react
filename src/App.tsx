@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
-import { Mail, Phone } from 'lucide-react';
+import { Mail, Phone, Calendar, ArrowUpRight, Upload, Sparkles } from 'lucide-react';
 import ScrollWorld from './components/ScrollWorld';
 import BrandPage from './components/BrandPage';
 import Toast from './components/Toast';
@@ -25,6 +25,25 @@ const config: Config = {
   atmosphere: true,
   cta: { label: 'Upload Light Bill', href: '#bill' },
   sections: [
+    {
+      id: 'genie',
+      label: 'Meet the Genie',
+      still: 'assets-v2/stills/00-genie.webp',
+      stillMobile: 'assets-v2/stills/00-genie-m.webp',
+      clip: 'assets-v2/vid/encoded/00-genie-loop.mp4',
+      clipMobile: 'assets-v2/vid/mobile/00-genie-loop.mp4',
+      scroll: 2.8,
+      linger: 0.5,
+      accent: '#3B82F6',
+      eyebrow: 'Introducing',
+      title: 'The Power Genie',
+      body: 'Your personal guide to solar savings. The Power Genie grants your wish for lower energy bills, backup power, and a cleaner planet — all with $0 down.',
+      tags: ['$0 Down Solar', 'Tesla Powerwall', 'Sunrun Backed'],
+      cta: {
+        primary: { label: 'Get Your Free Quote', href: '#quote' },
+        secondary: { label: 'See How It Works', href: '#sun' },
+      }
+    },
     {
       id: 'sun',
       label: 'The Source',
@@ -62,18 +81,18 @@ const config: Config = {
     },
     {
       id: 'battery',
-      label: 'Storage',
+      label: 'Powerwall',
       still: 'assets-v2/stills/03-battery.webp',
       stillMobile: 'assets-v2/stills/03-battery-m.webp',
       clip: 'assets-v2/vid/encoded/03-battery-loop.mp4',
       clipMobile: 'assets-v2/vid/mobile/03-battery-loop.mp4',
       scroll: 2.4,
       linger: 0.4,
-      accent: '#4CAF50',
-      eyebrow: 'Daytime Solar Capture',
-      title: 'Tesla Powerwall Sunlight Storage',
-      body: 'During peak daylight, excess rooftop solar energy channels directly into your Tesla Powerwall battery system. Watch clean solar wattage charge your battery for when you need it most.',
-      tags: ['Tesla Powerwall', 'Daytime Sun Storage', 'Zero Grid Draw']
+      accent: '#10B981',
+      eyebrow: 'Tesla Powerwall Battery',
+      title: 'Store Sunlight for When You Need It',
+      body: 'Your Tesla Powerwall captures excess solar energy during the day and stores it for nighttime use, blackouts, or peak rate hours — giving you true energy independence.',
+      tags: ['13.5 kWh Capacity', 'Blackout Protection', 'Peak Rate Savings']
     },
     {
       id: 'home',
@@ -110,7 +129,7 @@ const config: Config = {
       label: 'Get Started',
       still: 'assets-v2/stills/06-cta.webp',
       stillMobile: 'assets-v2/stills/06-cta-m.webp',
-      clip: 'assets-v2/vid/encoded/06-cta-dive.mp4',
+      clip: 'assets-v2/vid/encoded/06-cta-loop.mp4',
       clipMobile: 'assets-v2/vid/mobile/06-cta-dive.mp4',
       accent: '#FF6B00',
       eyebrow: 'Energy Independence',
@@ -123,20 +142,8 @@ const config: Config = {
       }
     }
   ],
-  connectors: [
-    'assets-v2/vid/encoded/c01-sun-roof.mp4',
-    'assets-v2/vid/encoded/c02-roof-battery.mp4',
-    'assets-v2/vid/encoded/c03-battery-home.mp4',
-    'assets-v2/vid/encoded/c04-home-community.mp4',
-    'assets-v2/vid/encoded/c05-community-cta.mp4'
-  ],
-  connectorsMobile: [
-    'assets-v2/vid/mobile/c01-sun-roof.mp4',
-    'assets-v2/vid/mobile/c02-roof-battery.mp4',
-    'assets-v2/vid/mobile/c03-battery-home.mp4',
-    'assets-v2/vid/mobile/c04-home-community.mp4',
-    'assets-v2/vid/mobile/c05-community-cta.mp4'
-  ]
+  connectors: [],
+  connectorsMobile: []
 };
 
 // Main application component
@@ -302,9 +309,10 @@ export default function App() {
             e.preventDefault();
             openAssistant('bill');
           }}
-          className="quote-cta-mobile flex items-center justify-center min-h-[52px] w-full bg-[#1A1A2E] text-white font-bold rounded-full shadow-lg pointer-events-auto no-underline"
+          className="quote-cta-mobile flex items-center justify-center gap-2.5 min-h-[52px] w-full bg-[#1A1A2E] text-white font-bold rounded-full shadow-[0_10px_25px_rgba(26,26,46,0.35)] hover:bg-[#262642] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] transition-all duration-200 pointer-events-auto no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00] focus-visible:ring-offset-2"
         >
-          Upload Light Bill
+          <Upload className="w-5 h-5 text-[#FF8A2B]" aria-hidden="true" />
+          <span>Upload Light Bill</span>
         </a>
       </div>
       )}
@@ -317,44 +325,55 @@ export default function App() {
       />
 
       <section ref={quoteRef} className="quote-panel relative z-45 min-h-screen bg-[#F6F7FB] text-[#1A1A2E] p-[calc(clamp(84px,10vw,112px)+env(safe-area-inset-top))_clamp(16px,5vw,64px)_calc(40px+env(safe-area-inset-bottom))]" id="quote" aria-labelledby="quote-title" tabIndex={-1}>
-        <p className="quote-panel__eyebrow m-0 mb-2 text-[0.74rem] font-semibold tracking-[0.14em] uppercase text-[#FF6B00]">Your free quote</p>
-        <h2 id="quote-title" className="m-0 mb-4 text-[#1A1A2E] font-bold text-[clamp(1.7rem,3.6vw,2.6rem)] tracking-tight leading-[1.1]">Let's power your home.</h2>
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#FF6B00]/10 border border-[#FF6B00]/20 mb-3">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#FF6B00] animate-pulse" aria-hidden="true" />
+          <p className="quote-panel__eyebrow m-0 text-[0.72rem] font-bold tracking-[0.14em] uppercase text-[#FF6B00]">Your free quote</p>
+        </div>
+        <h2 id="quote-title" className="m-0 mb-4 text-[#1A1A2E] font-bold text-[clamp(1.85rem,3.8vw,2.8rem)] tracking-tight leading-[1.08]">Let's power your home.</h2>
         <div className="mb-7">
           <button
             type="button"
             data-testid="book-consult"
             onClick={() => openAssistant('book')}
-            className="inline-flex items-center justify-center min-h-[48px] px-5 rounded-full bg-[#FF6B00] text-white font-bold shadow-[0_8px_20px_rgba(255,107,0,0.28)]"
+            className="inline-flex items-center justify-center gap-2 min-h-[48px] px-6 rounded-full bg-[#FF6B00] text-white font-bold shadow-[0_8px_20px_rgba(255,107,0,0.28)] hover:bg-[#FF8A2B] hover:shadow-[0_12px_28px_rgba(255,107,0,0.38)] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] transition-all duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00] focus-visible:ring-offset-2 focus-visible:ring-offset-[#F6F7FB]"
           >
-            Book a free savings consult
+            <Calendar className="w-4 h-4 text-white" aria-hidden="true" />
+            <span>Book a free savings consult</span>
           </button>
         </div>
-        <div className="quote-panel__grid grid grid-cols-1 md:grid-cols-[minmax(260px,340px)_1fr] gap-[clamp(20px,3vw,40px)] items-start max-w-[1280px]">
-          <aside className="rep-card bg-[#0B2233] text-[#F7FBFF] rounded-[18px] p-[26px_24px] shadow-[0_12px_32px_rgba(10,20,40,0.18)]" aria-label="Your Sunrun solar expert">
-            <p className="rep-card__name m-0 text-[1.35rem] font-bold tracking-tight">Horace Lawrence</p>
-            <p className="rep-card__role m-0 mt-1 mb-[18px] text-[0.9rem] text-[#A9C1D6]">The Block Sales Expert Team Lead · Sunrun</p>
+        <div className="quote-panel__grid grid grid-cols-1 md:grid-cols-[minmax(280px,360px)_1fr] gap-[clamp(20px,3vw,40px)] items-start max-w-[1280px]">
+          <aside className="rep-card relative overflow-hidden bg-[#0B2233] text-[#F7FBFF] rounded-[22px] p-[28px_26px] shadow-[0_16px_40px_rgba(10,20,40,0.22)] border border-white/10" aria-label="Your Sunrun solar expert">
+            <div className="absolute top-0 right-0 w-36 h-36 bg-[radial-gradient(circle_at_100%_0%,rgba(255,107,0,0.18),transparent_70%)] pointer-events-none" />
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#FF6B00]/15 text-[#FF8A2B] border border-[#FF6B00]/30">
+                <Sparkles className="w-3 h-3 text-[#FF8A2B]" aria-hidden="true" />
+                Sunrun Expert Lead
+              </span>
+            </div>
+            <p className="rep-card__name m-0 text-[1.4rem] font-bold tracking-tight text-white">Horace Lawrence</p>
+            <p className="rep-card__role m-0 mt-1 mb-[18px] text-[0.88rem] text-[#A9C1D6]">The Block Sales Expert Team Lead · Sunrun</p>
             <ul className="rep-card__contact grid gap-2 m-0 mb-5 p-0 list-none">
               <li>
-                <a href="mailto:horace.lawrence@sunrun.com" className="inline-flex items-center gap-[10px] text-white font-semibold text-[0.95rem] no-underline break-all hover:underline focus-visible:underline">
+                <a href="mailto:horace.lawrence@sunrun.com" className="inline-flex items-center gap-[10px] text-white font-semibold text-[0.95rem] no-underline break-all px-2.5 py-1.5 -mx-2.5 rounded-lg hover:bg-white/10 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF8A2B]">
                   <Mail className="flex-none w-[18px] h-[18px] text-[#FF8A2B]" />
                   horace.lawrence@sunrun.com
                 </a>
               </li>
               <li>
-                <a href="tel:+15102417007" className="inline-flex items-center gap-[10px] text-white font-semibold text-[0.95rem] no-underline break-all hover:underline focus-visible:underline">
+                <a href="tel:+15102417007" className="inline-flex items-center gap-[10px] text-white font-semibold text-[0.95rem] no-underline break-all px-2.5 py-1.5 -mx-2.5 rounded-lg hover:bg-white/10 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF8A2B]">
                   <Phone className="flex-none w-[18px] h-[18px] text-[#FF8A2B]" />
                   510-241-7007
                 </a>
               </li>
             </ul>
             <p className="rep-card__intro m-0 mb-[14px] text-[0.95rem] leading-[1.55] text-[#D9E6F2]">Hi, I'm Horace! I'm dedicated to making the process of going solar as easy as possible. Why solar?</p>
-            <ul className="rep-card__why grid gap-[10px] m-0 p-0 list-none">
+            <ul className="rep-card__why grid gap-[12px] m-0 p-0 list-none">
               <li className="relative pl-[26px] text-[0.92rem] leading-[1.45] text-[#F7FBFF] before:content-[''] before:absolute before:left-0 before:top-[0.32em] before:w-[14px] before:h-[14px] before:rounded-full before:bg-[#FF6B00] before:shadow-[inset_0_0_0_4px_#0B2233]">Lock in a rate to avoid rising utility costs.</li>
               <li className="relative pl-[26px] text-[0.92rem] leading-[1.45] text-[#F7FBFF] before:content-[''] before:absolute before:left-0 before:top-[0.32em] before:w-[14px] before:h-[14px] before:rounded-full before:bg-[#FF6B00] before:shadow-[inset_0_0_0_4px_#0B2233]">A more reliable source of energy for your home.</li>
               <li className="relative pl-[26px] text-[0.92rem] leading-[1.45] text-[#F7FBFF] before:content-[''] before:absolute before:left-0 before:top-[0.32em] before:w-[14px] before:h-[14px] before:rounded-full before:bg-[#FF6B00] before:shadow-[inset_0_0_0_4px_#0B2233]">With a battery, protection during blackouts.</li>
             </ul>
           </aside>
-          <div ref={formBoxRef} className="quote-panel__formwrap bg-white rounded-[18px] overflow-hidden shadow-[0_12px_32px_rgba(10,20,40,0.12)]">
+          <div ref={formBoxRef} className="quote-panel__formwrap bg-white rounded-[22px] overflow-hidden border border-[#1A1A2E]/8 shadow-[0_16px_40px_rgba(10,20,40,0.1)]">
             {formReady ? (
               <iframe
                 className="quote-panel__frame block w-full h-[min(900px,82vh)] border-0 bg-white"
@@ -363,18 +382,34 @@ export default function App() {
                 referrerPolicy="strict-origin-when-cross-origin"
               ></iframe>
             ) : (
-              <div className="quote-panel__frame flex w-full h-[min(900px,82vh)] items-center justify-center bg-white text-[0.9rem] text-[#4A5568]">
-                Loading the quote form…
+              <div className="quote-panel__frame flex flex-col w-full h-[min(900px,82vh)] items-center justify-center gap-3 bg-white text-[0.95rem] text-[#4A5568]">
+                <div className="w-8 h-8 rounded-full border-3 border-[#FF6B00] border-t-transparent animate-spin" />
+                <span>Loading the quote form…</span>
               </div>
             )}
-            <p className="quote-panel__alt m-0 p-[12px_18px] text-[0.86rem] text-[#4A5568] border-t border-[rgba(26,26,46,0.08)]">
-              Form not loading? <a href={getSalesforceUrl("https://sunrun.my.salesforce-sites.com/purl/?srep=/powergenie")} target="_blank" rel="noopener" className="text-[#0066CC] font-semibold">Open it in a new tab</a>.
+            <p className="quote-panel__alt m-0 p-[14px_20px] text-[0.88rem] text-[#4A5568] bg-[#FAFAFC] border-t border-[rgba(26,26,46,0.06)] flex items-center justify-between flex-wrap gap-2">
+              <span>Form not loading?</span>
+              <a href={getSalesforceUrl("https://sunrun.my.salesforce-sites.com/purl/?srep=/powergenie")} target="_blank" rel="noopener" className="text-[#0066CC] font-semibold hover:underline inline-flex items-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066CC] rounded">
+                <span>Open it in a new tab</span>
+                <ArrowUpRight className="w-3.5 h-3.5" aria-hidden="true" />
+              </a>
             </p>
           </div>
         </div>
-        <p className="mt-8 max-w-[1280px] text-[0.98rem] leading-relaxed text-[#4A5568]">
-          <a href="/book" className="font-semibold text-[#0066CC] no-underline hover:underline focus-visible:underline">Book a one-hour call on Horace’s calendar</a>
-        </p>
+        <div className="mt-8 max-w-[1280px]">
+          <a
+            href="/book"
+            className="group inline-flex items-center gap-3 px-5 py-3.5 rounded-2xl bg-white border border-[#1A1A2E]/8 shadow-[0_4px_16px_rgba(10,20,40,0.06)] hover:border-[#0066CC]/30 hover:shadow-[0_8px_24px_rgba(0,102,204,0.12)] hover:-translate-y-0.5 transition-all duration-200 no-underline text-[#1A1A2E] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066CC] focus-visible:ring-offset-2"
+          >
+            <span className="flex items-center justify-center w-8 h-8 rounded-full bg-[#0066CC]/10 text-[#0066CC] group-hover:bg-[#0066CC] group-hover:text-white transition-colors">
+              <Calendar className="w-4 h-4" aria-hidden="true" />
+            </span>
+            <span className="font-semibold text-[0.95rem] text-[#0066CC] group-hover:underline">
+              Book a one-hour call on Horace’s calendar
+            </span>
+            <ArrowUpRight className="w-4 h-4 text-[#0066CC] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" aria-hidden="true" />
+          </a>
+        </div>
         <LegalFooter homeChrome />
       </section>
     </div>

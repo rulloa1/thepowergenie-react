@@ -243,10 +243,18 @@ html[data-pg-brand="brands"] {
   background: var(--pg-assistant, #FF6B00);
   color: var(--pg-assistant-ink, #fff);
   box-shadow: 0 10px 24px var(--pg-assistant-shadow, rgba(255, 107, 0, 0.35));
+  transition: transform 200ms ease, box-shadow 200ms ease, filter 200ms ease;
+  cursor: pointer;
 }
 
 .pg-assistant-launcher:hover {
-  filter: brightness(1.05);
+  filter: brightness(1.08);
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 14px 28px var(--pg-assistant-shadow, rgba(255, 107, 0, 0.45));
+}
+
+.pg-assistant-launcher:active {
+  transform: translateY(0) scale(0.97);
 }
 
 .pg-assistant-launcher:focus-visible {
