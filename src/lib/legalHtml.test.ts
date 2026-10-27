@@ -41,6 +41,15 @@ describe('crawlable legal markup', () => {
     expect(privacy).not.toMatch(new RegExp(['Fer' + 'rell', 'cust_' + 'patricia', 'Hanna' + ' Ward'].join('|')));
   });
 
+  it('links the four launch pages from the footer without touching the app brand routes', () => {
+    const footer = renderToStaticMarkup(React.createElement(LegalFooter));
+    expect(footer).toContain('href="/launch/gas-genie">Gas Genie');
+    expect(footer).toContain('href="/launch/celebrity-solar">Celebrity Solar');
+    expect(footer).toContain('href="/launch/hip-hop-solar">Hip Hop Solar');
+    expect(footer).toContain('href="/sport-and-solar">Sport &amp; Solar');
+    expect(footer).toContain('href="/privacy">Privacy Policy');
+  });
+
   it('includes the Power Genie Alerts disclosures and a privacy link', () => {
     const terms = html(TermsPage);
     expect(terms).toContain('Terms &amp; Conditions');
