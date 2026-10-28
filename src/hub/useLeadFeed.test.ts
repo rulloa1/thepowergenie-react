@@ -116,6 +116,43 @@ describe('lead feed merge', () => {
       amount: 140,
     });
     expect(leads.find((lead) => lead.id === 'manual-1')?.sourceLabel).toBe('Manual entry');
+    const [brandLead] = toLeads(
+      [{
+        id: 'brand-1',
+        created_at: '2026-10-28T12:00:00Z',
+        customer_name: 'Sport Fan',
+        service_address: '123 Main St',
+        phone: '555-111-2222',
+        email: 'fan@example.com',
+        notes: 'Referral source: sport-and-solar\nPicked: Football tickets',
+        kwh_this_period: null,
+        total_due: null,
+        current_charges: null,
+        past_due: null,
+        account_number: null,
+        appointment_date: null,
+        esiid: null,
+        meter_number: null,
+        tdu: null,
+        rep_puct_certificate: null,
+        avg_monthly_kwh: null,
+        usage_history: null,
+        utility: null,
+        stage: 'bill_received',
+        created_by: null,
+        days: null,
+        avg_kwh_per_day: null,
+        kwh_same_month_last_year: null,
+        bill_date: null,
+        rate_plan: null,
+        archived_at: null,
+        archived_by: null
+      }],
+      [],
+      [],
+      []
+    );
+    expect(brandLead.sourceLabel).toBe('Sport & Solar');
     expect(leads.find((lead) => lead.id === 'book-1')).toMatchObject({
       source: 'booking',
       sourceLabel: 'Booking page',

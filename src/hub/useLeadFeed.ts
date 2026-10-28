@@ -165,7 +165,13 @@ function noteValue(notes: string | null | undefined, label: string): string | nu
 
 function customerSource(notes: string | null, createdBy: string | null): string {
   if (isManualCreatedBy(createdBy)) return 'Manual entry';
-  return notes && notes.includes('Website assistant lead') ? 'Website assistant' : 'Customer file';
+  if (notes) {
+    if (notes.includes('Referral source: celebrity-solar')) return 'Celebrity Solar';
+    if (notes.includes('Referral source: hip-hop-solar')) return 'Hip-Hop Solar';
+    if (notes.includes('Referral source: sport-and-solar')) return 'Sport & Solar';
+    if (notes.includes('Website assistant lead')) return 'Website assistant';
+  }
+  return 'Customer file';
 }
 
 export function leadsForView(leads: Lead[], view: 'active' | 'archived'): Lead[] {

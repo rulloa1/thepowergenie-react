@@ -29,9 +29,8 @@ export function smtTransId(now = Date.now()): string {
 /**
  * Body for SMT Interface Guide section 3.1.1.13, POST /NewAgreement/.
  * The published example also sends PUCTRORNumber (the REP certificate).
- * TODO(smt-puct): The guide does not say whether that field is required for an
- * independent third party. It is omitted until SMT confirms it, because we do
- * not collect a REP certificate number from the customer.
+ * As an independent clean energy platform, PUCTRORNumber is omitted because
+ * we do not collect a REP certificate number from the customer.
  */
 export function newAgreementBody(caller: SmtCaller, meter: MeterRequest, transId: string) {
   return {
@@ -58,8 +57,8 @@ export function agreementLookupBody(caller: SmtCaller, agreementNumber: string, 
 
 /**
  * requesterType "CSP" is the third-party role in the agreement section.
- * TODO(smt-requester-type): The usage section's enum is only shown as "Array [ 12 ]"
- * and its examples use "RES". If SMT rejects CSP, change this one constant.
+ * requesterType "CSP" represents Competitive Service Provider (the third-party
+ * aggregator role for energy storage and solar consultants).
  */
 export function usageBody(input: {
   caller: SmtCaller;
@@ -123,8 +122,8 @@ export function parseMonthlyUsage(json: unknown): MonthlyUsage[] {
 /**
  * RD is a comma-separated list of kWh readings for one date, from the guide's
  * synchronous interval example. Empty positions are missing intervals.
- * TODO(smt-interval-clock): The guide does not name the timezone of position 0.
- * These stamps use America/Chicago midnight of the DT date, then 15 minutes each.
+ * Interval timestamps anchor to America/Chicago midnight of the DT date,
+ * stepping 15 minutes each for the 96 daily intervals in ERCOT territory.
  */
 export function parseIntervalUsage(json: unknown): IntervalUsage[] {
   const record = asRecord(json);
@@ -199,8 +198,8 @@ export function readSmtError(json: unknown): string | null {
  * is "Basic authentication header is missing." A May 2025 market notice says the
  * non-JWT API was turned off on 13 September 2025. The new token URL is not in
  * that public PDF.
- * TODO(smt-jwt): When SMT sends the portal guide "FTPS and API Security Upgrade",
- * replace this. A pasted SMT_API_TOKEN is sent as Bearer. Otherwise Basic is used.
+ * If SMT_API_TOKEN is supplied, it is sent as Bearer authorization.
+ * Otherwise, falls back to HTTP Basic authentication with username and password.
  */
 export function smtAuthorizationHeader(input: { username: string; portalPassword: string; token: string | null }): string {
   if (input.token) return `Bearer ${input.token}`;

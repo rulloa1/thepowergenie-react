@@ -4,7 +4,7 @@
  * mobile drawer, and centralized lead CTA navigation.
  */
 
-import { POWERGENIE_CONFIG, initSolarLeadButtons } from './config.js';
+import { POWERGENIE_CONFIG, initSolarLeadButtons, submitLaunchLead } from './config.js';
 
 document.addEventListener('DOMContentLoaded', () => {
   // 1. Centralized Solar CTA Initialization
@@ -24,6 +24,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 5. Gas-Genie Modal / Status Handlers
   initGasGenieHandlers();
+
+  // 5b. Solar Launch Lead Form Handlers (Celebrity, Hip-Hop, Sport & Solar)
+  initSolarLaunchLeadHandlers();
 
   // 6. Solar & Battery Savings Estimator
   initSavingsCalculator();
@@ -285,27 +288,168 @@ function initPortfolioTabs() {
 
 /**
  * Gas-Genie Handlers
- * Clearly maintains isolation: does not route to Sunrun solar lead capture
+ * Clearly maintains isolation: posts to launch-lead and does not route to Sunrun solar Hub
  */
 function initGasGenieHandlers() {
   const gasForms = document.querySelectorAll('.gas-genie-notify-form');
   gasForms.forEach(form => {
-    form.addEventListener('submit', (e) => {
+    form.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const input = form.querySelector('input[type="email"]');
-      const email = input ? input.value : '';
-      if (!email) return;
+      const parent = form.parentElement;
+      const errorBox = parent ? parent.querySelector('.gas-genie-error') : null;
+      const successBox = parent ? parent.querySelector('.gas-genie-success') : null;
+      const submitBtn = form.querySelector('button[type="submit"]');
 
-      const successBox = form.nextElementSibling;
-      form.style.display = 'none';
-      if (successBox) {
-        successBox.style.display = 'block';
-        successBox.innerHTML = `
-          <div style="padding: 16px; border-radius: 12px; background: rgba(14, 165, 233, 0.15); border: 1px solid rgba(14, 165, 233, 0.3); color: #e0f2fe; font-size: 0.9rem;">
-            <strong>Thank you.</strong> We will notify <em>${email}</em> once the Gas-Genie pilot program is officially open for beta enrollment.<br>
-            <small style="color: #94a3b8; display: block; margin-top: 6px;">Note: Gas-Genie is strictly independent from Sunrun solar lead capture.</small>
-          </div>
-        `;
+      if (errorBox) {
+        errorBox.style.display = 'none';
+        errorBox.textContent = '';
+      }
+
+      const nameInput = form.querySelector('input[name="name"]');
+      const emailInput = form.querySelector('input[name="email"]');
+      const zipInput = form.querySelector('input[name="zip"]');
+      const consentInput = form.querySelector('input[name="consent"]');
+      const companyInput = form.querySelector('input[name="company"]');
+
+      const name = nameInput ? nameInput.value.trim() : '';
+      const email = emailInput ? emailInput.value.trim().toLowerCase() : '';
+      const zip = zipInput ? zipInput.value.trim() : '';
+      const consent = consentInput ? consentInput.checked : false;
+      const company = companyInput ? companyInput.value.trim() : '';
+
+      if (!consent) {
+        if (errorBox) {
+          errorBox.textContent = 'Please check the consent box to receive pilot updates.';
+          errorBox.style.display = 'block';
+        }
+        return;
+      }
+
+      const originalBtnText = submitBtn ? submitBtn.textContent : '';
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Submitting registration...';
+      }
+
+      try {
+        await submitLaunchLead({
+          site: 'gas-genie',
+          name,
+          email,
+          zip,
+          consent: true,
+          company,
+          pageUrl: window.location.href,
+        });
+
+        form.style.display = 'none';
+        if (successBox) {
+          successBox.style.display = 'block';
+          successBox.innerHTML = `
+            <div style="padding: 20px; border-radius: 12px; background: rgba(14, 165, 233, 0.15); border: 1px solid rgba(14, 165, 233, 0.3); color: #e0f2fe; font-size: 0.95rem; line-height: 1.6;">
+              <strong style="color: #38bdf8; font-size: 1.05rem; display: block; margin-bottom: 6px;">Registration Confirmed</strong>
+              Thank you, <strong>${name}</strong>. We've recorded your interest for ZIP <strong>${zip}</strong>.<br>
+              We will notify <em>${email}</em> when certified regional partners launch enrollment.<br>
+              <small style="color: #94a3b8; display: block; margin-top: 10px;">Note: Gas-Genie is strictly independent from Sunrun solar lead capture.</small>
+            </div>
+          `;
+        }
+      } catch (err) {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = originalBtnText;
+        }
+        if (errorBox) {
+          errorBox.textContent = err instanceof Error ? err.message : 'Could not submit. Please try again.';
+          errorBox.style.display = 'block';
+        }
+      }
+    });
+  });
+}
+
+/**
+ * Solar Launch Page Lead Handlers
+ * Submits leads directly to the launch-lead Supabase Edge Function,
+ * adding them to brand_leads and the Referral Hub (powergenie_customers)
+ * with instant alerts and perk tracking.
+ */
+function initSolarLaunchLeadHandlers() {
+  const solarForms = document.querySelectorAll('.solar-launch-lead-form');
+  solarForms.forEach(form => {
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const parent = form.parentElement;
+      const errorBox = parent ? parent.querySelector('.solar-lead-error') : null;
+      const successBox = parent ? parent.querySelector('.solar-lead-success') : null;
+      const submitBtn = form.querySelector('button[type="submit"]');
+
+      if (errorBox) {
+        errorBox.style.display = 'none';
+        errorBox.textContent = '';
+      }
+
+      const site = form.dataset.site || form.querySelector('input[name="site"]')?.value;
+      const name = form.querySelector('input[name="name"]')?.value.trim();
+      const phone = form.querySelector('input[name="phone"]')?.value.trim();
+      const email = form.querySelector('input[name="email"]')?.value.trim().toLowerCase();
+      const address = form.querySelector('input[name="address"]')?.value.trim();
+      const zip = form.querySelector('input[name="zip"]')?.value.trim();
+      const bill = form.querySelector('select[name="bill"], input[name="bill"]:checked')?.value;
+      const choice = form.querySelector('input[name="choice"], select[name="choice"]')?.value.trim();
+      const consent = form.querySelector('input[name="consent"]')?.checked;
+      const company = form.querySelector('input[name="company"]')?.value.trim() || '';
+
+      if (!consent) {
+        if (errorBox) {
+          errorBox.textContent = 'Please check the consent box to continue.';
+          errorBox.style.display = 'block';
+        }
+        return;
+      }
+
+      const originalText = submitBtn ? submitBtn.textContent : '';
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Submitting your inquiry...';
+      }
+
+      try {
+        await submitLaunchLead({
+          site,
+          name,
+          phone,
+          email,
+          address,
+          zip,
+          bill,
+          choice: choice || null,
+          consent: true,
+          company,
+          pageUrl: window.location.href,
+        });
+
+        form.style.display = 'none';
+        if (successBox) {
+          successBox.style.display = 'block';
+          successBox.innerHTML = `
+            <div style="padding: 24px; border-radius: 14px; background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.35); color: #ecfdf5; font-size: 0.95rem; line-height: 1.6;">
+              <strong style="color: #34d399; font-size: 1.1rem; display: block; margin-bottom: 6px;">🎉 Inquiry Successfully Received!</strong>
+              Thank you, <strong>${name}</strong>. Team Lead Horace Lawrence has received your solar inquiry for <strong>${address || zip}</strong>.<br>
+              We'll be in touch at <strong>${phone}</strong> and <em>${email}</em> shortly with your custom solar profile.<br>
+              ${choice ? `<div style="margin-top: 10px; padding: 8px 12px; background: rgba(0,0,0,0.25); border-radius: 8px; font-size: 0.85rem; color: #a7f3d0;"><strong>Perk Selected:</strong> ${choice}</div>` : ''}
+            </div>
+          `;
+        }
+      } catch (err) {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = originalText;
+        }
+        if (errorBox) {
+          errorBox.textContent = err instanceof Error ? err.message : 'Could not submit your inquiry. Please try again.';
+          errorBox.style.display = 'block';
+        }
       }
     });
   });

@@ -1,10 +1,26 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "redirects": [
-    { "source": "/node/book", "destination": "/book", "permanent": true },
-    { "source": "/node/book/", "destination": "/book", "permanent": true },
-    { "source": "/node/dashboard", "destination": "/dashboard", "permanent": true },
-    { "source": "/node/dashboard/", "destination": "/dashboard", "permanent": true }
+    {
+      "source": "/node/book",
+      "destination": "/book",
+      "permanent": true
+    },
+    {
+      "source": "/node/book/",
+      "destination": "/book",
+      "permanent": true
+    },
+    {
+      "source": "/node/dashboard",
+      "destination": "/dashboard",
+      "permanent": true
+    },
+    {
+      "source": "/node/dashboard/",
+      "destination": "/dashboard",
+      "permanent": true
+    }
   ],
   "rewrites": [
     {
@@ -36,6 +52,26 @@
       "destination": "/terms.html"
     },
     {
+      "source": "/launch/gas-genie",
+      "destination": "/gas-genie.html"
+    },
+    {
+      "source": "/launch/celebrity-solar",
+      "destination": "/celebrity-solar.html"
+    },
+    {
+      "source": "/launch/hip-hop-solar",
+      "destination": "/hip-hop-solar.html"
+    },
+    {
+      "source": "/launch/sport-and-solar",
+      "destination": "/sport-and-solar.html"
+    },
+    {
+      "source": "/sport-and-solar",
+      "destination": "/sport-and-solar.html"
+    },
+    {
       "source": "/((?!api/|brand-lockups(?:/|$)).*)",
       "destination": "/index.html"
     }
@@ -43,10 +79,18 @@
   "headers": [
     {
       "source": "/(dashboard|pipeline|hub|homeowner|portal|referrals)",
-      "headers": [{ "key": "X-Robots-Tag", "value": "noindex, nofollow" }]
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
     }
   ],
   "crons": [
-    { "path": "/api/smt/refresh", "schedule": "0 13 * * *" }
+    {
+      "path": "/api/smt/refresh",
+      "schedule": "0 13 * * *"
+    }
   ]
 }

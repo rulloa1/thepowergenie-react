@@ -22,12 +22,36 @@ export const POWERGENIE_CONFIG = {
   
   // Gas-Genie separate status
   GAS_GENIE_STATUS: "pilot_evaluation",
-  GAS_GENIE_NOTICE: "Gas-Genie is a separate concept currently under development. It does NOT route inquiries to Sunrun solar lead capture."
+  GAS_GENIE_NOTICE: "Gas-Genie is a separate concept currently under development. It does NOT route inquiries to Sunrun solar lead capture.",
+
+  // Launch lead edge function endpoint
+  LAUNCH_LEAD_URL: "https://ogwiopxnjpwwzleqwobq.supabase.co/functions/v1/launch-lead",
 };
 
 // Global browser window attachment for vanilla JS compatibility
 if (typeof window !== 'undefined') {
   window.POWERGENIE_CONFIG = POWERGENIE_CONFIG;
+}
+
+/**
+ * Submit lead to the launch-lead Supabase edge function.
+ */
+export async function submitLaunchLead(leadData) {
+  const url = POWERGENIE_CONFIG.LAUNCH_LEAD_URL;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(leadData),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.error || "That didn't go through. Please try again.");
+  }
+  return data;
+}
+
+if (typeof window !== 'undefined') {
+  window.submitLaunchLead = submitLaunchLead;
 }
 
 /**

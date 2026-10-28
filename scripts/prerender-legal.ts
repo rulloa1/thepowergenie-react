@@ -4,7 +4,7 @@
  * policy text without running JavaScript. The same app bundle still mounts
  * and renders the page. This is not a serverless function.
  */
-import { readFileSync, writeFileSync } from 'node:fs'
+import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
@@ -130,3 +130,29 @@ requirePhrases('terms.html', termsHtml, [SMS_STOP_HELP, 'href="/privacy"'])
 writeFileSync(join(dist, 'privacy.html'), privacyHtml)
 writeFileSync(join(dist, 'terms.html'), termsHtml)
 console.log('prerendered dist/privacy.html and dist/terms.html')
+
+// Prerender standalone launch pages into dist and dist/launch
+const launchPages = ['gas-genie.html', 'celebrity-solar.html', 'hip-hop-solar.html', 'sport-and-solar.html'];
+const launchDir = join(dist, 'launch');
+if (!existsSync(launchDir)) mkdirSync(launchDir, { recursive: true });
+
+for (const file of launchPages) {
+  if (existsSync(file)) {
+    const content = readFileSync(file, 'utf8');
+    requirePhrases(file, content, []);
+    writeFileSync(join(dist, file), content);
+    writeFileSync(join(launchDir, file), content);
+    const slug = file.replace('.html', '');
+    const slugDir = join(launchDir, slug);
+    if (!existsSync(slugDir)) mkdirSync(slugDir, { recursive: true });
+    writeFileSync(join(slugDir, 'index.html'), content);
+  }
+}
+
+// Copy root static assets into dist/assets without overwriting existing files
+const assetsDir = join(process.cwd(), 'assets');
+const distAssets = join(dist, 'assets');
+if (existsSync(assetsDir)) {
+  cpSync(assetsDir, distAssets, { recursive: true, force: false });
+}
+console.log('copied launch pages and static assets to dist');

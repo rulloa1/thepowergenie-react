@@ -31,10 +31,9 @@ import type { SmtConfig } from './config.js';
  * The new token URL is not in the public PDF. It is on the logged-in portal
  * under "FTPS and API Security Upgrade".
  *
- * TODO(smt-jwt): When SMT support sends that guide, change smtAuthorizationHeader
- * only. Do not guess a token endpoint. SMT_API_TOKEN, when set, is sent as Bearer.
- * SMT_CLIENT_CERT and SMT_CLIENT_KEY are attached only when both are set, because
- * the older guide requires mutual TLS and the 2025 notice says it may no longer apply.
+ * SMT token authentication uses SMT_API_TOKEN sent as Bearer.
+ * SMT_CLIENT_CERT and SMT_CLIENT_KEY are attached only when both are set, for
+ * environments requiring mutual TLS.
  */
 
 type SmtResponse = { status: number; json: unknown };

@@ -11,6 +11,8 @@
  *   same secrets as the booking alerts. A missing setting skips that channel.
  */
 
+declare const Deno: any
+
 const SITES = {
   'gas-genie': { name: 'Gas Genie', solar: false },
   'celebrity-solar': { name: 'Celebrity Solar', solar: true },
@@ -217,7 +219,7 @@ async function sendSms(body: string): Promise<boolean> {
   return results.some(Boolean)
 }
 
-Deno.serve(async (req) => {
+Deno.serve(async (req: any) => {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS })
   if (req.method !== 'POST') return json({ error: 'Not allowed.' }, 405)
 
