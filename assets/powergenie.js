@@ -33,6 +33,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 7. Interactive Portfolio Tabs (Celebrity & Hip-Hop Solar)
   initPortfolioTabs();
+
+  // 8. Modern Web Accessible Error & Invalid State Sync
+  initFormAccessibility();
 });
 
 /**
@@ -524,4 +527,30 @@ function initSavingsCalculator() {
 
   slider.addEventListener('input', updateSavings);
   updateSavings();
+}
+
+/**
+ * Synchronize programmatic accessibility states (like aria-invalid) with :user-invalid
+ * per modern web guidance (accessible-error-announcement).
+ */
+function initFormAccessibility() {
+  const updateAriaState = (event) => {
+    const input = event.target;
+    if (!input || !input.matches || !input.matches('input, textarea, select')) return;
+
+    if (input.matches(':user-invalid')) {
+      input.setAttribute('aria-invalid', 'true');
+    } else {
+      input.removeAttribute('aria-invalid');
+    }
+  };
+
+  document.addEventListener('blur', updateAriaState, true);
+  document.addEventListener('focus', updateAriaState, true);
+  document.addEventListener('input', (event) => {
+    const input = event.target;
+    if (input && input.matches && input.matches('input, textarea, select') && input.getAttribute('aria-invalid') === 'true') {
+      updateAriaState(event);
+    }
+  });
 }

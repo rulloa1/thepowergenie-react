@@ -51,6 +51,15 @@
       padding: clamp(32px, 5vw, 56px);
       margin-top: 48px;
     }
+    h1, h2, h3, h4 {
+      text-wrap: balance;
+    }
+    p, li {
+      text-wrap: pretty;
+    }
+    input:user-invalid, select:user-invalid {
+      border-color: #ef4444 !important;
+    }
   </style>
 
   <!-- Centralized Configuration & Interactive Logic -->
@@ -399,18 +408,18 @@
               <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px;">
                 <div>
                   <label for="celebName" style="display: block; font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.08em; color: #dfba73; margin-bottom: 6px;">Full Name *</label>
-                  <input id="celebName" type="text" name="name" placeholder="First and last name" required minlength="2" maxlength="120" style="width: 100%; box-sizing: border-box; padding: 12px 16px; border-radius: 10px; background: rgba(5,8,17,0.85); border: 1px solid rgba(223, 186, 115, 0.3); color: #fff; font-size: 0.92rem;">
+                  <input id="celebName" type="text" name="name" placeholder="First and last name" required minlength="2" maxlength="120" autocomplete="name" autocorrect="off" spellcheck="false" enterkeyhint="next" style="width: 100%; box-sizing: border-box; padding: 12px 16px; border-radius: 10px; background: rgba(5,8,17,0.85); border: 1px solid rgba(223, 186, 115, 0.3); color: #fff; font-size: 0.92rem;">
                 </div>
                 <div>
                   <label for="celebPhone" style="display: block; font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.08em; color: #dfba73; margin-bottom: 6px;">Phone Number *</label>
-                  <input id="celebPhone" type="tel" name="phone" placeholder="(832) 555-0199" required maxlength="30" inputmode="tel" style="width: 100%; box-sizing: border-box; padding: 12px 16px; border-radius: 10px; background: rgba(5,8,17,0.85); border: 1px solid rgba(223, 186, 115, 0.3); color: #fff; font-size: 0.92rem;">
+                  <input id="celebPhone" type="tel" name="phone" placeholder="(832) 555-0199" required maxlength="30" inputmode="tel" autocomplete="tel" enterkeyhint="next" style="width: 100%; box-sizing: border-box; padding: 12px 16px; border-radius: 10px; background: rgba(5,8,17,0.85); border: 1px solid rgba(223, 186, 115, 0.3); color: #fff; font-size: 0.92rem;">
                 </div>
               </div>
 
               <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px;">
                 <div>
                   <label for="celebEmail" style="display: block; font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.08em; color: #dfba73; margin-bottom: 6px;">Email Address *</label>
-                  <input id="celebEmail" type="email" name="email" placeholder="you@domain.com" required maxlength="200" style="width: 100%; box-sizing: border-box; padding: 12px 16px; border-radius: 10px; background: rgba(5,8,17,0.85); border: 1px solid rgba(223, 186, 115, 0.3); color: #fff; font-size: 0.92rem;">
+                  <input id="celebEmail" type="email" name="email" placeholder="you@domain.com" required maxlength="200" autocomplete="email" spellcheck="false" enterkeyhint="next" style="width: 100%; box-sizing: border-box; padding: 12px 16px; border-radius: 10px; background: rgba(5,8,17,0.85); border: 1px solid rgba(223, 186, 115, 0.3); color: #fff; font-size: 0.92rem;">
                 </div>
                 <div>
                   <label for="celebBill" style="display: block; font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.08em; color: #dfba73; margin-bottom: 6px;">Estimated Monthly Electric Bill *</label>
@@ -428,11 +437,11 @@
               <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 12px;">
                 <div>
                   <label for="celebAddress" style="display: block; font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.08em; color: #dfba73; margin-bottom: 6px;">Estate Street Address *</label>
-                  <input id="celebAddress" type="text" name="address" placeholder="1234 Grand View Blvd" required minlength="6" maxlength="200" style="width: 100%; box-sizing: border-box; padding: 12px 16px; border-radius: 10px; background: rgba(5,8,17,0.85); border: 1px solid rgba(223, 186, 115, 0.3); color: #fff; font-size: 0.92rem;">
+                  <input id="celebAddress" type="text" name="address" placeholder="1234 Grand View Blvd" required minlength="6" maxlength="200" autocomplete="street-address" enterkeyhint="next" style="width: 100%; box-sizing: border-box; padding: 12px 16px; border-radius: 10px; background: rgba(5,8,17,0.85); border: 1px solid rgba(223, 186, 115, 0.3); color: #fff; font-size: 0.92rem;">
                 </div>
                 <div>
                   <label for="celebZip" style="display: block; font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.08em; color: #dfba73; margin-bottom: 6px;">ZIP Code *</label>
-                  <input id="celebZip" type="text" name="zip" placeholder="77002" required pattern="[0-9]{5}" maxlength="5" inputmode="numeric" style="width: 100%; box-sizing: border-box; padding: 12px 16px; border-radius: 10px; background: rgba(5,8,17,0.85); border: 1px solid rgba(223, 186, 115, 0.3); color: #fff; font-size: 0.92rem;">
+                  <input id="celebZip" type="text" name="zip" placeholder="77002" required pattern="[0-9]{5}" maxlength="5" inputmode="numeric" autocomplete="postal-code" enterkeyhint="done" style="width: 100%; box-sizing: border-box; padding: 12px 16px; border-radius: 10px; background: rgba(5,8,17,0.85); border: 1px solid rgba(223, 186, 115, 0.3); color: #fff; font-size: 0.92rem;">
                 </div>
               </div>
 
@@ -457,8 +466,8 @@
                 <a href="https://sunrun.my.salesforce-sites.com/purl/?srep=/powergenie" class="solar-cta" data-solar-cta target="_blank" rel="noopener noreferrer" style="color: #dfba73; font-size: 0.82rem; text-decoration: underline;">Continue to Sunrun Salesforce ↗</a>
               </div>
             </form>
-            <div class="solar-lead-error" style="display: none; margin-top: 14px; padding: 12px; border-radius: 8px; background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.3); color: #fca5a5; font-size: 0.88rem; max-width: 640px; margin-left: auto; margin-right: auto;"></div>
-            <div class="solar-lead-success" style="display: none; margin-top: 16px; max-width: 640px; margin-left: auto; margin-right: auto;"></div>
+            <div class="solar-lead-error" role="alert" aria-live="polite" style="display: none; margin-top: 14px; padding: 12px; border-radius: 8px; background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.3); color: #fca5a5; font-size: 0.88rem; max-width: 640px; margin-left: auto; margin-right: auto;"></div>
+            <div class="solar-lead-success" role="status" aria-live="polite" style="display: none; margin-top: 16px; max-width: 640px; margin-left: auto; margin-right: auto;"></div>
           </div>
         </div>
       </section>
