@@ -2244,3 +2244,47 @@ button {
     display: inline-flex !important;
   }
 }
+
+/* ==========================================================================
+   ACCESSIBILITY & FOCUS MANAGEMENT (WCAG 2.1 AA)
+   ========================================================================== */
+:focus-visible {
+  outline: 2px solid var(--solar-gold, #38bdf8);
+  outline-offset: 3px;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+.btn:focus-visible,
+.nav-link:focus-visible,
+.mobile-nav-item:focus-visible,
+.mobile-nav-toggle:focus-visible {
+  outline: 2px solid var(--solar-gold, #38bdf8);
+  outline-offset: 2px;
+}
+
+[data-site="sport-and-solar"] :focus-visible,
+.theme-sport :focus-visible,
+.btn-sport:focus-visible {
+  outline-color: #00e599 !important;
+}
+
+[data-site="celebrity-solar"] :focus-visible,
+.theme-celebrity :focus-visible,
+.btn-luxury:focus-visible {
+  outline-color: #dfba73 !important;
+}
+
+[data-site="hip-hop-solar"] :focus-visible,
+.theme-hiphop :focus-visible,
+.btn-culture:focus-visible {
+  outline-color: #ffb703 !important;
+}
+
+[data-site="gas-genie"] :focus-visible,
+.theme-gasgenie :focus-visible {
+  outline-color: #38bdf8 !important;
+}

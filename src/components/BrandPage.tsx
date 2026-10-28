@@ -97,7 +97,7 @@ export default function BrandPage({ id, onNavigate, getSalesforceUrl, onQuoteCli
               </button>
             </section>
 
-            <section className="grid grid-cols-1 md:grid-cols-3 gap-[22px] px-[7vw]" aria-label="Choose a brand">
+            <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-[20px] px-[5vw]" aria-label="Choose a brand">
               <BrandCard 
                 href="/celebrity-solar"
                 kicker="01 / THE SPOTLIGHT" 
@@ -121,14 +121,24 @@ export default function BrandPage({ id, onNavigate, getSalesforceUrl, onQuoteCli
                 onClick={() => onNavigate('hip-hop-solar')}
               />
               <BrandCard 
+                href="/sport-and-solar"
+                kicker="03 / THE ARENA" 
+                title="Sport & Solar" 
+                body="Game day power meets whole-home battery resilience. Lock in 2 game tickets with Sunrun clean energy." 
+                accent="#00e599"
+                image="assets/stills/01-sun.webp"
+                badge="High Performance"
+                onClick={() => { window.location.href = '/sport-and-solar'; }}
+              />
+              <BrandCard 
                 href="/gas-genie"
-                kicker="03 / WHAT’S NEXT" 
+                kicker="04 / SEPARATE PILOT" 
                 title="Gas Genie" 
                 body="A new part of The Power Genie family is taking shape. Clean energy transitions for the next generation." 
                 accent="#95dbe9"
                 image="assets/stills/03-battery.webp"
                 lockup={BRAND_LOCKUPS['gas-genie']}
-                badge="Coming Soon"
+                badge="Pilot Research"
                 onClick={() => onNavigate('gas-genie')}
               />
             </section>
@@ -139,7 +149,7 @@ export default function BrandPage({ id, onNavigate, getSalesforceUrl, onQuoteCli
                 <p className="text-[11px] font-bold tracking-[2px] text-[#f6cf85] uppercase">ONE CONNECTED JOURNEY</p>
                 <h2 className="text-[clamp(28px,3.3vw,46px)] leading-[1.12] tracking-[-0.045em] font-semibold mt-4">Your home is where it starts.</h2>
                 <p className="text-[#bacbd6] my-6 max-w-[640px] text-base leading-relaxed">
-                  Celebrity Solar and Hip-Hop Solar connect you to The Power Genie’s solar inquiry experience. Discover customized savings, Tesla Powerwall storage, and seamless Sunrun installation.
+                  Celebrity Solar, Hip-Hop Solar, and Sport & Solar connect you to The Power Genie’s solar inquiry experience. Discover customized savings, Tesla Powerwall storage, and seamless Sunrun installation.
                 </p>
                 <button
                   onClick={() => onNavigate('journey')}
