@@ -86,8 +86,8 @@ const config: Config = {
       linger: 0.4,
       accent: '#FFF8F0',
       eyebrow: 'Nighttime Power & EV Charging',
-      title: 'From Tesla Powerwall to Home & EV',
-      body: 'When night falls, stored energy discharges seamlessly from your Tesla Powerwalls back into your home — keeping interior lights bright, air conditioning cool, and charging your EV via Level 2 wall connector.',
+      title: 'From Powerwall to Home & EV',
+      body: 'After sunset, your Tesla Powerwalls send the energy they stored during the day back into your home, keeping the lights on, the A/C running, and your EV charging through a Level 2 wall connector.',
       tags: ['Nighttime Discharge', 'Level 2 EV Charging', 'Whole-Home Backup']
     },
     {
