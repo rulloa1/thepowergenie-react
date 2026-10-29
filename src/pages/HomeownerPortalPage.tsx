@@ -32,7 +32,16 @@ import {
   Wind,
   Utensils,
   Car,
-  MessageSquare
+  FileText,
+  Download,
+  Eye,
+  RefreshCw,
+  Cpu,
+  Layers,
+  Lock,
+  Unlock,
+  Compass,
+  Gauge
 } from 'lucide-react';
 import { BrandMark } from '../hub/ui';
 import { lockPageScroll } from '../lib/scrollLock';
@@ -57,6 +66,22 @@ interface ApplianceLoad {
   essential: boolean;
   icon: React.ReactNode;
   desc: string;
+}
+
+interface MilestoneStage {
+  id: number;
+  name: string;
+  shortName: string;
+  status: 'completed' | 'active' | 'pending';
+  date: string;
+  duration: string;
+  signOffLead: string;
+  role: string;
+  details: string;
+  deliverables: string[];
+  documentId: string;
+  documentTitle: string;
+  documentSummary: string;
 }
 
 const INITIAL_REFERRALS: ReferralRecord[] = [
@@ -104,6 +129,142 @@ const DEFAULT_APPLIANCES: ApplianceLoad[] = [
   { id: 'ev', name: 'Tesla / EV Level 2 Charging', kw: 5.50, essential: false, icon: <Car className="h-4 w-4 text-emerald-400" />, desc: 'High-draw home vehicle replenishment' },
 ];
 
+const SUNRUN_MILESTONES: MilestoneStage[] = [
+  {
+    id: 1,
+    name: 'Agreement Executed & Locked',
+    shortName: 'Agreement Signed',
+    status: 'completed',
+    date: 'Oct 2, 2026',
+    duration: 'Day 1',
+    signOffLead: 'Horace Lawrence',
+    role: 'Sunrun Senior Energy Advisor & Team Lead',
+    details: 'Digital contract executed via DocuSign. Custom Solar PPA + Tesla Powerwall 3 battery storage package locked in at $0 upfront. Sunrun 25-Year Production Guarantee and comprehensive equipment warranty activated.',
+    deliverables: [
+      'Executed Sunrun Solar & Battery Master Agreement',
+      '25-Year Production Guarantee Contract (16,400 kWh/yr)',
+      'Customer Care Welcome Package & Portal Access',
+    ],
+    documentId: 'DOC-AGR-7721',
+    documentTitle: 'Executed Master Solar & Powerwall PPA Agreement',
+    documentSummary: 'Binding 25-year energy performance agreement protecting your household from utility rate increases.',
+  },
+  {
+    id: 2,
+    name: 'Site Survey & 3D LiDAR Drone Scan',
+    shortName: 'Site Survey & LiDAR',
+    status: 'completed',
+    date: 'Oct 6, 2026',
+    duration: 'Day 4',
+    signOffLead: 'Marcus Vance',
+    role: 'Lead Field Systems Surveyor',
+    details: 'Certified field surveyor completed sub-centimeter roof drone LiDAR scan, digital shading analysis, attic truss structural integrity inspection, and 200A electrical service panel load verification for whole-home battery backup.',
+    deliverables: [
+      '3D Aerial LiDAR Drone Point Cloud & Roof Geometry',
+      '200A Electrical Service Panel Busbar Load Calculation',
+      'Attic Rafter & Structural Load Engineering Report',
+    ],
+    documentId: 'DOC-SRV-4109',
+    documentTitle: '3D LiDAR Survey & Structural Engineering Report',
+    documentSummary: 'Precision engineering verification certifying structural roof framing and electrical service capacity.',
+  },
+  {
+    id: 3,
+    name: 'AHJ Permitting & Engineering Approved',
+    shortName: 'Permitting Approved',
+    status: 'completed',
+    date: 'Oct 14, 2026',
+    duration: 'Day 12',
+    signOffLead: 'Elena Rostova, PE',
+    role: 'Licensed Professional Electrical Engineer',
+    details: 'City Building & Safety Department issued municipal solar and energy storage permits. Professional Engineer (PE) stamped blueprints approved for 28 REC Alpha panels, 2x Tesla Powerwall 3 units, and Tesla Backup Gateway 2 rapid shutdown system.',
+    deliverables: [
+      'City Building & Electrical Department Construction Permit #SLR-2026-8819',
+      'PE Stamped Single-Line Electrical Schematic',
+      'Tesla Backup Gateway 2 Rapid Shutdown & Islanding Plan',
+    ],
+    documentId: 'DOC-PMT-8819',
+    documentTitle: 'City Building & Electrical Department Approved Permit',
+    documentSummary: 'Official municipal construction authorization and stamped PE electrical engineering blueprints.',
+  },
+  {
+    id: 4,
+    name: 'Installation Day — Panels & Powerwall 3',
+    shortName: 'Installation Day',
+    status: 'completed',
+    date: 'Oct 20, 2026',
+    duration: 'Day 18',
+    signOffLead: 'Carlos Mendez',
+    role: 'Sunrun Master Electrician Crew Lead',
+    details: 'Certified master electrician installation crew mounted 28 REC Alpha Pure-R 455W all-black solar panels (12.8 kW DC), installed twin Tesla Powerwall 3 units with liquid cooling loops, and integrated the Tesla Backup Gateway 2 microgrid controller.',
+    deliverables: [
+      '28x REC Alpha Pure-R 455W High-Efficiency Modules Mounted',
+      '2x Tesla Powerwall 3 Batteries (27.0 kWh, 11.5 kW Continuous)',
+      'Tesla Backup Gateway 2 Whole-Home Microgrid Isolation Contactor',
+    ],
+    documentId: 'DOC-INS-9024',
+    documentTitle: 'Installation Quality & Electrical Commissioning Certificate',
+    documentSummary: 'Signed electrical commissioning record verifying flashing seals, torque specs, and rapid shutdown compliance.',
+  },
+  {
+    id: 5,
+    name: 'Municipal & City Inspection Passed',
+    shortName: 'Inspection Passed',
+    status: 'completed',
+    date: 'Oct 24, 2026',
+    duration: 'Day 22',
+    signOffLead: 'Inspector R. Gallagher (City Inspector #412)',
+    role: 'City Building & Electrical Division',
+    details: 'City Electrical Building Inspector performed full on-site code verification. Confirmed compliance with NEC 690.12 (Rapid Shutdown), grounding electrode bonding, UL 9540 fire safety spacing, and simulated 8ms microgrid islanding. Green inspection tag signed.',
+    deliverables: [
+      'Municipal Electrical Inspection Green Tag Signed & Affixed',
+      'NEC 690.12 & UL 9540 Fire Safety Compliance Certificate',
+      'Microgrid Contactor 8ms Sub-Cycle Islanding Field Test Pass',
+    ],
+    documentId: 'DOC-TAG-4120',
+    documentTitle: 'Municipal Final Inspection Sign-Off & Green Tag Certificate',
+    documentSummary: 'Official municipal green tag certifying complete compliance with all local and national electrical safety codes.',
+  },
+  {
+    id: 6,
+    name: 'Permission to Operate (PTO) Granted',
+    shortName: 'Permission to Operate (PTO)',
+    status: 'completed',
+    date: 'Oct 28, 2026',
+    duration: 'Day 26',
+    signOffLead: 'Interconnection Affairs Desk',
+    role: 'Electric Utility Interconnection Operations',
+    details: 'Electric Utility issued the official Permission to Operate (PTO) authorization letter. Smart meter programmed for bi-directional Net Energy Metering (NEM 3.0), permitting lawful export of clean solar energy to the grid.',
+    deliverables: [
+      'Official Utility Permission to Operate (PTO) Authorization Letter',
+      'Bi-Directional Smart Utility Meter Interconnection Agreement',
+      'Net Energy Metering (NEM 3.0) Export Billing Rate Activated',
+    ],
+    documentId: 'DOC-PTO-1049',
+    documentTitle: 'Official Utility Permission to Operate (PTO) Letter',
+    documentSummary: 'Formal utility authorization permitting your solar and Tesla battery system to energize and export power.',
+  },
+  {
+    id: 7,
+    name: 'System Energized & Live Telemetry',
+    shortName: 'System Energized',
+    status: 'active',
+    date: 'Oct 29, 2026 (Live)',
+    duration: 'Day 27 (Continuous)',
+    signOffLead: 'Horace Lawrence & Sunrun Operations',
+    role: 'Sunrun System Commissioning & VIP Support',
+    details: 'Solar panels and dual Tesla Powerwall 3 fully energized and synchronized! Microgrid firewall actively protecting household loads. Live telemetry streaming to Tesla App and mySunrun portal with 24/7 automated monitoring and 100% production guarantee.',
+    deliverables: [
+      'Live High-Speed Telemetry Streaming to Tesla Gateway & Portal',
+      'Sunrun 24/7 Automated Satellite & Inverter Performance Monitoring',
+      'Lifetime VIP Concierge Direct Contact: Horace Lawrence (510-241-7007)',
+    ],
+    documentId: 'DOC-ENG-2026',
+    documentTitle: 'System Energization & Active Warranty Certificate',
+    documentSummary: 'Live system energization certificate confirming active microgrid protection and 24/7 proactive monitoring.',
+  },
+];
+
 export default function HomeownerPortalPage() {
   useEffect(() => {
     let meta = document.querySelector('meta[name="robots"]') as HTMLMetaElement | null;
@@ -121,7 +282,7 @@ export default function HomeownerPortalPage() {
     };
   }, []);
 
-  const [activeTab, setActiveTab] = useState<'powerwall' | 'referrals' | 'savings' | 'concierge'>('powerwall');
+  const [activeTab, setActiveTab] = useState<'powerwall' | 'milestones' | 'referrals' | 'savings' | 'concierge'>('powerwall');
 
   useEffect(() => {
     if (activeTab === 'referrals') {
@@ -129,10 +290,12 @@ export default function HomeownerPortalPage() {
     }
   }, [activeTab]);
 
-  // Powerwall / Energy Firewall state
-  const [isOutageSimulated, setIsOutageSimulated] = useState(false);
-  const [backupReserve, setBackupReserve] = useState(25);
-  const [batteryPct, setBatteryPct] = useState(88);
+  // Tesla Powerwall / Energy Firewall state
+  const [operationMode, setOperationMode] = useState<'self_consumption' | 'autonomous' | 'backup'>('self_consumption');
+  const [isStormWatchActive, setIsStormWatchActive] = useState<boolean>(false);
+  const [isOutageSimulated, setIsOutageSimulated] = useState<boolean>(false);
+  const [backupReserve, setBackupReserve] = useState<number>(25);
+  const [batteryPct, setBatteryPct] = useState<number>(88);
   const batteryCapacity = 27.0; // Dual Powerwall 3 (13.5 kWh * 2)
 
   // Interactive appliance loads during blackout
@@ -142,6 +305,9 @@ export default function HomeownerPortalPage() {
     'lights',
     'ac',
   ]);
+
+  // Milestone Document Modal
+  const [selectedMilestoneDoc, setSelectedMilestoneDoc] = useState<MilestoneStage | null>(null);
 
   // Referral system state
   const [rewardTier, setRewardTier] = useState<number>(1000);
@@ -187,14 +353,15 @@ export default function HomeownerPortalPage() {
   }, [referrals]);
 
   useEffect(() => {
-    if (!showQrModal) return;
+    if (!showQrModal && !selectedMilestoneDoc) return;
     return lockPageScroll();
-  }, [showQrModal]);
+  }, [showQrModal, selectedMilestoneDoc]);
 
   // Handle URL hash routing
   useEffect(() => {
     const hash = window.location.hash.toLowerCase();
-    if (hash.includes('referral')) setActiveTab('referrals');
+    if (hash.includes('milestone') || hash.includes('pto')) setActiveTab('milestones');
+    else if (hash.includes('referral')) setActiveTab('referrals');
     else if (hash.includes('saving')) setActiveTab('savings');
     else if (hash.includes('concierge') || hash.includes('warranty')) setActiveTab('concierge');
     else if (hash.includes('powerwall') || hash.includes('firewall')) setActiveTab('powerwall');
@@ -223,10 +390,71 @@ export default function HomeownerPortalPage() {
   const homeLoadKw = Number((0.6 + applianceLoadKw).toFixed(2));
   const currentBatteryKwh = (batteryCapacity * batteryPct) / 100;
 
-  // Powerwall flow: in normal mode, excess solar charges battery; in outage, battery covers home load
-  const batteryFlowKw = isOutageSimulated
-    ? Number((homeLoadKw - Math.min(solarGenerationKw, homeLoadKw)).toFixed(1))
-    : Number((Math.min(solarGenerationKw - homeLoadKw, 5.0)).toFixed(1));
+  // Tesla Power Flow Physics Calculations:
+  const solarToHomeKw = Number(Math.min(solarGenerationKw, homeLoadKw).toFixed(2));
+  const excessSolarKw = Number(Math.max(0, solarGenerationKw - homeLoadKw).toFixed(2));
+  const homeDeficitKw = Number(Math.max(0, homeLoadKw - solarGenerationKw).toFixed(2));
+
+  let solarToBatteryKw = 0;
+  let solarToGridKw = 0;
+  let batteryToHomeKw = 0;
+  let gridToHomeKw = 0;
+  let gridToBatteryKw = 0;
+  let batteryFlowKw = 0; // Positive = discharging, Negative = charging
+
+  if (isOutageSimulated) {
+    // Grid Contactor Open (8ms microgrid isolation)
+    if (solarGenerationKw >= homeLoadKw) {
+      solarToBatteryKw = excessSolarKw;
+      batteryFlowKw = -excessSolarKw; // Charging
+    } else {
+      batteryToHomeKw = homeDeficitKw;
+      batteryFlowKw = homeDeficitKw; // Discharging to cover home load
+    }
+  } else if (isStormWatchActive) {
+    // Storm Watch: Pre-charging Powerwall to 100% reserve from solar & grid
+    solarToBatteryKw = excessSolarKw;
+    const chargeDeficit = Number(Math.max(0, 5.0 - solarToBatteryKw).toFixed(2));
+    gridToBatteryKw = chargeDeficit;
+    batteryFlowKw = -(solarToBatteryKw + gridToBatteryKw);
+    if (homeDeficitKw > 0) {
+      gridToHomeKw = homeDeficitKw;
+    }
+  } else if (operationMode === 'backup') {
+    // 100% backup reserve: battery does not discharge, excess solar goes to grid
+    solarToGridKw = excessSolarKw;
+    gridToHomeKw = homeDeficitKw;
+    batteryFlowKw = 0;
+  } else if (operationMode === 'autonomous') {
+    // Time-based control (peak rate discharge simulation):
+    batteryToHomeKw = Number(Math.min(homeLoadKw, 5.0).toFixed(2));
+    batteryFlowKw = batteryToHomeKw;
+    solarToGridKw = excessSolarKw;
+    if (homeDeficitKw > batteryToHomeKw) {
+      gridToHomeKw = Number((homeDeficitKw - batteryToHomeKw).toFixed(2));
+    }
+  } else {
+    // self_consumption (Default):
+    if (solarGenerationKw >= homeLoadKw) {
+      const chargeHeadroom = batteryCapacity * (1 - batteryPct / 100);
+      const possibleCharge = Math.min(excessSolarKw, 5.0, chargeHeadroom > 0 ? 5.0 : 0);
+      solarToBatteryKw = Number(possibleCharge.toFixed(2));
+      solarToGridKw = Number((excessSolarKw - solarToBatteryKw).toFixed(2));
+      batteryFlowKw = -solarToBatteryKw;
+    } else {
+      if (batteryPct > backupReserve) {
+        batteryToHomeKw = homeDeficitKw;
+        batteryFlowKw = homeDeficitKw;
+      } else {
+        gridToHomeKw = homeDeficitKw;
+        batteryFlowKw = 0;
+      }
+    }
+  }
+
+  const gridFlowKw = isOutageSimulated
+    ? 0
+    : Number((gridToHomeKw + gridToBatteryKw - solarToGridKw).toFixed(2));
 
   // Estimated runtime in hours based on available battery kWh vs net draw
   const netBlackoutDraw = Math.max(0.4, homeLoadKw - (solarGenerationKw * 0.4));
@@ -285,13 +513,38 @@ export default function HomeownerPortalPage() {
     }, 400);
   };
 
-  // SVG battery circle calculation
-  const ringRadius = 70;
-  const ringCircumference = 2 * Math.PI * ringRadius;
-  const ringStrokeOffset = ringCircumference - (batteryPct / 100) * ringCircumference;
-
   return (
     <div className="min-h-screen bg-[#07131F] text-[#F3F7FA] font-sans antialiased selection:bg-[#FF6B00]/30 selection:text-white">
+      {/* Inline styles for Tesla animated energy conduit flow */}
+      <style>{`
+        @keyframes teslaFlowForward {
+          from { stroke-dashoffset: 28; }
+          to { stroke-dashoffset: 0; }
+        }
+        @keyframes teslaFlowReverse {
+          from { stroke-dashoffset: 0; }
+          to { stroke-dashoffset: 28; }
+        }
+        .flow-solar-home {
+          animation: teslaFlowForward 1.3s linear infinite;
+        }
+        .flow-solar-battery {
+          animation: teslaFlowForward 1.1s linear infinite;
+        }
+        .flow-solar-grid {
+          animation: teslaFlowForward 1.4s linear infinite;
+        }
+        .flow-battery-home {
+          animation: teslaFlowForward 1.2s linear infinite;
+        }
+        .flow-grid-home {
+          animation: teslaFlowForward 1.3s linear infinite;
+        }
+        .flow-grid-battery {
+          animation: teslaFlowForward 1.1s linear infinite;
+        }
+      `}</style>
+
       {/* Top Banner Navigation */}
       <header className="sticky top-0 z-50 border-b border-[#1E2E42] bg-[#0A1828]/95 backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
@@ -330,13 +583,13 @@ export default function HomeownerPortalPage() {
                   </>
                 ) : (
                   <>
-                    <ShieldCheck className="h-3.5 w-3.5 text-[#4CAF50]" /> Tesla Energy Firewall Online & Resilient
+                    <ShieldCheck className="h-3.5 w-3.5 text-[#4CAF50]" /> Tesla Energy Gateway Online · Sunrun Verified
                   </>
                 )}
               </p>
             </div>
             <h1 className="m-0 mt-1.5 text-2xl sm:text-3xl font-black tracking-tight text-white">
-              Homeowner Portal & Energy Firewall
+              Homeowner Portal & Tesla Firewall
             </h1>
             <p className="m-0 mt-1 text-sm text-[#8EA3B8]">
               Dual Tesla Powerwall 3 (27.0 kWh) · 12.8 kW Solar System · Oakland Hills Estate
@@ -346,22 +599,22 @@ export default function HomeownerPortalPage() {
           {/* Quick Action Badges */}
           <div className="flex flex-wrap items-center gap-2.5">
             <button
+              onClick={() => setActiveTab('milestones')}
+              className="inline-flex items-center gap-2 rounded-xl border border-[#1F4A38] bg-[#0B261D] px-3.5 py-2.5 text-sm font-semibold text-[#81C784] hover:bg-[#11382A] transition cursor-pointer"
+            >
+              <CheckCircle2 className="h-4 w-4 text-[#4CAF50]" /> mySunrun PTO (100%)
+            </button>
+            <button
               onClick={() => setActiveTab('referrals')}
               className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#FF6B00] to-[#E65100] px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-[#FF6B00]/25 hover:brightness-110 transition active:scale-95 cursor-pointer"
             >
               <DollarSign className="h-4 w-4" /> Refer & Earn $1,000 Cash
             </button>
-            <button
-              onClick={() => setActiveTab('powerwall')}
-              className="inline-flex items-center gap-2 rounded-xl border border-[#244263] bg-[#0E2841] px-3.5 py-2.5 text-sm font-semibold text-[#A9C8E8] hover:bg-[#143452] transition cursor-pointer"
-            >
-              <Battery className="h-4 w-4 text-[#4CAF50]" /> Powerwall Telemetry
-            </button>
           </div>
         </div>
       </div>
 
-      {/* Main Tab Navigation - ZERO ugly horizontal scrollbar */}
+      {/* Main Tab Navigation */}
       <div className="border-b border-[#182C44] bg-[#091A2C]">
         <div className="mx-auto flex max-w-6xl gap-2 overflow-x-auto px-4 py-2 sm:px-6 scrollbar-none [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <button
@@ -373,7 +626,22 @@ export default function HomeownerPortalPage() {
             }`}
           >
             <Battery className={`h-4 w-4 ${activeTab === 'powerwall' ? 'text-[#4CAF50]' : 'text-[#8EAEC7]'}`} />
-            <span>Tesla Powerwall 3 & Firewall</span>
+            <span>Tesla Powerwall & Energy Ring</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('milestones')}
+            className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs sm:text-sm font-bold transition-all whitespace-nowrap cursor-pointer ${
+              activeTab === 'milestones'
+                ? 'bg-[#0E2841] text-[#64B5F6] border border-[#1E88E5]/70 shadow-sm shadow-[#2196F3]/20'
+                : 'text-[#8EAEC7] hover:text-white hover:bg-white/5 border border-transparent'
+            }`}
+          >
+            <CheckCircle className={`h-4 w-4 ${activeTab === 'milestones' ? 'text-[#64B5F6]' : 'text-[#8EAEC7]'}`} />
+            <span>mySunrun 7-Stage PTO Stepper</span>
+            <span className="rounded-full bg-[#10B981] px-2 py-0.5 text-[10px] font-black text-white">
+              100% PTO
+            </span>
           </button>
 
           <button
@@ -420,7 +688,7 @@ export default function HomeownerPortalPage() {
       {/* Tab Contents */}
       <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
         {/* ========================================================================= */}
-        {/* TAB 1: TESLA POWERWALL & ENERGY FIREWALL */}
+        {/* TAB 1: TESLA POWERWALL & ANIMATED 4-NODE ENERGY RING */}
         {/* ========================================================================= */}
         {activeTab === 'powerwall' && (
           <div className="space-y-6">
@@ -434,7 +702,7 @@ export default function HomeownerPortalPage() {
                     </span>
                     <div>
                       <h3 className="m-0 text-base font-bold text-[#FF8A2B]">
-                        Tesla Microgrid Island Mode Engaged — Grid Power Contactor Open (8ms)
+                        Tesla Microgrid Island Mode Engaged — Grid Contactor Open (8ms Reaction)
                       </h3>
                       <p className="m-0 text-xs sm:text-sm text-[#FFD0AD] mt-0.5">
                         The Tesla Backup Gateway has completely isolated your home from the utility grid. Your active appliances ({activeApplianceIds.length} connected, {homeLoadKw} kW) are seamlessly powered by your Dual Powerwall 3.
@@ -451,200 +719,439 @@ export default function HomeownerPortalPage() {
               </div>
             ) : null}
 
-            {/* Core Telemetry Cards */}
-            <div className="grid gap-6 md:grid-cols-3">
-              {/* Card 1: Powerwall Battery Gauge with Animated SVG */}
-              <div className="rounded-2xl border border-[#1B324B] bg-gradient-to-b from-[#0C1E32] to-[#081726] p-5 shadow-xl">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold uppercase tracking-wider text-[#7E98B0]">State of Charge</span>
-                  <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold flex items-center gap-1 ${
-                    isOutageSimulated ? 'bg-[#FF6B00]/20 text-[#FF9E4A]' : 'bg-[#4CAF50]/15 text-[#4CAF50]'
-                  }`}>
-                    {isOutageSimulated ? (
-                      <>
-                        <Zap className="h-3 w-3" /> Discharging (Island)
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle2 className="h-3 w-3" /> Optimal Charging
-                      </>
-                    )}
+            {/* Storm Watch Alert / Banner */}
+            {isStormWatchActive && !isOutageSimulated ? (
+              <div className="rounded-2xl border-2 border-sky-500 bg-gradient-to-r from-sky-500/15 via-blue-950/40 to-[#0A1828] p-5 text-white shadow-xl shadow-sky-500/15 animate-fade-in">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-sky-500/25 text-sky-400 shadow-inner">
+                      <CloudLightning className="h-6 w-6" />
+                    </span>
+                    <div>
+                      <h3 className="m-0 text-base font-bold text-sky-300">
+                        Tesla Storm Watch Active — National Weather Service Severe Storm Alert
+                      </h3>
+                      <p className="m-0 text-xs sm:text-sm text-sky-100 mt-0.5">
+                        Severe weather alert detected in your area. Powerwall is automatically charging to 100% capacity from solar and grid, holding full reserve for emergency backup.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setIsStormWatchActive(false)}
+                    className="shrink-0 rounded-xl border border-sky-400/40 bg-sky-950/60 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-sky-200 hover:bg-sky-900 transition cursor-pointer"
+                  >
+                    Dismiss Storm Watch
+                  </button>
+                </div>
+              </div>
+            ) : null}
+
+            {/* Tesla Operating Mode Pills */}
+            <div className="rounded-2xl border border-[#1E324A] bg-[#0A1828] p-4 shadow-xl">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+                <span className="text-xs font-bold uppercase tracking-wider text-[#8FAEC7] flex items-center gap-1.5">
+                  <Sliders className="h-3.5 w-3.5 text-[#4CAF50]" /> Tesla Energy Operating Mode
+                </span>
+                <span className="text-xs text-[#607D8B] font-mono">Gateway ID: TEG-GW3-982410</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => { setOperationMode('self_consumption'); setIsStormWatchActive(false); }}
+                  className={`rounded-xl p-3 border text-left transition cursor-pointer flex items-center gap-3 ${
+                    operationMode === 'self_consumption' && !isStormWatchActive
+                      ? 'border-[#4CAF50] bg-[#102C1E] text-white shadow-md shadow-[#4CAF50]/20'
+                      : 'border-[#1B3047] bg-[#081726] text-[#8FAEC7] hover:border-[#2C4F75]'
+                  }`}
+                >
+                  <Sparkles className={`h-5 w-5 shrink-0 ${operationMode === 'self_consumption' && !isStormWatchActive ? 'text-[#4CAF50]' : 'text-[#607D8B]'}`} />
+                  <div>
+                    <strong className="text-xs sm:text-sm font-bold block text-white">Self-Powered</strong>
+                    <span className="text-[11px] text-[#8BA4BD] block">Maximize solar & battery self-reliance</span>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => { setOperationMode('autonomous'); setIsStormWatchActive(false); }}
+                  className={`rounded-xl p-3 border text-left transition cursor-pointer flex items-center gap-3 ${
+                    operationMode === 'autonomous' && !isStormWatchActive
+                      ? 'border-[#2196F3] bg-[#0F2A42] text-white shadow-md shadow-[#2196F3]/20'
+                      : 'border-[#1B3047] bg-[#081726] text-[#8FAEC7] hover:border-[#2C4F75]'
+                  }`}
+                >
+                  <TrendingUp className={`h-5 w-5 shrink-0 ${operationMode === 'autonomous' && !isStormWatchActive ? 'text-[#2196F3]' : 'text-[#607D8B]'}`} />
+                  <div>
+                    <strong className="text-xs sm:text-sm font-bold block text-white">Time-Based Control</strong>
+                    <span className="text-[11px] text-[#8BA4BD] block">Discharge during peak utility rates (4–9 PM)</span>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => { setOperationMode('backup'); setIsStormWatchActive(false); }}
+                  className={`rounded-xl p-3 border text-left transition cursor-pointer flex items-center gap-3 ${
+                    operationMode === 'backup' && !isStormWatchActive
+                      ? 'border-[#FF9800] bg-[#331C08] text-white shadow-md shadow-[#FF9800]/20'
+                      : 'border-[#1B3047] bg-[#081726] text-[#8FAEC7] hover:border-[#2C4F75]'
+                  }`}
+                >
+                  <Shield className={`h-5 w-5 shrink-0 ${operationMode === 'backup' && !isStormWatchActive ? 'text-[#FF9800]' : 'text-[#607D8B]'}`} />
+                  <div>
+                    <strong className="text-xs sm:text-sm font-bold block text-white">Backup-Only</strong>
+                    <span className="text-[11px] text-[#8BA4BD] block">Maintain 100% battery reserve for emergencies</span>
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            {/* Core Telemetry Grid: Animated Vector Flow Ring & Live Status */}
+            <div className="grid gap-6 lg:grid-cols-12 items-start">
+              {/* Left/Center Column: The Iconic Animated Tesla 4-Node Flow Vector Ring */}
+              <div className="rounded-2xl border border-[#1B324B] bg-gradient-to-b from-[#0B1A2A] via-[#081522] to-[#050D15] p-6 shadow-2xl lg:col-span-7 flex flex-col items-center justify-center relative overflow-hidden">
+                <div className="w-full flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <span className={`h-2.5 w-2.5 rounded-full ${isOutageSimulated ? 'bg-[#FF6B00] animate-ping' : 'bg-[#4CAF50] animate-pulse'}`} />
+                    <span className="text-xs font-bold uppercase tracking-wider text-[#A0C0DC]">
+                      {isOutageSimulated ? 'Microgrid Island Mode' : 'Tesla Real-Time Power Flow'}
+                    </span>
+                  </div>
+                  <span className="rounded-full bg-[#132C45] px-2.5 py-0.5 text-[11px] font-mono text-[#81C784]">
+                    {isOutageSimulated ? '60.00 Hz (Inverter Master)' : 'Grid Sync 60.00 Hz'}
                   </span>
                 </div>
 
-                {/* SVG Progress Ring */}
-                <div className="my-4 flex items-center justify-center">
-                  <div className="relative flex items-center justify-center">
-                    <svg className="h-44 w-44 -rotate-90 transform" viewBox="0 0 160 160">
-                      <defs>
-                        <linearGradient id="batteryChargingGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                          <stop offset="0%" stopColor="#4CAF50" />
-                          <stop offset="100%" stopColor="#81C784" />
-                        </linearGradient>
-                        <linearGradient id="batteryDischargingGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                          <stop offset="0%" stopColor="#FF6B00" />
-                          <stop offset="100%" stopColor="#FFA040" />
-                        </linearGradient>
-                        <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-                          <feGaussianBlur stdDeviation="3" result="coloredBlur" />
-                          <feMerge>
-                            <feMergeNode in="coloredBlur" />
-                            <feMergeNode in="SourceGraphic" />
-                          </feMerge>
-                        </filter>
-                      </defs>
-                      <circle
-                        cx="80"
-                        cy="80"
-                        r={ringRadius}
-                        stroke="#132B45"
-                        strokeWidth="10"
-                        fill="transparent"
-                      />
-                      <circle
-                        cx="80"
-                        cy="80"
-                        r={ringRadius}
-                        stroke={isOutageSimulated ? 'url(#batteryDischargingGrad)' : 'url(#batteryChargingGrad)'}
-                        strokeWidth="10"
-                        strokeDasharray={ringCircumference}
-                        strokeDashoffset={ringStrokeOffset}
-                        strokeLinecap="round"
-                        fill="transparent"
-                        filter="url(#glow)"
-                        className="transition-all duration-700 ease-out"
-                      />
-                    </svg>
+                {/* SVG Vector Power Flow Diagram */}
+                <div className="relative w-full max-w-[390px] aspect-square flex items-center justify-center my-2">
+                  <svg className="w-full h-full" viewBox="0 0 380 380">
+                    <defs>
+                      <filter id="teslaGlow" x="-20%" y="-20%" width="140%" height="140%">
+                        <feGaussianBlur stdDeviation="4" result="coloredBlur" />
+                        <feMerge>
+                          <feMergeNode in="coloredBlur" />
+                          <feMergeNode in="SourceGraphic" />
+                        </feMerge>
+                      </filter>
+                    </defs>
 
-                    <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-                      <span className="text-3xl sm:text-4xl font-black tracking-tight text-white">{batteryPct}%</span>
-                      <span className="text-xs font-semibold text-[#8FAEC7] mt-0.5">
-                        {currentBatteryKwh.toFixed(1)} / {batteryCapacity.toFixed(1)} kWh
-                      </span>
-                      <span className="text-[10px] text-[#607D8B] font-mono mt-0.5">
-                        Dual LFP Cells
-                      </span>
-                    </div>
-                  </div>
+                    {/* Muted Circular Track Ring */}
+                    <circle cx="190" cy="190" r="120" stroke="#16283C" strokeWidth="6" fill="none" />
+
+                    {/* Crosshair Axis Lines */}
+                    <line x1="190" y1="70" x2="190" y2="310" stroke="#16283C" strokeWidth="6" strokeLinecap="round" />
+                    <line x1="70" y1="190" x2="310" y2="190" stroke="#16283C" strokeWidth="6" strokeLinecap="round" />
+
+                    {/* ============================================================== */}
+                    {/* ACTIVE FLOW CONDUITS (DIRECTIONAL ANIMATED PARTICLES) */}
+                    {/* ============================================================== */}
+
+                    {/* 1. Solar -> Home (Top to Right Arc) */}
+                    {solarToHomeKw > 0 && (
+                      <path
+                        d="M 190 70 A 120 120 0 0 1 310 190"
+                        fill="none"
+                        stroke="#FFB300"
+                        strokeWidth="4"
+                        strokeDasharray="6 8"
+                        strokeLinecap="round"
+                        filter="url(#teslaGlow)"
+                        className="flow-solar-home"
+                      />
+                    )}
+
+                    {/* 2. Solar -> Powerwall (Vertical Down Line) */}
+                    {solarToBatteryKw > 0 && (
+                      <line
+                        x1="190"
+                        y1="70"
+                        x2="190"
+                        y2="310"
+                        stroke="#10B981"
+                        strokeWidth="4"
+                        strokeDasharray="6 8"
+                        strokeLinecap="round"
+                        filter="url(#teslaGlow)"
+                        className="flow-solar-battery"
+                      />
+                    )}
+
+                    {/* 3. Solar -> Grid (Top to Left Arc - Exporting) */}
+                    {solarToGridKw > 0 && !isOutageSimulated && (
+                      <path
+                        d="M 190 70 A 120 120 0 0 0 70 190"
+                        fill="none"
+                        stroke="#10B981"
+                        strokeWidth="4"
+                        strokeDasharray="6 8"
+                        strokeLinecap="round"
+                        filter="url(#teslaGlow)"
+                        className="flow-solar-grid"
+                      />
+                    )}
+
+                    {/* 4. Powerwall -> Home (Bottom to Right Arc - Discharging) */}
+                    {batteryToHomeKw > 0 && (
+                      <path
+                        d="M 190 310 A 120 120 0 0 0 310 190"
+                        fill="none"
+                        stroke={isOutageSimulated ? '#FF8A2B' : '#10B981'}
+                        strokeWidth="4"
+                        strokeDasharray="6 8"
+                        strokeLinecap="round"
+                        filter="url(#teslaGlow)"
+                        className="flow-battery-home"
+                      />
+                    )}
+
+                    {/* 5. Grid -> Home (Horizontal Left to Right Line - Importing) */}
+                    {gridToHomeKw > 0 && !isOutageSimulated && (
+                      <line
+                        x1="70"
+                        y1="190"
+                        x2="310"
+                        y2="190"
+                        stroke="#38BDF8"
+                        strokeWidth="4"
+                        strokeDasharray="6 8"
+                        strokeLinecap="round"
+                        filter="url(#teslaGlow)"
+                        className="flow-grid-home"
+                      />
+                    )}
+
+                    {/* 6. Grid -> Powerwall (Left to Bottom Arc - Storm Watch Precharge) */}
+                    {gridToBatteryKw > 0 && !isOutageSimulated && (
+                      <path
+                        d="M 70 190 A 120 120 0 0 0 190 310"
+                        fill="none"
+                        stroke="#38BDF8"
+                        strokeWidth="4"
+                        strokeDasharray="6 8"
+                        strokeLinecap="round"
+                        filter="url(#teslaGlow)"
+                        className="flow-grid-battery"
+                      />
+                    )}
+
+                    {/* Center Core Gateway Hub */}
+                    <circle cx="190" cy="190" r="32" fill="#06121E" stroke="#1B3650" strokeWidth="2" />
+                    <text x="190" y="186" textAnchor="middle" fill="#8FAEC7" fontSize="9" fontWeight="bold" fontFamily="system-ui">
+                      {isOutageSimulated ? 'ISLANDED' : 'GATEWAY'}
+                    </text>
+                    <text x="190" y="200" textAnchor="middle" fill={isOutageSimulated ? '#FF8A2B' : '#4CAF50'} fontSize="10" fontWeight="black" fontFamily="system-ui">
+                      {isOutageSimulated ? '8ms OPEN' : 'TEG-GW3'}
+                    </text>
+
+                    {/* ============================================================== */}
+                    {/* 4 PRIMARY NODES: SOLAR (TOP), GRID (LEFT), POWERWALL (BOTTOM), HOME (RIGHT) */}
+                    {/* ============================================================== */}
+
+                    {/* NODE 1: SOLAR (TOP: 190, 70) */}
+                    <g transform="translate(190, 70)">
+                      <circle cx="0" cy="0" r="34" fill="#0A1828" stroke="#F59E0B" strokeWidth="3" filter="url(#teslaGlow)" />
+                      <circle cx="0" cy="0" r="30" fill="#141E10" />
+                      <Sun x="-11" y="-23" width="22" height="22" className="text-amber-400" />
+                      <text x="0" y="9" textAnchor="middle" fill="#FFFFFF" fontSize="11" fontWeight="bold" fontFamily="monospace">
+                        {solarGenerationKw.toFixed(1)} kW
+                      </text>
+                      <text x="0" y="21" textAnchor="middle" fill="#FBBF24" fontSize="8" fontWeight="bold" fontFamily="system-ui">
+                        SOLAR
+                      </text>
+                    </g>
+
+                    {/* NODE 2: HOME (RIGHT: 310, 190) */}
+                    <g transform="translate(310, 190)">
+                      <circle cx="0" cy="0" r="34" fill="#0A1828" stroke="#38BDF8" strokeWidth="3" filter="url(#teslaGlow)" />
+                      <circle cx="0" cy="0" r="30" fill="#0A1E30" />
+                      <HomeIcon x="-11" y="-23" width="22" height="22" className="text-sky-400" />
+                      <text x="0" y="9" textAnchor="middle" fill="#FFFFFF" fontSize="11" fontWeight="bold" fontFamily="monospace">
+                        {homeLoadKw.toFixed(1)} kW
+                      </text>
+                      <text x="0" y="21" textAnchor="middle" fill="#7DD3FC" fontSize="8" fontWeight="bold" fontFamily="system-ui">
+                        HOME
+                      </text>
+                    </g>
+
+                    {/* NODE 3: POWERWALL 3 (BOTTOM: 190, 310) */}
+                    <g transform="translate(190, 310)">
+                      <circle
+                        cx="0"
+                        cy="0"
+                        r="34"
+                        fill="#0A1828"
+                        stroke={batteryFlowKw > 0 ? '#FF8A2B' : '#10B981'}
+                        strokeWidth="3"
+                        filter="url(#teslaGlow)"
+                      />
+                      <circle cx="0" cy="0" r="30" fill="#0B2317" />
+                      <Battery x="-11" y="-23" width="22" height="22" className={batteryFlowKw > 0 ? 'text-[#FF8A2B]' : 'text-emerald-400'} />
+                      <text x="0" y="9" textAnchor="middle" fill="#FFFFFF" fontSize="11" fontWeight="bold" fontFamily="monospace">
+                        {batteryPct}%
+                      </text>
+                      <text x="0" y="21" textAnchor="middle" fill={batteryFlowKw > 0 ? '#FFA040' : '#81C784'} fontSize="8" fontWeight="bold" fontFamily="system-ui">
+                        {batteryFlowKw > 0 ? `-${batteryFlowKw.toFixed(1)} kW` : batteryFlowKw < 0 ? `+${Math.abs(batteryFlowKw).toFixed(1)} kW` : 'IDLE'}
+                      </text>
+                    </g>
+
+                    {/* NODE 4: GRID (LEFT: 70, 190) */}
+                    <g transform="translate(70, 190)">
+                      <circle
+                        cx="0"
+                        cy="0"
+                        r="34"
+                        fill="#0A1828"
+                        stroke={isOutageSimulated ? '#EF4444' : gridFlowKw < 0 ? '#10B981' : '#38BDF8'}
+                        strokeWidth="3"
+                        filter="url(#teslaGlow)"
+                      />
+                      <circle cx="0" cy="0" r="30" fill={isOutageSimulated ? '#2B0E0E' : '#0B1C2A'} />
+                      <Zap x="-11" y="-23" width="22" height="22" className={isOutageSimulated ? 'text-red-400' : gridFlowKw < 0 ? 'text-emerald-400' : 'text-sky-400'} />
+                      <text x="0" y="9" textAnchor="middle" fill="#FFFFFF" fontSize="11" fontWeight="bold" fontFamily="monospace">
+                        {isOutageSimulated ? '0.0 kW' : `${Math.abs(gridFlowKw).toFixed(1)} kW`}
+                      </text>
+                      <text x="0" y="21" textAnchor="middle" fill={isOutageSimulated ? '#F87171' : gridFlowKw < 0 ? '#81C784' : '#7DD3FC'} fontSize="8" fontWeight="bold" fontFamily="system-ui">
+                        {isOutageSimulated ? 'ISLAND' : gridFlowKw < 0 ? 'EXPORT' : 'IMPORT'}
+                      </text>
+                    </g>
+                  </svg>
                 </div>
 
-                <div className="space-y-2.5 border-t border-white/10 pt-3 text-xs text-[#8BA4BD]">
-                  <div className="flex justify-between items-center">
-                    <span>Est. Backup Runtime:</span>
-                    <strong className="text-white font-mono text-sm">{estRuntimeHours} Hours</strong>
+                {/* Sub-Ring Telemetry Legend */}
+                <div className="w-full grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-white/10 text-center text-xs">
+                  <div className="rounded-lg bg-[#081726] p-2 border border-[#18314C]">
+                    <span className="text-[10px] text-amber-400 uppercase font-bold block">Solar Gen</span>
+                    <strong className="text-white font-mono">{solarGenerationKw} kW</strong>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span>Inverter Max Output:</span>
-                    <strong className="text-white font-mono">11.5 kW Continuous</strong>
+                  <div className="rounded-lg bg-[#081726] p-2 border border-[#18314C]">
+                    <span className="text-[10px] text-sky-400 uppercase font-bold block">Home Draw</span>
+                    <strong className="text-white font-mono">{homeLoadKw} kW</strong>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span>Peak Surge Starting Power:</span>
-                    <strong className="text-[#81C784] font-mono">18.5 kW (LRA Ready)</strong>
+                  <div className="rounded-lg bg-[#081726] p-2 border border-[#18314C]">
+                    <span className="text-[10px] text-emerald-400 uppercase font-bold block">Powerwall</span>
+                    <strong className="text-white font-mono">{currentBatteryKwh.toFixed(1)} kWh</strong>
+                  </div>
+                  <div className="rounded-lg bg-[#081726] p-2 border border-[#18314C]">
+                    <span className={`text-[10px] uppercase font-bold block ${isOutageSimulated ? 'text-red-400' : 'text-emerald-400'}`}>
+                      {isOutageSimulated ? 'Contactor' : gridFlowKw < 0 ? 'Net Export' : 'Grid In'}
+                    </span>
+                    <strong className={`font-mono ${isOutageSimulated ? 'text-red-400' : 'text-white'}`}>
+                      {isOutageSimulated ? 'Open (8ms)' : `${Math.abs(gridFlowKw)} kW`}
+                    </strong>
                   </div>
                 </div>
               </div>
 
-              {/* Card 2: Interactive Real-time Microgrid Energy Flow */}
-              <div className="rounded-2xl border border-[#1B324B] bg-[#0C1E32] p-5 shadow-xl md:col-span-2 flex flex-col justify-between">
-                <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="text-xs font-bold uppercase tracking-wider text-[#7E98B0]">Live Microgrid Energy Flow</span>
-                    <span className="text-xs text-[#4CAF50] font-semibold flex items-center gap-1.5">
-                      <span className="h-2 w-2 rounded-full bg-[#4CAF50] animate-ping" />
-                      Tesla Backup Gateway 2 Active
+              {/* Right Column: Tesla Gateway Controls & Backup Reserve */}
+              <div className="space-y-5 lg:col-span-5">
+                {/* Gateway Contactor Islanding Toggle */}
+                <div className="rounded-2xl border border-[#1B324B] bg-[#0A1828] p-5 shadow-xl">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="m-0 text-sm font-bold text-white flex items-center gap-2">
+                      <Zap className="h-4 w-4 text-[#FF6B00]" />
+                      Tesla Backup Gateway Island Contactor
+                    </h3>
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${
+                      isOutageSimulated ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                    }`}>
+                      {isOutageSimulated ? 'ISLAND ACTIVE' : 'GRID LOCKED'}
                     </span>
                   </div>
-
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
-                    {/* Node 1: Solar */}
-                    <div className="rounded-xl border border-[#28496B] bg-[#081827] p-3 relative overflow-hidden">
-                      <Sun className="mx-auto h-6 w-6 text-[#FFB300] mb-1 animate-spin-slow" />
-                      <p className="m-0 text-xs text-[#7E98B0]">Solar Roof</p>
-                      <p className="m-0 text-lg font-bold text-[#FFB300]">{solarGenerationKw} kW</p>
-                      <span className="text-[10px] text-[#4CAF50]">● Producing Clean DC</span>
-                    </div>
-
-                    {/* Node 2: Powerwall */}
-                    <div className="rounded-xl border border-[#28496B] bg-[#081827] p-3">
-                      <Battery className={`mx-auto h-6 w-6 mb-1 ${isOutageSimulated ? 'text-[#FF6B00]' : 'text-[#4CAF50]'}`} />
-                      <p className="m-0 text-xs text-[#7E98B0]">Powerwall 3</p>
-                      <p className={`m-0 text-lg font-bold ${isOutageSimulated ? 'text-[#FF6B00]' : 'text-[#4CAF50]'}`}>
-                        {isOutageSimulated ? `-${batteryFlowKw} kW` : `+${batteryFlowKw} kW`}
-                      </p>
-                      <span className={`text-[10px] flex items-center justify-center gap-1 ${isOutageSimulated ? 'text-[#FF8A2B] font-semibold' : 'text-[#4CAF50]'}`}>
-                        {isOutageSimulated ? (
-                          <>
-                            <Zap className="h-2.5 w-2.5 text-[#FF8A2B]" /> Discharging to Home
-                          </>
-                        ) : (
-                          <>
-                            <span className="h-1.5 w-1.5 rounded-full bg-[#4CAF50]" /> Storing Solar
-                          </>
-                        )}
-                      </span>
-                    </div>
-
-                    {/* Node 3: Home */}
-                    <div className="rounded-xl border border-[#28496B] bg-[#081827] p-3">
-                      <HomeIcon className="mx-auto h-6 w-6 text-[#64B5F6] mb-1" />
-                      <p className="m-0 text-xs text-[#7E98B0]">Home Load</p>
-                      <p className="m-0 text-lg font-bold text-[#64B5F6]">{homeLoadKw} kW</p>
-                      <span className="text-[10px] text-[#90CAF9]">{activeApplianceIds.length} Appliances Active</span>
-                    </div>
-
-                    {/* Node 4: Grid */}
-                    <div className={`rounded-xl border p-3 transition-colors ${
-                      isOutageSimulated ? 'border-red-500/60 bg-red-950/30' : 'border-[#28496B] bg-[#081827]'
-                    }`}>
-                      <Zap className={`mx-auto h-6 w-6 mb-1 ${isOutageSimulated ? 'text-red-400' : 'text-[#81C784]'}`} />
-                      <p className="m-0 text-xs text-[#7E98B0]">Utility Grid</p>
-                      <p className={`m-0 text-lg font-bold ${isOutageSimulated ? 'text-red-400 font-mono' : 'text-[#81C784]'}`}>
-                        {isOutageSimulated ? '0.0 kW' : '+1.2 kW'}
-                      </p>
-                      <span className={`text-[10px] flex items-center justify-center gap-1 ${isOutageSimulated ? 'text-red-400 font-bold' : 'text-[#81C784]'}`}>
-                        {isOutageSimulated ? (
-                          <>
-                            <AlertTriangle className="h-2.5 w-2.5 text-red-400" /> CONTACTOR OPEN
-                          </>
-                        ) : (
-                          <>
-                            <span className="h-1.5 w-1.5 rounded-full bg-[#81C784]" /> Exporting Credits
-                          </>
-                        )}
-                      </span>
-                    </div>
+                  <p className="m-0 text-xs text-[#8BA4BD]">
+                    Seamlessly test whole-home islanding. The Gateway opens the high-speed contactor in 8ms with zero flicker.
+                  </p>
+                  <div className="mt-4">
+                    <button
+                      type="button"
+                      onClick={() => setIsOutageSimulated(!isOutageSimulated)}
+                      className={`w-full rounded-xl py-3 px-4 text-xs font-bold uppercase tracking-wider transition cursor-pointer flex items-center justify-center gap-2 shadow-lg ${
+                        isOutageSimulated
+                          ? 'bg-[#4CAF50] text-white hover:bg-[#43A047] shadow-[#4CAF50]/30'
+                          : 'bg-gradient-to-r from-[#FF6B00] to-[#E65100] text-white hover:brightness-110 shadow-[#FF6B00]/30'
+                      }`}
+                    >
+                      {isOutageSimulated ? (
+                        <>
+                          <Check className="h-4 w-4 stroke-[3]" /> Reconnect Utility Grid (Close Contactor)
+                        </>
+                      ) : (
+                        <>
+                          <Zap className="h-4 w-4" /> Go Off-Grid (Open 8ms Microgrid Contactor)
+                        </>
+                      )}
+                    </button>
                   </div>
                 </div>
 
-                {/* Simulation Contactor Control */}
-                <div className="mt-5 rounded-xl border border-[#1E3B5C] bg-[#081624] p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-                  <div>
-                    <h4 className="m-0 text-sm font-bold text-white flex items-center gap-2">
-                      <Zap className="h-4 w-4 text-[#FF6B00]" />
-                      Tesla Energy Firewall Blackout Simulator
-                    </h4>
-                    <p className="m-0 text-xs text-[#8BA4BD] mt-0.5">
-                      Verify your whole-home microgrid islanding response without waiting for severe weather.
-                    </p>
+                {/* Storm Watch & Backup Reserve Slider */}
+                <div className="rounded-2xl border border-[#1B324B] bg-[#0A1828] p-5 shadow-xl">
+                  <div className="flex items-center justify-between">
+                    <h3 className="m-0 text-sm font-bold text-white flex items-center gap-2">
+                      <Shield className="h-4 w-4 text-[#4CAF50]" />
+                      Backup Reserve Slider
+                    </h3>
+                    <span className="font-mono text-sm font-bold text-[#4CAF50]">{backupReserve}%</span>
                   </div>
-                  <button
-                    onClick={() => setIsOutageSimulated(!isOutageSimulated)}
-                    className={`shrink-0 rounded-xl px-4 py-2.5 text-xs font-bold uppercase tracking-wider transition cursor-pointer flex items-center gap-1.5 ${
-                      isOutageSimulated
-                        ? 'bg-[#4CAF50] text-white hover:bg-[#43A047] shadow-lg shadow-[#4CAF50]/30'
-                        : 'bg-gradient-to-r from-[#FF6B00] to-[#E65100] text-white hover:brightness-110 shadow-lg shadow-[#FF6B00]/30'
-                    }`}
-                  >
-                    {isOutageSimulated ? (
-                      <>
-                        <Check className="h-3.5 w-3.5" /> Reconnect Utility Grid
-                      </>
-                    ) : (
-                      <>
-                        <Zap className="h-3.5 w-3.5" /> Simulate Grid Outage
-                      </>
-                    )}
-                  </button>
+                  <p className="mt-1 text-xs text-[#8BA4BD]">
+                    Reserved capacity for outages: <strong className="text-white font-mono">{((batteryCapacity * backupReserve) / 100).toFixed(1)} kWh</strong>. Available for daily cycling: <strong className="text-[#81C784] font-mono">{((batteryCapacity * (100 - backupReserve)) / 100).toFixed(1)} kWh</strong>.
+                  </p>
+
+                  <div className="my-4">
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      step="5"
+                      value={backupReserve}
+                      onChange={(e) => setBackupReserve(Number(e.target.value))}
+                      className="w-full h-2 rounded-lg bg-[#18314C] accent-[#4CAF50] cursor-pointer"
+                    />
+                    <div className="flex justify-between text-[10px] text-[#607D8B] mt-1 font-mono">
+                      <span>0% (Max Savings)</span>
+                      <span>50% (Balanced)</span>
+                      <span>100% (Full Storm)</span>
+                    </div>
+                  </div>
+
+                  {/* Storm Watch Toggle */}
+                  <div className="pt-3 border-t border-white/10 flex items-center justify-between">
+                    <div>
+                      <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                        <CloudLightning className="h-3.5 w-3.5 text-amber-400" /> Tesla Storm Watch
+                      </span>
+                      <p className="m-0 text-[11px] text-[#8BA4BD]">Auto pre-charges to 100% on NWS severe storm alert</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setIsStormWatchActive(!isStormWatchActive)}
+                      className={`rounded-xl px-3 py-1.5 text-xs font-bold transition cursor-pointer ${
+                        isStormWatchActive
+                          ? 'bg-sky-500 text-white shadow-md shadow-sky-500/30'
+                          : 'border border-[#234567] bg-[#0E253B] text-[#90CAF9] hover:bg-[#143452]'
+                      }`}
+                    >
+                      {isStormWatchActive ? 'ACTIVE' : 'STANDBY'}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Battery Specs Card */}
+                <div className="rounded-2xl border border-[#1B324B] bg-[#0A1828] p-5 shadow-xl text-xs space-y-2">
+                  <div className="flex justify-between items-center text-[#8FAEC7]">
+                    <span>Hardware Configuration:</span>
+                    <strong className="text-white">Dual Powerwall 3 (27.0 kWh)</strong>
+                  </div>
+                  <div className="flex justify-between items-center text-[#8FAEC7]">
+                    <span>Continuous Power Rating:</span>
+                    <strong className="text-white font-mono">11.5 kW Continuous</strong>
+                  </div>
+                  <div className="flex justify-between items-center text-[#8FAEC7]">
+                    <span>Peak Motor Starting Surge:</span>
+                    <strong className="text-[#81C784] font-mono">18.5 kW (LRA Ready)</strong>
+                  </div>
+                  <div className="flex justify-between items-center text-[#8FAEC7]">
+                    <span>Est. Backup Runtime:</span>
+                    <strong className="text-[#FFB300] font-mono text-sm">{estRuntimeHours} Hours</strong>
+                  </div>
                 </div>
               </div>
             </div>
@@ -707,82 +1214,135 @@ export default function HomeownerPortalPage() {
                 })}
               </div>
             </div>
+          </div>
+        )}
 
-            {/* Backup Reserve Slider & Firewall Protection Diagnostics */}
-            <div className="grid gap-6 md:grid-cols-2">
-              <div className="rounded-2xl border border-[#1B324B] bg-[#0C1E32] p-5 shadow-lg">
-                <h3 className="m-0 text-base font-bold text-white flex items-center gap-2">
-                  <Shield className="h-5 w-5 text-[#4CAF50]" /> Storm Watch & Backup Reserve
-                </h3>
-                <p className="mt-1 text-xs text-[#8BA4BD]">
-                  Set the minimum battery capacity reserved exclusively for blackout protection.
+        {/* ========================================================================= */}
+        {/* TAB 2: MYSUNRUN 7-STAGE PTO & CONSTRUCTION MILESTONE PIPELINE */}
+        {/* ========================================================================= */}
+        {activeTab === 'milestones' && (
+          <div className="space-y-8 animate-fade-in">
+            {/* Header Card */}
+            <div className="rounded-3xl border border-[#1E4A38] bg-gradient-to-br from-[#0B2519] via-[#091D2C] to-[#07131F] p-6 sm:p-8 shadow-2xl relative overflow-hidden">
+              <div className="relative z-10">
+                <div className="flex flex-wrap items-center gap-2.5 mb-2">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-[#10B981]/20 px-3 py-1 text-xs font-bold uppercase tracking-wider text-[#34D399]">
+                    <CheckCircle className="h-4 w-4" /> 100% Commissioned & Energized
+                  </span>
+                  <span className="rounded-full bg-[#14314A] px-2.5 py-1 text-xs font-semibold text-[#64B5F6]">
+                    PTO Granted by Electric Utility
+                  </span>
+                </div>
+                <h2 className="m-0 text-2xl sm:text-4xl font-black tracking-tight text-white">
+                  mySunrun Construction & PTO Milestone Tracker
+                </h2>
+                <p className="m-0 mt-2 text-sm sm:text-base text-[#C2D7EA] max-w-2xl leading-relaxed">
+                  Track your complete solar installation lifecycle from initial contract signature to utility permission to operate (PTO). Every milestone is verified with official engineering, municipal inspection, and utility sign-offs.
                 </p>
 
-                <div className="my-6">
-                  <div className="flex justify-between text-sm mb-2 font-semibold">
-                    <span>Reserve Percentage</span>
-                    <span className="text-[#4CAF50]">{backupReserve}% ({((batteryCapacity * backupReserve) / 100).toFixed(1)} kWh)</span>
+                {/* Progress Bar (7/7 Complete) */}
+                <div className="mt-6 max-w-xl">
+                  <div className="flex justify-between items-center text-xs font-bold mb-2">
+                    <span className="text-[#81C784]">All 7 Milestones Completed</span>
+                    <span className="text-white font-mono">Stage 7 of 7 (100%)</span>
                   </div>
-                  <input
-                    type="range"
-                    min="20"
-                    max="100"
-                    step="5"
-                    value={backupReserve}
-                    onChange={(e) => setBackupReserve(Number(e.target.value))}
-                    className="w-full h-2 rounded-lg bg-[#18314C] accent-[#4CAF50] cursor-pointer"
-                  />
-                  <div className="flex justify-between text-[11px] text-[#5D7A96] mt-1 font-mono">
-                    <span>20% (Daily Savings)</span>
-                    <span>50% (Balanced)</span>
-                    <span>100% (Full Storm)</span>
-                  </div>
-                </div>
-
-                <div className="rounded-xl bg-[#081827] p-3 text-xs text-[#8BA4BD] space-y-1">
-                  <p className="m-0 font-semibold text-white flex items-center gap-1.5">
-                    <CloudLightning className="h-4 w-4 text-amber-400" /> Tesla Storm Watch: ENABLED
-                  </p>
-                  <p className="m-0 text-[11px]">
-                    National Weather Service alerts automatically pre-charge your battery to 100% before storms hit.
-                  </p>
-                </div>
-              </div>
-
-              {/* Firewall Technical Health Status */}
-              <div className="rounded-2xl border border-[#1B324B] bg-[#0C1E32] p-5 shadow-lg">
-                <h3 className="m-0 text-base font-bold text-white flex items-center gap-2">
-                  <Activity className="h-5 w-5 text-[#2196F3]" /> Energy Firewall System Diagnostics
-                </h3>
-                <p className="mt-1 text-xs text-[#8BA4BD]">
-                  Continuous hardware telemetry verified by Tesla Gateway 2 controller.
-                </p>
-
-                <div className="mt-4 space-y-3">
-                  <div className="flex items-center justify-between rounded-xl bg-[#081827] px-3.5 py-2.5 text-xs">
-                    <span className="text-[#8BA4BD]">Microgrid Contactor Status:</span>
-                    <span className="font-semibold text-[#4CAF50]">● Nominal (Sub-10ms Islanding Ready)</span>
-                  </div>
-                  <div className="flex items-center justify-between rounded-xl bg-[#081827] px-3.5 py-2.5 text-xs">
-                    <span className="text-[#8BA4BD]">Line Frequency Synchronization:</span>
-                    <span className="font-semibold text-white">60.00 Hz (Locked)</span>
-                  </div>
-                  <div className="flex items-center justify-between rounded-xl bg-[#081827] px-3.5 py-2.5 text-xs">
-                    <span className="text-[#8BA4BD]">Thermal Protection & Liquid Cooling:</span>
-                    <span className="font-semibold text-[#4CAF50]">Optimal (68°F Internal Core)</span>
-                  </div>
-                  <div className="flex items-center justify-between rounded-xl bg-[#081827] px-3.5 py-2.5 text-xs">
-                    <span className="text-[#8BA4BD]">Overvoltage & Lightning Surge Suppressor:</span>
-                    <span className="font-semibold text-[#4CAF50]">Active & Protected</span>
+                  <div className="h-3 w-full rounded-full bg-[#0E2C1E] border border-[#1B4B32] overflow-hidden p-0.5">
+                    <div className="h-full w-full rounded-full bg-gradient-to-r from-[#10B981] via-[#34D399] to-[#4CAF50] shadow-sm animate-pulse" />
                   </div>
                 </div>
               </div>
+            </div>
+
+            {/* 7-Stage Milestone Stepper */}
+            <div className="space-y-4">
+              {SUNRUN_MILESTONES.map((stage) => (
+                <div
+                  key={stage.id}
+                  className={`rounded-2xl border transition-all p-5 sm:p-6 ${
+                    stage.status === 'active'
+                      ? 'border-[#10B981] bg-[#0A2217] shadow-xl shadow-[#10B981]/15'
+                      : 'border-[#1B324B] bg-[#0C1E32] hover:border-[#2A4D73]'
+                  }`}
+                >
+                  <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                    <div className="flex items-start gap-4">
+                      {/* Step Number Badge */}
+                      <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl font-black text-sm shadow-md ${
+                        stage.status === 'active'
+                          ? 'bg-[#10B981] text-white animate-pulse'
+                          : 'bg-[#18392B] text-[#81C784] border border-[#2E7D32]'
+                      }`}>
+                        {stage.status === 'completed' ? (
+                          <Check className="h-5 w-5 stroke-[3]" />
+                        ) : (
+                          <Zap className="h-5 w-5 text-white" />
+                        )}
+                      </div>
+
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="rounded-md bg-white/10 px-2 py-0.5 text-[10px] font-mono font-bold text-[#A5C3DF]">
+                            STAGE {stage.id} OF 7 · {stage.duration}
+                          </span>
+                          <span className={`rounded-md px-2 py-0.5 text-[10px] font-bold uppercase ${
+                            stage.status === 'active'
+                              ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
+                              : 'bg-[#123120] text-[#81C784]'
+                          }`}>
+                            {stage.status === 'active' ? '● Live Telemetry Active' : '✓ Verified & Complete'}
+                          </span>
+                        </div>
+
+                        <h3 className="m-0 mt-1.5 text-lg sm:text-xl font-bold text-white">
+                          {stage.name}
+                        </h3>
+
+                        <p className="m-0 mt-1 text-xs sm:text-sm text-[#A8C4DF] leading-relaxed">
+                          {stage.details}
+                        </p>
+
+                        {/* Deliverables Checklist */}
+                        <div className="mt-3 space-y-1.5">
+                          {stage.deliverables.map((item, dIdx) => (
+                            <div key={dIdx} className="flex items-center gap-2 text-xs text-[#8BA4BD]">
+                              <CheckCircle2 className="h-3.5 w-3.5 text-[#4CAF50] shrink-0" />
+                              <span>{item}</span>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Team Lead Sign-Off */}
+                        <div className="mt-4 flex flex-wrap items-center gap-3 pt-3 border-t border-white/10 text-xs">
+                          <span className="text-[#64B5F6] font-semibold flex items-center gap-1.5">
+                            <ShieldCheck className="h-3.5 w-3.5 text-[#4CAF50]" /> Verified Sign-off:
+                          </span>
+                          <span className="text-white font-medium">{stage.signOffLead}</span>
+                          <span className="text-[#607D8B]">({stage.role})</span>
+                          <span className="text-[#8FAEC7] font-mono ml-auto">{stage.date}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Right Action: View Certificate / Inspection Document */}
+                    <div className="md:self-start shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedMilestoneDoc(stage)}
+                        className="inline-flex items-center gap-2 rounded-xl border border-[#234567] bg-[#0E253B] px-3.5 py-2 text-xs font-semibold text-[#90CAF9] hover:bg-[#143452] transition cursor-pointer"
+                      >
+                        <FileText className="h-4 w-4 text-[#FFB300]" />
+                        <span>View Certificate</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}
 
         {/* ========================================================================= */}
-        {/* TAB 2: REFERRAL SYSTEM ($1,000 CASH REWARD) */}
+        {/* TAB 3: REFERRAL SYSTEM ($1,000 CASH REWARD) */}
         {/* ========================================================================= */}
         {activeTab === 'referrals' && (
           <div className="space-y-8">
@@ -848,355 +1408,257 @@ export default function HomeownerPortalPage() {
               <div className="my-6">
                 <div className="flex justify-between text-sm mb-2 font-semibold">
                   <span>Number of Referrals:</span>
-                  <span className="text-white font-bold">{referralCount} Homeowners</span>
+                  <span className="text-[#FFB300] font-bold">{referralCount} Neighbors</span>
                 </div>
                 <input
                   type="range"
                   min="1"
                   max="10"
-                  step="1"
                   value={referralCount}
                   onChange={(e) => setReferralCount(Number(e.target.value))}
-                  className="w-full h-2.5 rounded-lg bg-[#18314C] accent-[#FF6B00] cursor-pointer"
+                  className="w-full h-2 rounded-lg bg-[#18314C] accent-[#FF6B00] cursor-pointer"
                 />
                 <div className="flex justify-between text-[11px] text-[#5D7A96] mt-1 font-mono">
-                  <span>1 ($ {rewardTier.toLocaleString()})</span>
-                  <span>5 ($ {(5 * rewardTier).toLocaleString()})</span>
-                  <span>10 ($ {(10 * rewardTier).toLocaleString()})</span>
+                  <span>1 Referral ($1,000)</span>
+                  <span>5 Referrals ($5,000)</span>
+                  <span>10 Referrals ($10,000)</span>
                 </div>
               </div>
 
-              {/* Referral Milestone Badges */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 border-t border-white/10">
-                <div className={`rounded-xl p-3 border text-center ${referralCount >= 1 ? 'border-[#4CAF50] bg-[#102D1C]' : 'border-[#1E3752] bg-[#081827] opacity-60'}`}>
-                  <span className="text-sm font-bold text-white">Bronze Tier</span>
-                  <p className="m-0 text-[11px] text-[#81C784]">1 Referral ($1,000)</p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+                <div className="rounded-xl bg-[#081827] p-3 border border-[#234567]">
+                  <span className="text-[11px] uppercase font-bold text-[#8FAEC7]">Prorated 1st Year Bill</span>
+                  <p className="m-0 text-lg font-bold text-white font-mono">$0 Electric Cost</p>
+                  <span className="text-[10px] text-[#81C784]">Covered by referral payouts</span>
                 </div>
-                <div className={`rounded-xl p-3 border text-center ${referralCount >= 3 ? 'border-[#2196F3] bg-[#0F2942]' : 'border-[#1E3752] bg-[#081827] opacity-60'}`}>
-                  <span className="text-sm font-bold text-white">Silver Tier</span>
-                  <p className="m-0 text-[11px] text-[#64B5F6]">3 Referrals ($3,000)</p>
+                <div className="rounded-xl bg-[#081827] p-3 border border-[#234567]">
+                  <span className="text-[11px] uppercase font-bold text-[#8FAEC7]">Average Payout Speed</span>
+                  <p className="m-0 text-lg font-bold text-white font-mono">24 Hours from PTO</p>
+                  <span className="text-[10px] text-[#81C784]">Zelle or Direct ACH</span>
                 </div>
-                <div className={`rounded-xl p-3 border text-center ${referralCount >= 5 ? 'border-[#FFB300] bg-[#3B2C0B]' : 'border-[#1E3752] bg-[#081827] opacity-60'}`}>
-                  <span className="text-sm font-bold text-white">Gold Tier</span>
-                  <p className="m-0 text-[11px] text-[#FFD54F]">5 Referrals ($5,000)</p>
-                </div>
-                <div className={`rounded-xl p-3 border text-center ${referralCount >= 10 ? 'border-[#E040FB] bg-[#381142]' : 'border-[#1E3752] bg-[#081827] opacity-60'}`}>
-                  <span className="text-sm font-bold text-white">Platinum VIP</span>
-                  <p className="m-0 text-[11px] text-[#EA80FC]">10 Referrals ($10,000)</p>
+                <div className="rounded-xl bg-[#081827] p-3 border border-[#234567]">
+                  <span className="text-[11px] uppercase font-bold text-[#8FAEC7]">Dedicated Advisor</span>
+                  <p className="m-0 text-lg font-bold text-[#FF8A2B]">Horace Lawrence</p>
+                  <span className="text-[10px] text-[#8FAEC7]">White-glove coordination</span>
                 </div>
               </div>
             </div>
 
-            {/* 1-Click Share & Custom Link Bar */}
-            <div className="rounded-2xl border border-[#1F3752] bg-[#0C1E32] p-6 shadow-xl">
-              <h3 className="m-0 text-base font-bold text-white flex items-center gap-2">
-                <Share2 className="h-5 w-5 text-[#64B5F6]" /> Your Personal Referral Link
+            {/* Direct Referral Submission Form */}
+            <div id="referralPipelineSection" className="rounded-2xl border border-[#1F3752] bg-[#0C1E32] p-6 shadow-xl">
+              <h3 className="m-0 text-lg font-bold text-white flex items-center gap-2">
+                <Users className="h-5 w-5 text-[#FF6B00]" /> Send Horace a Direct Neighbor Referral
               </h3>
-              <p className="mt-1 text-xs text-[#8BA4BD]">
-                Share your personalized link. When homeowners book through it, you are automatically attributed.
+              <p className="m-0 mt-1 text-xs text-[#8BA4BD]">
+                Provide your friend or neighbor’s information. Horace Lawrence will reach out with a personalized zero-down solar + Powerwall proposal and credit you upon install.
               </p>
 
-              <div className="mt-4 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                <div className="flex-1 rounded-xl border border-[#234567] bg-[#081827] px-3.5 py-2.5 font-mono text-xs text-[#90CAF9] truncate">
-                  {referralUrl}
-                </div>
-                <button
-                  onClick={handleCopyLink}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#1E3B5C] px-4 py-2.5 text-xs font-bold text-white hover:bg-[#29507D] transition cursor-pointer"
-                >
-                  {copiedLink ? <Check className="h-4 w-4 text-[#4CAF50]" /> : <Copy className="h-4 w-4" />}
-                  {copiedLink ? 'Copied!' : 'Copy Link'}
-                </button>
-                <button
-                  onClick={() => setShowQrModal(true)}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#244263] bg-[#0C243B] px-3.5 py-2.5 text-xs font-bold text-white hover:bg-[#133352] transition cursor-pointer"
-                >
-                  <QrCode className="h-4 w-4 text-[#FFB300]" /> QR Code
-                </button>
-              </div>
-
-              {/* Fast Social & Message Buttons */}
-              <div className="mt-4 flex flex-wrap gap-2 pt-4 border-t border-white/10">
-                <a
-                  href={`sms:?&body=Hey!%20We%20installed%20Sunrun%20solar%20with%20a%20Tesla%20Powerwall%20and%20cut%20our%20electric%20bill%20to%20almost%20nothing.%20Check%20it%20out%20and%20get%20a%20free%20consult%20with%20our%20advisor%20Horace:%20${encodeURIComponent(referralUrl)}`}
-                  className="inline-flex items-center gap-2 rounded-lg bg-[#14314A] px-3 py-1.5 text-xs font-semibold text-[#82B1FF] hover:bg-[#1A3E5E] transition no-underline cursor-pointer"
-                >
-                  <MessageSquare className="h-3.5 w-3.5" /> Share via Text Message (SMS)
-                </a>
-                <a
-                  href={`https://wa.me/?text=${encodeURIComponent(`Check out The Power Genie Sunrun solar & Tesla Powerwall: ${referralUrl}`)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 rounded-lg bg-[#0F392B] px-3 py-1.5 text-xs font-semibold text-[#69F0AE] hover:bg-[#144D3A] transition no-underline cursor-pointer"
-                >
-                  <Share2 className="h-3.5 w-3.5" /> Share on WhatsApp
-                </a>
-                <a
-                  href={`mailto:?subject=${encodeURIComponent("Lower your electric bill with Sunrun & Tesla Powerwall")}&body=${encodeURIComponent(`Hi,\n\nWe installed Sunrun solar and a Tesla Powerwall through The Power Genie and cut our electric bill dramatically.\n\nTake a look here: ${referralUrl}\n\nAsk for Horace Lawrence!`)}`}
-                  className="inline-flex items-center gap-2 rounded-lg bg-[#2D1F42] px-3 py-1.5 text-xs font-semibold text-[#D1C4E9] hover:bg-[#3D2B59] transition no-underline cursor-pointer"
-                >
-                  <Mail className="h-3.5 w-3.5" /> Share via Email
-                </a>
-              </div>
-            </div>
-
-            {/* DIRECT REFERRAL FORM */}
-            <div className="rounded-2xl border-2 border-[#FF6B00]/60 bg-[#0C1E32] p-6 sm:p-8 shadow-2xl">
-              <div className="border-b border-white/10 pb-4 mb-6">
-                <span className="text-xs font-bold uppercase tracking-wider text-[#FF6B00]">Instant Submission</span>
-                <h3 className="m-0 text-xl sm:text-2xl font-bold text-white">
-                  Refer A Neighbor Directly to Horace Lawrence
-                </h3>
-                <p className="m-0 mt-1 text-xs sm:text-sm text-[#8BA4BD]">
-                  Enter your neighbor’s contact information below. Horace will personally perform a free satellite solar design and reach out respectfully.
-                </p>
-              </div>
-
               {formFeedback && (
-                <div
-                  className={`mb-6 rounded-xl p-4 text-sm font-semibold flex items-center gap-3 ${
-                    formFeedback.type === 'success'
-                      ? 'bg-[#123824] border border-[#2E7D32] text-[#81C784]'
-                      : 'bg-[#3E1616] border border-[#C62828] text-[#EF9A9A]'
-                  }`}
-                >
-                  {formFeedback.type === 'success' ? <CheckCircle2 className="h-5 w-5 shrink-0" /> : <AlertTriangle className="h-5 w-5 shrink-0" />}
-                  <span>{formFeedback.message}</span>
+                <div className={`mt-4 p-4 rounded-xl text-xs sm:text-sm font-semibold ${
+                  formFeedback.type === 'success' ? 'bg-[#0E2C1E] border border-[#2E7D32] text-[#81C784]' : 'bg-[#3A1212] border border-red-500 text-red-200'
+                }`}>
+                  {formFeedback.message}
                 </div>
               )}
 
-              <form id="directReferralForm" onSubmit={handleDirectReferralSubmit} className="space-y-4">
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <label htmlFor="refNeighborName" className="block text-xs font-bold uppercase tracking-wider text-[#A5C3DF] mb-1">
-                      Neighbor's Full Name *
-                    </label>
-                    <input
-                      id="refNeighborName"
-                      type="text"
-                      required
-                      placeholder="e.g. Jordan Miller"
-                      value={refName}
-                      onChange={(e) => setRefName(e.target.value)}
-                      className="w-full rounded-xl border border-[#234567] bg-[#081827] px-3.5 py-3 text-sm text-white placeholder-[#5A738E] focus:border-[#FF6B00] focus:outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label htmlFor="refNeighborPhone" className="block text-xs font-bold uppercase tracking-wider text-[#A5C3DF] mb-1">
-                      Neighbor's Mobile Phone *
-                    </label>
-                    <input
-                      id="refNeighborPhone"
-                      type="tel"
-                      required
-                      placeholder="e.g. 510-555-0199"
-                      value={refPhone}
-                      onChange={(e) => setRefPhone(e.target.value)}
-                      className="w-full rounded-xl border border-[#234567] bg-[#081827] px-3.5 py-3 text-sm text-white placeholder-[#5A738E] focus:border-[#FF6B00] focus:outline-none"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <label htmlFor="refNeighborEmail" className="block text-xs font-bold uppercase tracking-wider text-[#A5C3DF] mb-1">
-                      Neighbor's Email (Optional)
-                    </label>
-                    <input
-                      id="refNeighborEmail"
-                      type="email"
-                      placeholder="e.g. jordan@example.com"
-                      value={refEmail}
-                      onChange={(e) => setRefEmail(e.target.value)}
-                      className="w-full rounded-xl border border-[#234567] bg-[#081827] px-3.5 py-3 text-sm text-white placeholder-[#5A738E] focus:border-[#FF6B00] focus:outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label htmlFor="refNeighborAddress" className="block text-xs font-bold uppercase tracking-wider text-[#A5C3DF] mb-1">
-                      Home Street Address or Neighborhood
-                    </label>
-                    <input
-                      id="refNeighborAddress"
-                      type="text"
-                      placeholder="e.g. 742 Evergreen Terrace, Oakland CA"
-                      value={refAddress}
-                      onChange={(e) => setRefAddress(e.target.value)}
-                      className="w-full rounded-xl border border-[#234567] bg-[#081827] px-3.5 py-3 text-sm text-white placeholder-[#5A738E] focus:border-[#FF6B00] focus:outline-none"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <label htmlFor="refUtility" className="block text-xs font-bold uppercase tracking-wider text-[#A5C3DF] mb-1">
-                      Electric Utility
-                    </label>
-                    <select
-                      id="refUtility"
-                      value={refUtility}
-                      onChange={(e) => setRefUtility(e.target.value)}
-                      className="w-full rounded-xl border border-[#234567] bg-[#081827] px-3.5 py-3 text-sm text-white focus:border-[#FF6B00] focus:outline-none"
-                    >
-                      <option value="Entergy Texas">Entergy Texas</option>
-                      <option value="CenterPoint Houston">CenterPoint Houston</option>
-                      <option value="Oncor Electric">Oncor Electric</option>
-                      <option value="PG&E Northern California">PG&E Northern California</option>
-                      <option value="Other / Co-op">Other / Co-op</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label htmlFor="refBill" className="block text-xs font-bold uppercase tracking-wider text-[#A5C3DF] mb-1">
-                      Estimated Monthly Electric Bill
-                    </label>
-                    <select
-                      id="refBill"
-                      value={refBill}
-                      onChange={(e) => setRefBill(e.target.value)}
-                      className="w-full rounded-xl border border-[#234567] bg-[#081827] px-3.5 py-3 text-sm text-white focus:border-[#FF6B00] focus:outline-none"
-                    >
-                      <option value="$150 - $250">$150 - $250 / mo</option>
-                      <option value="$250 - $350">$250 - $350 / mo</option>
-                      <option value="$350 - $500">$350 - $500 / mo</option>
-                      <option value="$500+">$500+ / mo (High Power Usage)</option>
-                    </select>
-                  </div>
-                </div>
-
+              <form onSubmit={handleDirectReferralSubmit} className="mt-5 grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label htmlFor="refNotes" className="block text-xs font-bold uppercase tracking-wider text-[#A5C3DF] mb-1">
-                    Notes for Horace (Optional)
+                  <label htmlFor="refNeighborName" className="block text-xs font-bold uppercase tracking-wider text-[#8FAEC7] mb-1">
+                    Neighbor Full Name *
                   </label>
-                  <textarea
-                    id="refNotes"
-                    rows={2}
-                    placeholder="e.g. They had power outages last summer and are very interested in battery backup."
-                    value={refNotes}
-                    onChange={(e) => setRefNotes(e.target.value)}
-                    className="w-full rounded-xl border border-[#234567] bg-[#081827] px-3.5 py-2.5 text-sm text-white placeholder-[#5A738E] focus:border-[#FF6B00] focus:outline-none"
+                  <input
+                    id="refNeighborName"
+                    type="text"
+                    required
+                    value={refName}
+                    onChange={(e) => setRefName(e.target.value)}
+                    placeholder="e.g. David Mitchell"
+                    className="w-full rounded-xl border border-[#244263] bg-[#081827] px-3.5 py-2.5 text-sm text-white placeholder-[#506A85] focus:border-[#FF6B00] focus:outline-none"
                   />
                 </div>
 
-                {/* Submit Referral Button */}
-                <div className="pt-2">
+                <div>
+                  <label htmlFor="refNeighborPhone" className="block text-xs font-bold uppercase tracking-wider text-[#8FAEC7] mb-1">
+                    Phone Number *
+                  </label>
+                  <input
+                    id="refNeighborPhone"
+                    type="tel"
+                    required
+                    value={refPhone}
+                    onChange={(e) => setRefPhone(e.target.value)}
+                    placeholder="e.g. 510-555-0199"
+                    className="w-full rounded-xl border border-[#244263] bg-[#081827] px-3.5 py-2.5 text-sm text-white placeholder-[#506A85] focus:border-[#FF6B00] focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="refNeighborEmail" className="block text-xs font-bold uppercase tracking-wider text-[#8FAEC7] mb-1">
+                    Email Address (Optional)
+                  </label>
+                  <input
+                    id="refNeighborEmail"
+                    type="email"
+                    value={refEmail}
+                    onChange={(e) => setRefEmail(e.target.value)}
+                    placeholder="neighbor@example.com"
+                    className="w-full rounded-xl border border-[#244263] bg-[#081827] px-3.5 py-2.5 text-sm text-white placeholder-[#506A85] focus:border-[#FF6B00] focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="refNeighborAddress" className="block text-xs font-bold uppercase tracking-wider text-[#8FAEC7] mb-1">
+                    Address / Neighborhood
+                  </label>
+                  <input
+                    id="refNeighborAddress"
+                    type="text"
+                    value={refAddress}
+                    onChange={(e) => setRefAddress(e.target.value)}
+                    placeholder="e.g. 1420 Skyline Blvd, Oakland"
+                    className="w-full rounded-xl border border-[#244263] bg-[#081827] px-3.5 py-2.5 text-sm text-white placeholder-[#506A85] focus:border-[#FF6B00] focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="refNeighborUtility" className="block text-xs font-bold uppercase tracking-wider text-[#8FAEC7] mb-1">
+                    Utility Provider
+                  </label>
+                  <select
+                    id="refNeighborUtility"
+                    value={refUtility}
+                    onChange={(e) => setRefUtility(e.target.value)}
+                    className="w-full rounded-xl border border-[#244263] bg-[#081827] px-3.5 py-2.5 text-sm text-white focus:border-[#FF6B00] focus:outline-none"
+                  >
+                    <option value="PG&E">PG&E (California)</option>
+                    <option value="Entergy Texas">Entergy Texas</option>
+                    <option value="CenterPoint Houston">CenterPoint Energy (Houston)</option>
+                    <option value="Oncor Electric">Oncor Electric (Dallas/Fort Worth)</option>
+                    <option value="SoCal Edison">Southern California Edison</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label htmlFor="refNeighborBill" className="block text-xs font-bold uppercase tracking-wider text-[#8FAEC7] mb-1">
+                    Estimated Electric Bill
+                  </label>
+                  <select
+                    id="refNeighborBill"
+                    value={refBill}
+                    onChange={(e) => setRefBill(e.target.value)}
+                    className="w-full rounded-xl border border-[#244263] bg-[#081827] px-3.5 py-2.5 text-sm text-white focus:border-[#FF6B00] focus:outline-none"
+                  >
+                    <option value="$150 - $250">$150 - $250 / month</option>
+                    <option value="$250 - $350">$250 - $350 / month</option>
+                    <option value="$350 - $500">$350 - $500 / month</option>
+                    <option value="$500+">$500+ / month (High Savings Potential)</option>
+                  </select>
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label htmlFor="refNeighborNotes" className="block text-xs font-bold uppercase tracking-wider text-[#8FAEC7] mb-1">
+                    Notes for Horace (Roof details, electric vehicle, power outages)
+                  </label>
+                  <textarea
+                    id="refNeighborNotes"
+                    rows={2}
+                    value={refNotes}
+                    onChange={(e) => setRefNotes(e.target.value)}
+                    placeholder="e.g. Complained about high summer A/C bills and frequent winter storm outages..."
+                    className="w-full rounded-xl border border-[#244263] bg-[#081827] px-3.5 py-2 text-sm text-white placeholder-[#506A85] focus:border-[#FF6B00] focus:outline-none"
+                  />
+                </div>
+
+                <div className="sm:col-span-2 flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
+                  <span className="text-xs text-[#8BA4BD]">
+                    Locking in <strong className="text-[#FF8A2B]">${rewardTier.toLocaleString()}</strong> reward for your account.
+                  </span>
                   <button
-                    id="btnSubmitReferral"
                     type="submit"
                     disabled={isSubmitting}
-                    className="w-full min-h-[52px] rounded-xl bg-gradient-to-r from-[#FF6B00] to-[#E65100] px-6 py-3.5 text-base font-extrabold text-white shadow-xl shadow-[#FF6B00]/30 hover:brightness-110 active:scale-[0.99] transition flex items-center justify-center gap-2 cursor-pointer"
+                    className="w-full sm:w-auto rounded-xl bg-gradient-to-r from-[#FF6B00] to-[#E65100] px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-[#FF6B00]/30 hover:brightness-110 transition cursor-pointer disabled:opacity-50"
                   >
-                    {isSubmitting ? (
-                      <span>Submitting referral to Horace…</span>
-                    ) : (
-                      <>
-                        <DollarSign className="h-5 w-5" />
-                        <span>Submit Referral & Lock In ${rewardTier.toLocaleString()} Reward</span>
-                      </>
-                    )}
+                    {isSubmitting ? 'Submitting to Horace...' : 'Submit Referral & Lock In Cash'}
                   </button>
-                  <p className="mt-2 text-center text-[11px] text-[#7A9BB8]">
-                    No spam. Horace Lawrence will reach out respectfully to provide a customized proposal.
-                  </p>
                 </div>
               </form>
             </div>
 
-            {/* LIVE REFERRAL PIPELINE TABLE */}
-            <div id="referralPipelineSection" className="rounded-2xl border border-[#1F3752] bg-[#0C1E32] p-6 shadow-xl">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-white/10 pb-4 mb-4">
-                <div>
-                  <h3 className="m-0 text-lg font-bold text-white flex items-center gap-2">
-                    <Award className="h-5 w-5 text-[#FF6B00]" /> Your Referral Rewards Pipeline
-                  </h3>
-                  <p className="m-0 text-xs text-[#8BA4BD]">Track the live progress of each homeowner you referred.</p>
-                </div>
-                <span className="rounded-full bg-[#163652] px-3 py-1 text-xs font-semibold text-[#82B1FF]">
-                  {referrals.length} Total Referrals Tracked
-                </span>
+            {/* Referrals Tracking Table */}
+            <div className="rounded-2xl border border-[#1F3752] bg-[#0C1E32] p-6 shadow-xl">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="m-0 text-base font-bold text-white">Your Submitted Referrals</h3>
+                <span className="text-xs text-[#8BA4BD]">Live Tracking Status</span>
               </div>
-
-              <div className="space-y-3">
-                {referrals.map((r) => (
-                  <div
-                    key={r.id}
-                    className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-xl border border-[#1E3957] bg-[#081827] p-4 transition hover:border-[#2C537D]"
-                  >
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <strong className="text-base font-bold text-white">{r.name}</strong>
-                        <span className="rounded bg-[#17304A] px-2 py-0.5 text-[10px] font-mono text-[#8EAEC9]">
-                          {r.id}
-                        </span>
-                      </div>
-                      <p className="m-0 text-xs text-[#8BA4BD]">{r.location}</p>
-                      <p className="m-0 mt-0.5 text-xs text-[#688FA8]">{r.system}</p>
-                    </div>
-
-                    <div className="flex flex-col sm:items-end w-full sm:w-auto">
-                      <span
-                        className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${
-                          r.status === 'paid'
-                            ? 'bg-[#184628] text-[#81C784]'
-                            : r.status === 'pending'
-                            ? 'bg-[#422D0B] text-[#FFB74D]'
-                            : 'bg-[#21354A] text-[#90CAF9]'
-                        }`}
-                      >
-                        {r.status === 'paid' ? (
-                          <Check className="h-3.5 w-3.5 stroke-[3]" />
-                        ) : (
-                          <span className="h-1.5 w-1.5 rounded-full bg-current" />
-                        )}
-                        <span>{r.statusLabel}</span>
-                      </span>
-                      <p className="m-0 mt-1 text-sm font-extrabold text-[#FFB300]">
-                        ${r.reward.toLocaleString()} ({r.payoutMethod})
-                      </p>
-                      <span className="text-[10px] text-[#637C94]">Submitted: {r.date}</span>
-                    </div>
-                  </div>
-                ))}
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead>
+                    <tr className="border-b border-white/10 text-[#8FAEC7]">
+                      <th className="pb-3 font-semibold">Referral ID</th>
+                      <th className="pb-3 font-semibold">Neighbor</th>
+                      <th className="pb-3 font-semibold">System Quoted</th>
+                      <th className="pb-3 font-semibold">Status</th>
+                      <th className="pb-3 font-semibold text-right">Reward</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5">
+                    {referrals.map((r) => (
+                      <tr key={r.id} className="text-white">
+                        <td className="py-3 font-mono text-[#64B5F6]">{r.id}</td>
+                        <td className="py-3">
+                          <strong className="block text-white">{r.name}</strong>
+                          <span className="text-[11px] text-[#8BA4BD]">{r.location}</span>
+                        </td>
+                        <td className="py-3 text-[#B0C7DE]">{r.system}</td>
+                        <td className="py-3">
+                          <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
+                            r.status === 'paid'
+                              ? 'bg-[#123120] text-[#81C784]'
+                              : r.status === 'pending'
+                              ? 'bg-[#3A1E08] text-[#FF8A2B]'
+                              : 'bg-white/10 text-white'
+                          }`}>
+                            {r.status === 'paid' ? <Check className="h-3 w-3" /> : null}
+                            {r.statusLabel}
+                          </span>
+                        </td>
+                        <td className="py-3 text-right font-mono font-bold text-[#FFB300]">
+                          ${r.reward.toLocaleString()}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
         )}
 
         {/* ========================================================================= */}
-        {/* TAB 3: BILL SAVINGS & PERFORMANCE */}
+        {/* TAB 4: SAVINGS & 25-YEAR PERFORMANCE */}
         {/* ========================================================================= */}
         {activeTab === 'savings' && (
           <div className="space-y-6">
             <div className="grid gap-6 md:grid-cols-3">
-              <div className="rounded-2xl border border-[#1B324B] bg-gradient-to-b from-[#0C1E32] to-[#081827] p-5 shadow-lg">
-                <span className="text-xs uppercase font-bold text-[#7E98B0] tracking-wider">Utility Bill Comparison</span>
-                <div className="mt-4 flex items-baseline justify-between">
-                  <div>
-                    <span className="text-xs text-[#E57373] font-semibold">Before Solar</span>
-                    <p className="m-0 text-2xl font-black text-white">$385/mo</p>
-                  </div>
-                  <ChevronRight className="h-6 w-6 text-[#7E98B0]" />
-                  <div>
-                    <span className="text-xs text-[#81C784] font-semibold">Sunrun + Powerwall</span>
-                    <p className="m-0 text-2xl font-black text-[#81C784]">$18/mo</p>
-                  </div>
-                </div>
+              <div className="rounded-2xl border border-[#1B324B] bg-[#0C1E32] p-5 shadow-xl">
+                <span className="text-xs uppercase font-bold text-[#7E98B0] tracking-wider">Estimated Monthly Savings</span>
+                <p className="m-0 mt-3 text-3xl font-black text-[#4CAF50] font-mono">$367.40</p>
+                <p className="m-0 mt-1 text-xs text-[#8BA4BD]">Compared to average local utility bill of $385.00/mo.</p>
                 <div className="mt-4 border-t border-white/10 pt-3 text-xs text-[#8BA4BD]">
-                  Net Monthly Savings: <strong className="text-white">$367 / month</strong>
+                  Annual Net Savings: <strong className="text-white font-mono">$4,408.80 / yr</strong>
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-[#1B324B] bg-gradient-to-b from-[#0C1E32] to-[#081827] p-5 shadow-lg">
-                <span className="text-xs uppercase font-bold text-[#7E98B0] tracking-wider">Lifetime Net Savings</span>
-                <p className="m-0 mt-3 text-3xl font-black text-[#FFB300]">$4,820</p>
-                <p className="m-0 mt-1 text-xs text-[#8BA4BD]">Saved since system installation (14 months active).</p>
+              <div className="rounded-2xl border border-[#1B324B] bg-[#0C1E32] p-5 shadow-xl">
+                <span className="text-xs uppercase font-bold text-[#7E98B0] tracking-wider">Lifetime Solar Generation</span>
+                <p className="m-0 mt-3 text-3xl font-black text-[#FFB300] font-mono">18,420 kWh</p>
+                <p className="m-0 mt-1 text-xs text-[#8BA4BD]">Clean DC power generated and inverted on site.</p>
                 <div className="mt-4 border-t border-white/10 pt-3 text-xs text-[#8BA4BD]">
-                  25-Year Projected Savings: <strong className="text-white">$74,500+</strong>
+                  Net Metering Credits: <strong className="text-[#81C784] font-mono">+3,840 kWh Exported</strong>
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-[#1B324B] bg-gradient-to-b from-[#0C1E32] to-[#081827] p-5 shadow-lg">
+              <div className="rounded-2xl border border-[#1B324B] bg-[#0C1E32] p-5 shadow-xl">
                 <span className="text-xs uppercase font-bold text-[#7E98B0] tracking-wider">Environmental Offset</span>
                 <p className="m-0 mt-3 text-3xl font-black text-[#64B5F6]">14.2 Tons</p>
                 <p className="m-0 mt-1 text-xs text-[#8BA4BD]">CO2 greenhouse gas eliminated from utility grid.</p>
@@ -1282,7 +1744,7 @@ export default function HomeownerPortalPage() {
         )}
 
         {/* ========================================================================= */}
-        {/* TAB 4: SUNRUN ADVISOR & WARRANTY */}
+        {/* TAB 5: SUNRUN ADVISOR & WARRANTY */}
         {/* ========================================================================= */}
         {activeTab === 'concierge' && (
           <div className="space-y-6">
@@ -1367,6 +1829,61 @@ export default function HomeownerPortalPage() {
           </div>
         )}
       </main>
+
+      {/* Milestone Certificate Modal */}
+      {selectedMilestoneDoc && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm animate-fade-in">
+          <div className="w-full max-w-lg rounded-3xl border border-[#2B4E73] bg-[#0C1E32] p-6 text-left shadow-2xl">
+            <div className="flex items-center justify-between border-b border-white/10 pb-4">
+              <div className="flex items-center gap-2.5">
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#10B981]/20 text-[#10B981]">
+                  <FileText className="h-5 w-5" />
+                </span>
+                <div>
+                  <h3 className="m-0 text-base font-bold text-white">{selectedMilestoneDoc.documentTitle}</h3>
+                  <span className="text-[11px] font-mono text-[#64B5F6]">{selectedMilestoneDoc.documentId}</span>
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedMilestoneDoc(null)}
+                className="rounded-lg p-1.5 text-[#8FAEC7] hover:bg-white/10 hover:text-white transition cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="my-4 space-y-3 text-xs text-[#C2D7EA]">
+              <div className="rounded-xl bg-[#081827] p-3 border border-[#1A3859]">
+                <strong className="text-white block mb-1">Official Summary:</strong>
+                <p className="m-0 text-[#A8C4DF]">{selectedMilestoneDoc.documentSummary}</p>
+              </div>
+
+              <div>
+                <strong className="text-white block mb-1.5">Verified Milestone Deliverables:</strong>
+                <ul className="space-y-1 pl-4 list-disc text-[#8BA4BD]">
+                  {selectedMilestoneDoc.deliverables.map((item, idx) => (
+                    <li key={idx}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="pt-2 border-t border-white/10 flex justify-between items-center text-[11px] text-[#607D8B]">
+                <span>Certified Sign-Off: <strong className="text-white">{selectedMilestoneDoc.signOffLead}</strong></span>
+                <span className="font-mono">{selectedMilestoneDoc.date}</span>
+              </div>
+            </div>
+
+            <div className="flex gap-2.5 pt-2">
+              <button
+                onClick={() => setSelectedMilestoneDoc(null)}
+                className="w-full rounded-xl bg-[#1C3A5A] py-2.5 text-xs font-bold text-white hover:bg-[#28507B] transition cursor-pointer"
+              >
+                Close Certificate
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* QR Code Modal */}
       {showQrModal && (
