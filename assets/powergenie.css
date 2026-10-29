@@ -245,6 +245,19 @@ button {
   fill: currentColor;
 }
 
+.brand-logo-img {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  object-fit: contain;
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), filter 0.22s ease;
+}
+
+.brand-logo:hover .brand-logo-img {
+  transform: scale(1.08);
+  filter: drop-shadow(0 0 12px rgba(0, 229, 153, 0.7));
+}
+
 .ecosystem-badge {
   display: inline-flex;
   align-items: center;
