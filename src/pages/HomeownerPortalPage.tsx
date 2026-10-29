@@ -41,7 +41,9 @@ import {
   Lock,
   Unlock,
   Compass,
-  Gauge
+  Gauge,
+  Radio,
+  Power
 } from 'lucide-react';
 import { BrandMark } from '../hub/ui';
 import { lockPageScroll } from '../lib/scrollLock';
@@ -298,6 +300,9 @@ export default function HomeownerPortalPage() {
   const [batteryPct, setBatteryPct] = useState<number>(88);
   const batteryCapacity = 27.0; // Dual Powerwall 3 (13.5 kWh * 2)
 
+  // Interactive node inspection in the 4-node ring
+  const [inspectedNode, setInspectedNode] = useState<'solar' | 'home' | 'battery' | 'grid' | null>(null);
+
   // Interactive appliance loads during blackout
   const [activeApplianceIds, setActiveApplianceIds] = useState<string[]>([
     'fridge',
@@ -380,6 +385,18 @@ export default function HomeownerPortalPage() {
     );
   };
 
+  const handleSelectAllAppliances = () => {
+    setActiveApplianceIds(DEFAULT_APPLIANCES.map((a) => a.id));
+  };
+
+  const handleSelectEssentialOnly = () => {
+    setActiveApplianceIds(DEFAULT_APPLIANCES.filter((a) => a.essential).map((a) => a.id));
+  };
+
+  const handleClearAppliances = () => {
+    setActiveApplianceIds([]);
+  };
+
   // Compute live active load
   const applianceLoadKw = activeApplianceIds.reduce((sum, id) => {
     const app = DEFAULT_APPLIANCES.find((a) => a.id === id);
@@ -389,6 +406,8 @@ export default function HomeownerPortalPage() {
   const solarGenerationKw = isOutageSimulated ? 6.2 : 8.4;
   const homeLoadKw = Number((0.6 + applianceLoadKw).toFixed(2));
   const currentBatteryKwh = (batteryCapacity * batteryPct) / 100;
+  const maxInverterContinuousKw = 11.5;
+  const loadPercentageOfInverter = Math.min(100, Math.round((homeLoadKw / maxInverterContinuousKw) * 100));
 
   // Tesla Power Flow Physics Calculations:
   const solarToHomeKw = Number(Math.min(solarGenerationKw, homeLoadKw).toFixed(2));
@@ -518,30 +537,30 @@ export default function HomeownerPortalPage() {
       {/* Inline styles for Tesla animated energy conduit flow */}
       <style>{`
         @keyframes teslaFlowForward {
-          from { stroke-dashoffset: 28; }
+          from { stroke-dashoffset: 32; }
           to { stroke-dashoffset: 0; }
         }
         @keyframes teslaFlowReverse {
           from { stroke-dashoffset: 0; }
-          to { stroke-dashoffset: 28; }
+          to { stroke-dashoffset: 32; }
         }
         .flow-solar-home {
-          animation: teslaFlowForward 1.3s linear infinite;
+          animation: teslaFlowForward 1.2s linear infinite;
         }
         .flow-solar-battery {
-          animation: teslaFlowForward 1.1s linear infinite;
+          animation: teslaFlowForward 1.0s linear infinite;
         }
         .flow-solar-grid {
           animation: teslaFlowForward 1.4s linear infinite;
         }
         .flow-battery-home {
-          animation: teslaFlowForward 1.2s linear infinite;
+          animation: teslaFlowForward 1.1s linear infinite;
         }
         .flow-grid-home {
           animation: teslaFlowForward 1.3s linear infinite;
         }
         .flow-grid-battery {
-          animation: teslaFlowForward 1.1s linear infinite;
+          animation: teslaFlowForward 1.0s linear infinite;
         }
       `}</style>
 
@@ -549,7 +568,7 @@ export default function HomeownerPortalPage() {
       <header className="sticky top-0 z-50 border-b border-[#1E2E42] bg-[#0A1828]/95 backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
           <div className="flex items-center gap-3">
-            <a href="/" className="inline-flex items-center gap-2 text-white no-underline">
+            <a href="/" className="inline-flex items-center gap-2 text-white no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00] rounded-lg">
               <BrandMark />
             </a>
             <span className="hidden sm:inline-block h-4 w-px bg-white/20" />
@@ -561,7 +580,7 @@ export default function HomeownerPortalPage() {
           <div className="flex items-center gap-2.5">
             <a
               href="tel:+15102417007"
-              className="inline-flex items-center gap-2 rounded-full border border-[#234567] bg-[#0E253B] px-3.5 py-1.5 text-xs font-semibold text-[#90CAF9] hover:bg-[#143452] transition shadow-sm"
+              className="inline-flex items-center gap-2 rounded-full border border-[#234567] bg-[#0E253B] px-3.5 py-1.5 text-xs font-semibold text-[#90CAF9] hover:bg-[#143452] hover:border-[#3A6B9B] transition shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00]"
             >
               <Phone className="h-3.5 w-3.5 text-[#FF6B00]" />
               <span className="hidden md:inline">Advisor Horace Lawrence:</span> 510-241-7007
@@ -599,14 +618,16 @@ export default function HomeownerPortalPage() {
           {/* Quick Action Badges */}
           <div className="flex flex-wrap items-center gap-2.5">
             <button
+              type="button"
               onClick={() => setActiveTab('milestones')}
-              className="inline-flex items-center gap-2 rounded-xl border border-[#1F4A38] bg-[#0B261D] px-3.5 py-2.5 text-sm font-semibold text-[#81C784] hover:bg-[#11382A] transition cursor-pointer"
+              className="inline-flex items-center gap-2 rounded-xl border border-[#1F4A38] bg-[#0B261D] px-3.5 py-2.5 text-sm font-semibold text-[#81C784] hover:bg-[#11382A] hover:border-[#2F6B52] transition cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4CAF50]"
             >
               <CheckCircle2 className="h-4 w-4 text-[#4CAF50]" /> mySunrun PTO (100%)
             </button>
             <button
+              type="button"
               onClick={() => setActiveTab('referrals')}
-              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#FF6B00] to-[#E65100] px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-[#FF6B00]/25 hover:brightness-110 transition active:scale-95 cursor-pointer"
+              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#FF6B00] to-[#E65100] px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-[#FF6B00]/25 hover:brightness-110 transition active:scale-95 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00]"
             >
               <DollarSign className="h-4 w-4" /> Refer & Earn $1,000 Cash
             </button>
@@ -616,10 +637,12 @@ export default function HomeownerPortalPage() {
 
       {/* Main Tab Navigation */}
       <div className="border-b border-[#182C44] bg-[#091A2C]">
-        <div className="mx-auto flex max-w-6xl gap-2 overflow-x-auto px-4 py-2 sm:px-6 scrollbar-none [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="mx-auto flex max-w-6xl gap-2 overflow-x-auto px-4 py-2 sm:px-6 scrollbar-none [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" role="tablist">
           <button
+            role="tab"
+            aria-selected={activeTab === 'powerwall'}
             onClick={() => setActiveTab('powerwall')}
-            className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs sm:text-sm font-bold transition-all whitespace-nowrap cursor-pointer ${
+            className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs sm:text-sm font-bold transition-all whitespace-nowrap cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4CAF50] ${
               activeTab === 'powerwall'
                 ? 'bg-[#123120] text-[#81C784] border border-[#2E7D32] shadow-sm shadow-[#4CAF50]/20'
                 : 'text-[#8EAEC7] hover:text-white hover:bg-white/5 border border-transparent'
@@ -630,8 +653,10 @@ export default function HomeownerPortalPage() {
           </button>
 
           <button
+            role="tab"
+            aria-selected={activeTab === 'milestones'}
             onClick={() => setActiveTab('milestones')}
-            className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs sm:text-sm font-bold transition-all whitespace-nowrap cursor-pointer ${
+            className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs sm:text-sm font-bold transition-all whitespace-nowrap cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2196F3] ${
               activeTab === 'milestones'
                 ? 'bg-[#0E2841] text-[#64B5F6] border border-[#1E88E5]/70 shadow-sm shadow-[#2196F3]/20'
                 : 'text-[#8EAEC7] hover:text-white hover:bg-white/5 border border-transparent'
@@ -645,8 +670,10 @@ export default function HomeownerPortalPage() {
           </button>
 
           <button
+            role="tab"
+            aria-selected={activeTab === 'referrals'}
             onClick={() => setActiveTab('referrals')}
-            className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs sm:text-sm font-bold transition-all whitespace-nowrap cursor-pointer ${
+            className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs sm:text-sm font-bold transition-all whitespace-nowrap cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00] ${
               activeTab === 'referrals'
                 ? 'bg-[#3A1E08] text-[#FF8A2B] border border-[#FF6B00]/70 shadow-sm shadow-[#FF6B00]/20'
                 : 'text-[#8EAEC7] hover:text-white hover:bg-white/5 border border-transparent'
@@ -660,8 +687,10 @@ export default function HomeownerPortalPage() {
           </button>
 
           <button
+            role="tab"
+            aria-selected={activeTab === 'savings'}
             onClick={() => setActiveTab('savings')}
-            className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs sm:text-sm font-bold transition-all whitespace-nowrap cursor-pointer ${
+            className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs sm:text-sm font-bold transition-all whitespace-nowrap cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2196F3] ${
               activeTab === 'savings'
                 ? 'bg-[#0F2942] text-[#64B5F6] border border-[#1E88E5]/70 shadow-sm shadow-[#2196F3]/20'
                 : 'text-[#8EAEC7] hover:text-white hover:bg-white/5 border border-transparent'
@@ -672,8 +701,10 @@ export default function HomeownerPortalPage() {
           </button>
 
           <button
+            role="tab"
+            aria-selected={activeTab === 'concierge'}
             onClick={() => setActiveTab('concierge')}
-            className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs sm:text-sm font-bold transition-all whitespace-nowrap cursor-pointer ${
+            className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs sm:text-sm font-bold transition-all whitespace-nowrap cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FFB300] ${
               activeTab === 'concierge'
                 ? 'bg-[#212E3B] text-white border border-[#475569] shadow-sm'
                 : 'text-[#8EAEC7] hover:text-white hover:bg-white/5 border border-transparent'
@@ -691,7 +722,7 @@ export default function HomeownerPortalPage() {
         {/* TAB 1: TESLA POWERWALL & ANIMATED 4-NODE ENERGY RING */}
         {/* ========================================================================= */}
         {activeTab === 'powerwall' && (
-          <div className="space-y-6">
+          <div className="space-y-6 animate-fade-in">
             {/* Outage Simulation Alert / Banner */}
             {isOutageSimulated ? (
               <div className="rounded-2xl border-2 border-[#FF6B00] bg-gradient-to-r from-[#FF6B00]/15 via-[#FF6B00]/10 to-[#120800] p-5 text-white shadow-xl shadow-[#FF6B00]/15 animate-fade-in">
@@ -710,8 +741,9 @@ export default function HomeownerPortalPage() {
                     </div>
                   </div>
                   <button
+                    type="button"
                     onClick={() => setIsOutageSimulated(false)}
-                    className="shrink-0 rounded-xl bg-[#4CAF50] px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-white shadow hover:bg-[#43A047] transition cursor-pointer"
+                    className="shrink-0 rounded-xl bg-[#4CAF50] px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-white shadow hover:bg-[#43A047] transition cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4CAF50]"
                   >
                     Restore Utility Grid
                   </button>
@@ -737,8 +769,9 @@ export default function HomeownerPortalPage() {
                     </div>
                   </div>
                   <button
+                    type="button"
                     onClick={() => setIsStormWatchActive(false)}
-                    className="shrink-0 rounded-xl border border-sky-400/40 bg-sky-950/60 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-sky-200 hover:bg-sky-900 transition cursor-pointer"
+                    className="shrink-0 rounded-xl border border-sky-400/40 bg-sky-950/60 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-sky-200 hover:bg-sky-900 transition cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400"
                   >
                     Dismiss Storm Watch
                   </button>
@@ -758,49 +791,58 @@ export default function HomeownerPortalPage() {
                 <button
                   type="button"
                   onClick={() => { setOperationMode('self_consumption'); setIsStormWatchActive(false); }}
-                  className={`rounded-xl p-3 border text-left transition cursor-pointer flex items-center gap-3 ${
+                  className={`rounded-xl p-3.5 border text-left transition-all duration-200 cursor-pointer flex items-center justify-between gap-3 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4CAF50] ${
                     operationMode === 'self_consumption' && !isStormWatchActive
                       ? 'border-[#4CAF50] bg-[#102C1E] text-white shadow-md shadow-[#4CAF50]/20'
-                      : 'border-[#1B3047] bg-[#081726] text-[#8FAEC7] hover:border-[#2C4F75]'
+                      : 'border-[#1B3047] bg-[#081726] text-[#8FAEC7] hover:border-[#2C4F75] hover:bg-[#0C1E30]'
                   }`}
                 >
-                  <Sparkles className={`h-5 w-5 shrink-0 ${operationMode === 'self_consumption' && !isStormWatchActive ? 'text-[#4CAF50]' : 'text-[#607D8B]'}`} />
-                  <div>
-                    <strong className="text-xs sm:text-sm font-bold block text-white">Self-Powered</strong>
-                    <span className="text-[11px] text-[#8BA4BD] block">Maximize solar & battery self-reliance</span>
+                  <div className="flex items-center gap-3">
+                    <Sparkles className={`h-5 w-5 shrink-0 ${operationMode === 'self_consumption' && !isStormWatchActive ? 'text-[#4CAF50]' : 'text-[#607D8B]'}`} />
+                    <div>
+                      <strong className="text-xs sm:text-sm font-bold block text-white">Self-Powered</strong>
+                      <span className="text-[11px] text-[#8BA4BD] block">Maximize solar & battery self-reliance</span>
+                    </div>
                   </div>
+                  <span className={`h-2.5 w-2.5 rounded-full shrink-0 ${operationMode === 'self_consumption' && !isStormWatchActive ? 'bg-[#4CAF50] shadow-sm shadow-[#4CAF50]' : 'bg-[#2A435E]'}`} />
                 </button>
 
                 <button
                   type="button"
                   onClick={() => { setOperationMode('autonomous'); setIsStormWatchActive(false); }}
-                  className={`rounded-xl p-3 border text-left transition cursor-pointer flex items-center gap-3 ${
+                  className={`rounded-xl p-3.5 border text-left transition-all duration-200 cursor-pointer flex items-center justify-between gap-3 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2196F3] ${
                     operationMode === 'autonomous' && !isStormWatchActive
                       ? 'border-[#2196F3] bg-[#0F2A42] text-white shadow-md shadow-[#2196F3]/20'
-                      : 'border-[#1B3047] bg-[#081726] text-[#8FAEC7] hover:border-[#2C4F75]'
+                      : 'border-[#1B3047] bg-[#081726] text-[#8FAEC7] hover:border-[#2C4F75] hover:bg-[#0C1E30]'
                   }`}
                 >
-                  <TrendingUp className={`h-5 w-5 shrink-0 ${operationMode === 'autonomous' && !isStormWatchActive ? 'text-[#2196F3]' : 'text-[#607D8B]'}`} />
-                  <div>
-                    <strong className="text-xs sm:text-sm font-bold block text-white">Time-Based Control</strong>
-                    <span className="text-[11px] text-[#8BA4BD] block">Discharge during peak utility rates (4–9 PM)</span>
+                  <div className="flex items-center gap-3">
+                    <TrendingUp className={`h-5 w-5 shrink-0 ${operationMode === 'autonomous' && !isStormWatchActive ? 'text-[#2196F3]' : 'text-[#607D8B]'}`} />
+                    <div>
+                      <strong className="text-xs sm:text-sm font-bold block text-white">Time-Based Control</strong>
+                      <span className="text-[11px] text-[#8BA4BD] block">Discharge during peak utility rates (4–9 PM)</span>
+                    </div>
                   </div>
+                  <span className={`h-2.5 w-2.5 rounded-full shrink-0 ${operationMode === 'autonomous' && !isStormWatchActive ? 'bg-[#2196F3] shadow-sm shadow-[#2196F3]' : 'bg-[#2A435E]'}`} />
                 </button>
 
                 <button
                   type="button"
                   onClick={() => { setOperationMode('backup'); setIsStormWatchActive(false); }}
-                  className={`rounded-xl p-3 border text-left transition cursor-pointer flex items-center gap-3 ${
+                  className={`rounded-xl p-3.5 border text-left transition-all duration-200 cursor-pointer flex items-center justify-between gap-3 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9800] ${
                     operationMode === 'backup' && !isStormWatchActive
                       ? 'border-[#FF9800] bg-[#331C08] text-white shadow-md shadow-[#FF9800]/20'
-                      : 'border-[#1B3047] bg-[#081726] text-[#8FAEC7] hover:border-[#2C4F75]'
+                      : 'border-[#1B3047] bg-[#081726] text-[#8FAEC7] hover:border-[#2C4F75] hover:bg-[#0C1E30]'
                   }`}
                 >
-                  <Shield className={`h-5 w-5 shrink-0 ${operationMode === 'backup' && !isStormWatchActive ? 'text-[#FF9800]' : 'text-[#607D8B]'}`} />
-                  <div>
-                    <strong className="text-xs sm:text-sm font-bold block text-white">Backup-Only</strong>
-                    <span className="text-[11px] text-[#8BA4BD] block">Maintain 100% battery reserve for emergencies</span>
+                  <div className="flex items-center gap-3">
+                    <Shield className={`h-5 w-5 shrink-0 ${operationMode === 'backup' && !isStormWatchActive ? 'text-[#FF9800]' : 'text-[#607D8B]'}`} />
+                    <div>
+                      <strong className="text-xs sm:text-sm font-bold block text-white">Backup-Only</strong>
+                      <span className="text-[11px] text-[#8BA4BD] block">Maintain 100% battery reserve for emergencies</span>
+                    </div>
                   </div>
+                  <span className={`h-2.5 w-2.5 rounded-full shrink-0 ${operationMode === 'backup' && !isStormWatchActive ? 'bg-[#FF9800] shadow-sm shadow-[#FF9800]' : 'bg-[#2A435E]'}`} />
                 </button>
               </div>
             </div>
@@ -813,25 +855,39 @@ export default function HomeownerPortalPage() {
                   <div className="flex items-center gap-2">
                     <span className={`h-2.5 w-2.5 rounded-full ${isOutageSimulated ? 'bg-[#FF6B00] animate-ping' : 'bg-[#4CAF50] animate-pulse'}`} />
                     <span className="text-xs font-bold uppercase tracking-wider text-[#A0C0DC]">
-                      {isOutageSimulated ? 'Microgrid Island Mode' : 'Tesla Real-Time Power Flow'}
+                      {isOutageSimulated ? 'Microgrid Island Mode (Active)' : 'Tesla Real-Time Power Flow'}
                     </span>
                   </div>
-                  <span className="rounded-full bg-[#132C45] px-2.5 py-0.5 text-[11px] font-mono text-[#81C784]">
-                    {isOutageSimulated ? '60.00 Hz (Inverter Master)' : 'Grid Sync 60.00 Hz'}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="rounded-full bg-[#132C45] px-2.5 py-0.5 text-[11px] font-mono text-[#81C784]">
+                      {isOutageSimulated ? '60.00 Hz (Inverter Master)' : 'Grid Sync 60.00 Hz'}
+                    </span>
+                  </div>
                 </div>
 
                 {/* SVG Vector Power Flow Diagram */}
                 <div className="relative w-full max-w-[390px] aspect-square flex items-center justify-center my-2">
                   <svg className="w-full h-full" viewBox="0 0 380 380">
                     <defs>
-                      <filter id="teslaGlow" x="-20%" y="-20%" width="140%" height="140%">
-                        <feGaussianBlur stdDeviation="4" result="coloredBlur" />
+                      <filter id="teslaGlow" x="-30%" y="-30%" width="160%" height="160%">
+                        <feGaussianBlur stdDeviation="5" result="coloredBlur" />
                         <feMerge>
                           <feMergeNode in="coloredBlur" />
                           <feMergeNode in="SourceGraphic" />
                         </feMerge>
                       </filter>
+                      <radialGradient id="solarGlowGrad" cx="50%" cy="50%" r="50%">
+                        <stop offset="0%" stopColor="#FFB300" stopOpacity="0.3" />
+                        <stop offset="100%" stopColor="#FFB300" stopOpacity="0" />
+                      </radialGradient>
+                      <radialGradient id="homeGlowGrad" cx="50%" cy="50%" r="50%">
+                        <stop offset="0%" stopColor="#38BDF8" stopOpacity="0.3" />
+                        <stop offset="100%" stopColor="#38BDF8" stopOpacity="0" />
+                      </radialGradient>
+                      <radialGradient id="batteryGlowGrad" cx="50%" cy="50%" r="50%">
+                        <stop offset="0%" stopColor="#10B981" stopOpacity="0.3" />
+                        <stop offset="100%" stopColor="#10B981" stopOpacity="0" />
+                      </radialGradient>
                     </defs>
 
                     {/* Muted Circular Track Ring */}
@@ -851,59 +907,59 @@ export default function HomeownerPortalPage() {
                         d="M 190 70 A 120 120 0 0 1 310 190"
                         fill="none"
                         stroke="#FFB300"
-                        strokeWidth="4"
-                        strokeDasharray="6 8"
+                        strokeWidth="5"
+                        strokeDasharray="6 10"
                         strokeLinecap="round"
                         filter="url(#teslaGlow)"
                         className="flow-solar-home"
                       />
                     )}
 
-                    {/* 2. Solar -> Powerwall (Vertical Down Line) */}
+                    {/* 2. Solar -> Powerwall (Vertical Down Line - Luminous Solar Gold!) */}
                     {solarToBatteryKw > 0 && (
                       <line
                         x1="190"
                         y1="70"
                         x2="190"
                         y2="310"
-                        stroke="#10B981"
-                        strokeWidth="4"
-                        strokeDasharray="6 8"
+                        stroke="#FFB300"
+                        strokeWidth="5"
+                        strokeDasharray="6 10"
                         strokeLinecap="round"
                         filter="url(#teslaGlow)"
                         className="flow-solar-battery"
                       />
                     )}
 
-                    {/* 3. Solar -> Grid (Top to Left Arc - Exporting) */}
+                    {/* 3. Solar -> Grid (Top to Left Arc - Clean Export) */}
                     {solarToGridKw > 0 && !isOutageSimulated && (
                       <path
                         d="M 190 70 A 120 120 0 0 0 70 190"
                         fill="none"
                         stroke="#10B981"
-                        strokeWidth="4"
-                        strokeDasharray="6 8"
+                        strokeWidth="5"
+                        strokeDasharray="6 10"
                         strokeLinecap="round"
                         filter="url(#teslaGlow)"
                         className="flow-solar-grid"
                       />
                     )}
 
-                    {/* 4. Powerwall -> Home (Bottom to Right Arc - Discharging) */}
+                    {/* 4. Powerwall -> Home (Bottom to Right Arc - Battery Discharging) */}
                     {batteryToHomeKw > 0 && (
                       <path
                         d="M 190 310 A 120 120 0 0 0 310 190"
                         fill="none"
                         stroke={isOutageSimulated ? '#FF8A2B' : '#10B981'}
-                        strokeWidth="4"
-                        strokeDasharray="6 8"
+                        strokeWidth="5"
+                        strokeDasharray="6 10"
                         strokeLinecap="round"
                         filter="url(#teslaGlow)"
                         className="flow-battery-home"
                       />
                     )}
 
-                    {/* 5. Grid -> Home (Horizontal Left to Right Line - Importing) */}
+                    {/* 5. Grid -> Home (Horizontal Left to Right Line - Grid Import) */}
                     {gridToHomeKw > 0 && !isOutageSimulated && (
                       <line
                         x1="70"
@@ -911,8 +967,8 @@ export default function HomeownerPortalPage() {
                         x2="310"
                         y2="190"
                         stroke="#38BDF8"
-                        strokeWidth="4"
-                        strokeDasharray="6 8"
+                        strokeWidth="5"
+                        strokeDasharray="6 10"
                         strokeLinecap="round"
                         filter="url(#teslaGlow)"
                         className="flow-grid-home"
@@ -925,8 +981,8 @@ export default function HomeownerPortalPage() {
                         d="M 70 190 A 120 120 0 0 0 190 310"
                         fill="none"
                         stroke="#38BDF8"
-                        strokeWidth="4"
-                        strokeDasharray="6 8"
+                        strokeWidth="5"
+                        strokeDasharray="6 10"
                         strokeLinecap="round"
                         filter="url(#teslaGlow)"
                         className="flow-grid-battery"
@@ -947,9 +1003,14 @@ export default function HomeownerPortalPage() {
                     {/* ============================================================== */}
 
                     {/* NODE 1: SOLAR (TOP: 190, 70) */}
-                    <g transform="translate(190, 70)">
-                      <circle cx="0" cy="0" r="34" fill="#0A1828" stroke="#F59E0B" strokeWidth="3" filter="url(#teslaGlow)" />
-                      <circle cx="0" cy="0" r="30" fill="#141E10" />
+                    <g
+                      transform="translate(190, 70)"
+                      className="cursor-pointer transition-transform duration-200 hover:scale-105"
+                      onClick={() => setInspectedNode(inspectedNode === 'solar' ? null : 'solar')}
+                    >
+                      <circle cx="0" cy="0" r="42" fill="url(#solarGlowGrad)" />
+                      <circle cx="0" cy="0" r="34" fill="#0A1828" stroke="#F59E0B" strokeWidth={inspectedNode === 'solar' ? '4' : '3'} filter="url(#teslaGlow)" />
+                      <circle cx="0" cy="0" r="29" fill="#141E10" />
                       <Sun x="-11" y="-23" width="22" height="22" className="text-amber-400" />
                       <text x="0" y="9" textAnchor="middle" fill="#FFFFFF" fontSize="11" fontWeight="bold" fontFamily="monospace">
                         {solarGenerationKw.toFixed(1)} kW
@@ -960,9 +1021,14 @@ export default function HomeownerPortalPage() {
                     </g>
 
                     {/* NODE 2: HOME (RIGHT: 310, 190) */}
-                    <g transform="translate(310, 190)">
-                      <circle cx="0" cy="0" r="34" fill="#0A1828" stroke="#38BDF8" strokeWidth="3" filter="url(#teslaGlow)" />
-                      <circle cx="0" cy="0" r="30" fill="#0A1E30" />
+                    <g
+                      transform="translate(310, 190)"
+                      className="cursor-pointer transition-transform duration-200 hover:scale-105"
+                      onClick={() => setInspectedNode(inspectedNode === 'home' ? null : 'home')}
+                    >
+                      <circle cx="0" cy="0" r="42" fill="url(#homeGlowGrad)" />
+                      <circle cx="0" cy="0" r="34" fill="#0A1828" stroke="#38BDF8" strokeWidth={inspectedNode === 'home' ? '4' : '3'} filter="url(#teslaGlow)" />
+                      <circle cx="0" cy="0" r="29" fill="#0A1E30" />
                       <HomeIcon x="-11" y="-23" width="22" height="22" className="text-sky-400" />
                       <text x="0" y="9" textAnchor="middle" fill="#FFFFFF" fontSize="11" fontWeight="bold" fontFamily="monospace">
                         {homeLoadKw.toFixed(1)} kW
@@ -973,38 +1039,47 @@ export default function HomeownerPortalPage() {
                     </g>
 
                     {/* NODE 3: POWERWALL 3 (BOTTOM: 190, 310) */}
-                    <g transform="translate(190, 310)">
+                    <g
+                      transform="translate(190, 310)"
+                      className="cursor-pointer transition-transform duration-200 hover:scale-105"
+                      onClick={() => setInspectedNode(inspectedNode === 'battery' ? null : 'battery')}
+                    >
+                      <circle cx="0" cy="0" r="42" fill="url(#batteryGlowGrad)" />
                       <circle
                         cx="0"
                         cy="0"
                         r="34"
                         fill="#0A1828"
                         stroke={batteryFlowKw > 0 ? '#FF8A2B' : '#10B981'}
-                        strokeWidth="3"
+                        strokeWidth={inspectedNode === 'battery' ? '4' : '3'}
                         filter="url(#teslaGlow)"
                       />
-                      <circle cx="0" cy="0" r="30" fill="#0B2317" />
+                      <circle cx="0" cy="0" r="29" fill="#0B2317" />
                       <Battery x="-11" y="-23" width="22" height="22" className={batteryFlowKw > 0 ? 'text-[#FF8A2B]' : 'text-emerald-400'} />
                       <text x="0" y="9" textAnchor="middle" fill="#FFFFFF" fontSize="11" fontWeight="bold" fontFamily="monospace">
                         {batteryPct}%
                       </text>
                       <text x="0" y="21" textAnchor="middle" fill={batteryFlowKw > 0 ? '#FFA040' : '#81C784'} fontSize="8" fontWeight="bold" fontFamily="system-ui">
-                        {batteryFlowKw > 0 ? `-${batteryFlowKw.toFixed(1)} kW` : batteryFlowKw < 0 ? `+${Math.abs(batteryFlowKw).toFixed(1)} kW` : 'IDLE'}
+                        {batteryFlowKw > 0 ? `-${batteryFlowKw.toFixed(1)} kW` : batteryFlowKw < 0 ? `+${Math.abs(batteryFlowKw).toFixed(1)} kW` : 'STANDBY'}
                       </text>
                     </g>
 
                     {/* NODE 4: GRID (LEFT: 70, 190) */}
-                    <g transform="translate(70, 190)">
+                    <g
+                      transform="translate(70, 190)"
+                      className="cursor-pointer transition-transform duration-200 hover:scale-105"
+                      onClick={() => setInspectedNode(inspectedNode === 'grid' ? null : 'grid')}
+                    >
                       <circle
                         cx="0"
                         cy="0"
                         r="34"
                         fill="#0A1828"
                         stroke={isOutageSimulated ? '#EF4444' : gridFlowKw < 0 ? '#10B981' : '#38BDF8'}
-                        strokeWidth="3"
+                        strokeWidth={inspectedNode === 'grid' ? '4' : '3'}
                         filter="url(#teslaGlow)"
                       />
-                      <circle cx="0" cy="0" r="30" fill={isOutageSimulated ? '#2B0E0E' : '#0B1C2A'} />
+                      <circle cx="0" cy="0" r="29" fill={isOutageSimulated ? '#2B0E0E' : '#0B1C2A'} />
                       <Zap x="-11" y="-23" width="22" height="22" className={isOutageSimulated ? 'text-red-400' : gridFlowKw < 0 ? 'text-emerald-400' : 'text-sky-400'} />
                       <text x="0" y="9" textAnchor="middle" fill="#FFFFFF" fontSize="11" fontWeight="bold" fontFamily="monospace">
                         {isOutageSimulated ? '0.0 kW' : `${Math.abs(gridFlowKw).toFixed(1)} kW`}
@@ -1018,27 +1093,95 @@ export default function HomeownerPortalPage() {
 
                 {/* Sub-Ring Telemetry Legend */}
                 <div className="w-full grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-white/10 text-center text-xs">
-                  <div className="rounded-lg bg-[#081726] p-2 border border-[#18314C]">
-                    <span className="text-[10px] text-amber-400 uppercase font-bold block">Solar Gen</span>
-                    <strong className="text-white font-mono">{solarGenerationKw} kW</strong>
-                  </div>
-                  <div className="rounded-lg bg-[#081726] p-2 border border-[#18314C]">
+                  <button
+                    type="button"
+                    onClick={() => setInspectedNode(inspectedNode === 'solar' ? null : 'solar')}
+                    className={`rounded-xl p-2.5 border transition cursor-pointer text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 ${
+                      inspectedNode === 'solar' ? 'bg-[#211A0B] border-amber-400' : 'bg-[#081726] border-[#18314C] hover:border-amber-400/50'
+                    }`}
+                  >
+                    <span className="text-[10px] text-amber-400 uppercase font-bold block">Solar Roof</span>
+                    <strong className="text-white font-mono text-sm">{solarGenerationKw} kW</strong>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setInspectedNode(inspectedNode === 'home' ? null : 'home')}
+                    className={`rounded-xl p-2.5 border transition cursor-pointer text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 ${
+                      inspectedNode === 'home' ? 'bg-[#0B1E2E] border-sky-400' : 'bg-[#081726] border-[#18314C] hover:border-sky-400/50'
+                    }`}
+                  >
                     <span className="text-[10px] text-sky-400 uppercase font-bold block">Home Draw</span>
-                    <strong className="text-white font-mono">{homeLoadKw} kW</strong>
-                  </div>
-                  <div className="rounded-lg bg-[#081726] p-2 border border-[#18314C]">
-                    <span className="text-[10px] text-emerald-400 uppercase font-bold block">Powerwall</span>
-                    <strong className="text-white font-mono">{currentBatteryKwh.toFixed(1)} kWh</strong>
-                  </div>
-                  <div className="rounded-lg bg-[#081726] p-2 border border-[#18314C]">
+                    <strong className="text-white font-mono text-sm">{homeLoadKw} kW</strong>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setInspectedNode(inspectedNode === 'battery' ? null : 'battery')}
+                    className={`rounded-xl p-2.5 border transition cursor-pointer text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 ${
+                      inspectedNode === 'battery' ? 'bg-[#0A261A] border-emerald-400' : 'bg-[#081726] border-[#18314C] hover:border-emerald-400/50'
+                    }`}
+                  >
+                    <span className="text-[10px] text-emerald-400 uppercase font-bold block">Powerwall 3</span>
+                    <strong className="text-white font-mono text-sm">{currentBatteryKwh.toFixed(1)} kWh</strong>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setInspectedNode(inspectedNode === 'grid' ? null : 'grid')}
+                    className={`rounded-xl p-2.5 border transition cursor-pointer text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 ${
+                      inspectedNode === 'grid' ? 'bg-[#0C1F2E] border-emerald-400' : 'bg-[#081726] border-[#18314C] hover:border-emerald-400/50'
+                    }`}
+                  >
                     <span className={`text-[10px] uppercase font-bold block ${isOutageSimulated ? 'text-red-400' : 'text-emerald-400'}`}>
                       {isOutageSimulated ? 'Contactor' : gridFlowKw < 0 ? 'Net Export' : 'Grid In'}
                     </span>
-                    <strong className={`font-mono ${isOutageSimulated ? 'text-red-400' : 'text-white'}`}>
+                    <strong className={`font-mono text-sm ${isOutageSimulated ? 'text-red-400' : 'text-white'}`}>
                       {isOutageSimulated ? 'Open (8ms)' : `${Math.abs(gridFlowKw)} kW`}
                     </strong>
-                  </div>
+                  </button>
                 </div>
+
+                {/* Node Hardware Diagnostics Badge */}
+                {inspectedNode && (
+                  <div className="w-full mt-3 p-3.5 rounded-xl border border-[#234567] bg-[#071626] text-xs animate-fade-in">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="font-bold text-white uppercase text-[11px] flex items-center gap-1.5">
+                        <Cpu className="h-3.5 w-3.5 text-[#64B5F6]" />
+                        {inspectedNode === 'solar' && 'Solar Inverter & Array Telemetry'}
+                        {inspectedNode === 'home' && 'Whole-Home Electrical Panel Telemetry'}
+                        {inspectedNode === 'battery' && 'Dual Tesla Powerwall 3 Diagnostics'}
+                        {inspectedNode === 'grid' && 'Tesla Backup Gateway 2 Contactor Telemetry'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setInspectedNode(null)}
+                        className="text-[10px] text-[#8FAEC7] hover:text-white"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                    {inspectedNode === 'solar' && (
+                      <p className="m-0 text-[#90CAF9] text-[11px] leading-relaxed">
+                        28x REC Alpha Pure-R 455W Panels (12.8 kW DC) · Dual MPPT tracking at 98.4% efficiency · String A: 382V (11.0A) · String B: 378V (11.2A). Clean DC solar inverted on site.
+                      </p>
+                    )}
+                    {inspectedNode === 'home' && (
+                      <p className="m-0 text-[#90CAF9] text-[11px] leading-relaxed">
+                        Sub-panel draw: {homeLoadKw} kW across {activeApplianceIds.length} active circuits. Continuous inverter headroom: {(11.5 - homeLoadKw).toFixed(1)} kW remaining. Motor starting LRA headroom: {(18.5 - homeLoadKw).toFixed(1)} kW.
+                      </p>
+                    )}
+                    {inspectedNode === 'battery' && (
+                      <p className="m-0 text-[#90CAF9] text-[11px] leading-relaxed">
+                        Dual LFP Architecture: 27.0 kWh capacity ({currentBatteryKwh.toFixed(1)} kWh stored) · Pack 1: {batteryPct}% · Pack 2: {batteryPct}% · Internal cell temperature: 68°F (Liquid cooling nominal) · 10-Year unlimited cycle warranty.
+                      </p>
+                    )}
+                    {inspectedNode === 'grid' && (
+                      <p className="m-0 text-[#90CAF9] text-[11px] leading-relaxed">
+                        {isOutageSimulated
+                          ? 'Grid Contactor OPEN (8ms Reaction): Home operating as an isolated zero-carbon microgrid. Utility islanding compliance verified.'
+                          : `Grid Contactor CLOSED: Phase-locked to utility 60.00 Hz AC. NEM 3.0 Real-time exchange: ${gridFlowKw < 0 ? `Exporting ${Math.abs(gridFlowKw)} kW credits` : `Importing ${gridFlowKw} kW`}.`}
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Right Column: Tesla Gateway Controls & Backup Reserve */}
@@ -1063,7 +1206,7 @@ export default function HomeownerPortalPage() {
                     <button
                       type="button"
                       onClick={() => setIsOutageSimulated(!isOutageSimulated)}
-                      className={`w-full rounded-xl py-3 px-4 text-xs font-bold uppercase tracking-wider transition cursor-pointer flex items-center justify-center gap-2 shadow-lg ${
+                      className={`w-full rounded-xl py-3 px-4 text-xs font-bold uppercase tracking-wider transition cursor-pointer flex items-center justify-center gap-2 shadow-lg active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00] ${
                         isOutageSimulated
                           ? 'bg-[#4CAF50] text-white hover:bg-[#43A047] shadow-[#4CAF50]/30'
                           : 'bg-gradient-to-r from-[#FF6B00] to-[#E65100] text-white hover:brightness-110 shadow-[#FF6B00]/30'
@@ -1092,10 +1235,10 @@ export default function HomeownerPortalPage() {
                     <span className="font-mono text-sm font-bold text-[#4CAF50]">{backupReserve}%</span>
                   </div>
                   <p className="mt-1 text-xs text-[#8BA4BD]">
-                    Reserved capacity for outages: <strong className="text-white font-mono">{((batteryCapacity * backupReserve) / 100).toFixed(1)} kWh</strong>. Available for daily cycling: <strong className="text-[#81C784] font-mono">{((batteryCapacity * (100 - backupReserve)) / 100).toFixed(1)} kWh</strong>.
+                    Reserved for outages: <strong className="text-white font-mono">{((batteryCapacity * backupReserve) / 100).toFixed(1)} kWh</strong> · Daily cycling: <strong className="text-[#81C784] font-mono">{((batteryCapacity * (100 - backupReserve)) / 100).toFixed(1)} kWh</strong>.
                   </p>
 
-                  <div className="my-4">
+                  <div className="my-3">
                     <input
                       type="range"
                       min="0"
@@ -1112,8 +1255,30 @@ export default function HomeownerPortalPage() {
                     </div>
                   </div>
 
+                  {/* 1-Click Quick Presets */}
+                  <div className="flex gap-2 pt-2">
+                    {[
+                      { pct: 20, label: '20% Daily Shaving' },
+                      { pct: 50, label: '50% Balanced' },
+                      { pct: 100, label: '100% Storm Hold' },
+                    ].map((p) => (
+                      <button
+                        key={p.pct}
+                        type="button"
+                        onClick={() => setBackupReserve(p.pct)}
+                        className={`flex-1 rounded-lg py-1.5 text-[11px] font-semibold transition cursor-pointer border ${
+                          backupReserve === p.pct
+                            ? 'bg-[#123824] border-[#2E7D32] text-[#81C784]'
+                            : 'bg-[#081827] border-[#1C3652] text-[#8FAEC7] hover:border-[#2F537A]'
+                        }`}
+                      >
+                        {p.label}
+                      </button>
+                    ))}
+                  </div>
+
                   {/* Storm Watch Toggle */}
-                  <div className="pt-3 border-t border-white/10 flex items-center justify-between">
+                  <div className="pt-3 mt-3 border-t border-white/10 flex items-center justify-between">
                     <div>
                       <span className="text-xs font-bold text-white flex items-center gap-1.5">
                         <CloudLightning className="h-3.5 w-3.5 text-amber-400" /> Tesla Storm Watch
@@ -1123,7 +1288,7 @@ export default function HomeownerPortalPage() {
                     <button
                       type="button"
                       onClick={() => setIsStormWatchActive(!isStormWatchActive)}
-                      className={`rounded-xl px-3 py-1.5 text-xs font-bold transition cursor-pointer ${
+                      className={`rounded-xl px-3 py-1.5 text-xs font-bold transition cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 ${
                         isStormWatchActive
                           ? 'bg-sky-500 text-white shadow-md shadow-sky-500/30'
                           : 'border border-[#234567] bg-[#0E253B] text-[#90CAF9] hover:bg-[#143452]'
@@ -1167,9 +1332,49 @@ export default function HomeownerPortalPage() {
                     Toggle home appliances on or off to see how your Powerwall backup duration dynamically changes.
                   </p>
                 </div>
-                <div className="rounded-xl bg-[#081827] px-3.5 py-1.5 border border-[#234567] text-right">
-                  <span className="text-[10px] uppercase font-bold text-[#8FAEC7] block">Estimated Backup Runtime</span>
-                  <span className="text-lg font-black text-[#81C784] font-mono">{estRuntimeHours} Hours</span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleSelectEssentialOnly}
+                    className="rounded-lg px-2.5 py-1 text-[11px] font-semibold border border-[#2E7D32] bg-[#0E281C] text-[#81C784] hover:bg-[#133A29] transition cursor-pointer"
+                  >
+                    Essential Only
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSelectAllAppliances}
+                    className="rounded-lg px-2.5 py-1 text-[11px] font-semibold border border-[#1C3652] bg-[#081827] text-[#90CAF9] hover:bg-[#122A42] transition cursor-pointer"
+                  >
+                    Power All
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleClearAppliances}
+                    className="rounded-lg px-2.5 py-1 text-[11px] font-semibold border border-white/10 bg-white/5 text-[#8BA4BD] hover:bg-white/10 transition cursor-pointer"
+                  >
+                    Clear All
+                  </button>
+                </div>
+              </div>
+
+              {/* Inverter Continuous Headroom Bar */}
+              <div className="mb-4 rounded-xl bg-[#081827] p-3.5 border border-[#1D3650]">
+                <div className="flex justify-between items-center text-xs mb-1.5">
+                  <span className="text-[#8FAEC7] font-semibold flex items-center gap-1.5">
+                    <Gauge className="h-3.5 w-3.5 text-[#64B5F6]" />
+                    Inverter Continuous Power Draw: <strong className="text-white font-mono">{homeLoadKw} kW</strong> of 11.5 kW max
+                  </span>
+                  <span className="font-mono font-bold text-xs text-[#81C784]">
+                    {(11.5 - homeLoadKw).toFixed(1)} kW Continuous Headroom ({100 - loadPercentageOfInverter}%)
+                  </span>
+                </div>
+                <div className="h-2 w-full rounded-full bg-[#112436] overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all duration-300 ${
+                      loadPercentageOfInverter > 80 ? 'bg-amber-400' : 'bg-emerald-400'
+                    }`}
+                    style={{ width: `${loadPercentageOfInverter}%` }}
+                  />
                 </div>
               </div>
 
@@ -1181,9 +1386,9 @@ export default function HomeownerPortalPage() {
                       key={app.id}
                       type="button"
                       onClick={() => toggleAppliance(app.id)}
-                      className={`flex items-start justify-between p-3.5 rounded-xl border text-left transition cursor-pointer ${
+                      className={`flex items-start justify-between p-3.5 rounded-xl border text-left transition-all duration-200 cursor-pointer active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4CAF50] ${
                         isActive
-                          ? 'border-[#2E7D32] bg-[#0B2518]'
+                          ? 'border-[#2E7D32] bg-[#0B2518] shadow-sm'
                           : 'border-[#1C3652] bg-[#081726] opacity-60 hover:opacity-100 hover:border-[#2C537D]'
                       }`}
                     >
@@ -1254,11 +1459,14 @@ export default function HomeownerPortalPage() {
             </div>
 
             {/* 7-Stage Milestone Stepper */}
-            <div className="space-y-4">
+            <div className="space-y-4 relative">
+              {/* Vertical Luminous Pipeline Connecting Bar */}
+              <div className="hidden md:block absolute left-[38px] top-6 bottom-6 w-0.5 bg-gradient-to-b from-[#10B981] via-[#34D399] to-[#4CAF50] -z-0 opacity-40" />
+
               {SUNRUN_MILESTONES.map((stage) => (
                 <div
                   key={stage.id}
-                  className={`rounded-2xl border transition-all p-5 sm:p-6 ${
+                  className={`rounded-2xl border transition-all duration-200 p-5 sm:p-6 relative z-10 hover:translate-x-1 ${
                     stage.status === 'active'
                       ? 'border-[#10B981] bg-[#0A2217] shadow-xl shadow-[#10B981]/15'
                       : 'border-[#1B324B] bg-[#0C1E32] hover:border-[#2A4D73]'
@@ -1328,7 +1536,7 @@ export default function HomeownerPortalPage() {
                       <button
                         type="button"
                         onClick={() => setSelectedMilestoneDoc(stage)}
-                        className="inline-flex items-center gap-2 rounded-xl border border-[#234567] bg-[#0E253B] px-3.5 py-2 text-xs font-semibold text-[#90CAF9] hover:bg-[#143452] transition cursor-pointer"
+                        className="inline-flex items-center gap-2 rounded-xl border border-[#234567] bg-[#0E253B] px-3.5 py-2 text-xs font-semibold text-[#90CAF9] hover:bg-[#143452] hover:border-[#3B6694] transition cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2196F3]"
                       >
                         <FileText className="h-4 w-4 text-[#FFB300]" />
                         <span>View Certificate</span>
@@ -1345,7 +1553,7 @@ export default function HomeownerPortalPage() {
         {/* TAB 3: REFERRAL SYSTEM ($1,000 CASH REWARD) */}
         {/* ========================================================================= */}
         {activeTab === 'referrals' && (
-          <div className="space-y-8">
+          <div className="space-y-8 animate-fade-in">
             {/* Hero Banner: $1,000 Referral Program */}
             <div className="rounded-3xl border border-[#FF6B00]/40 bg-gradient-to-br from-[#1A1208] via-[#101F31] to-[#0A1828] p-6 sm:p-8 shadow-2xl relative overflow-hidden">
               <div className="relative z-10 max-w-2xl">
@@ -1372,7 +1580,7 @@ export default function HomeownerPortalPage() {
                         key={tier.amount}
                         type="button"
                         onClick={() => setRewardTier(tier.amount)}
-                        className={`rounded-xl border px-3.5 py-2 text-xs font-bold transition cursor-pointer ${
+                        className={`rounded-xl border px-3.5 py-2 text-xs font-bold transition cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00] ${
                           rewardTier === tier.amount
                             ? 'border-[#FF6B00] bg-[#FF6B00] text-white shadow-md shadow-[#FF6B00]/30'
                             : 'border-[#244263] bg-[#0A1D30] text-[#A5C3DF] hover:border-[#386494]'
@@ -1473,7 +1681,7 @@ export default function HomeownerPortalPage() {
                     value={refName}
                     onChange={(e) => setRefName(e.target.value)}
                     placeholder="e.g. David Mitchell"
-                    className="w-full rounded-xl border border-[#244263] bg-[#081827] px-3.5 py-2.5 text-sm text-white placeholder-[#506A85] focus:border-[#FF6B00] focus:outline-none"
+                    className="w-full rounded-xl border border-[#244263] bg-[#081827] px-3.5 py-2.5 text-sm text-white placeholder-[#506A85] focus:border-[#FF6B00] focus:outline-none focus:ring-1 focus:ring-[#FF6B00]"
                   />
                 </div>
 
@@ -1488,7 +1696,7 @@ export default function HomeownerPortalPage() {
                     value={refPhone}
                     onChange={(e) => setRefPhone(e.target.value)}
                     placeholder="e.g. 510-555-0199"
-                    className="w-full rounded-xl border border-[#244263] bg-[#081827] px-3.5 py-2.5 text-sm text-white placeholder-[#506A85] focus:border-[#FF6B00] focus:outline-none"
+                    className="w-full rounded-xl border border-[#244263] bg-[#081827] px-3.5 py-2.5 text-sm text-white placeholder-[#506A85] focus:border-[#FF6B00] focus:outline-none focus:ring-1 focus:ring-[#FF6B00]"
                   />
                 </div>
 
@@ -1502,7 +1710,7 @@ export default function HomeownerPortalPage() {
                     value={refEmail}
                     onChange={(e) => setRefEmail(e.target.value)}
                     placeholder="neighbor@example.com"
-                    className="w-full rounded-xl border border-[#244263] bg-[#081827] px-3.5 py-2.5 text-sm text-white placeholder-[#506A85] focus:border-[#FF6B00] focus:outline-none"
+                    className="w-full rounded-xl border border-[#244263] bg-[#081827] px-3.5 py-2.5 text-sm text-white placeholder-[#506A85] focus:border-[#FF6B00] focus:outline-none focus:ring-1 focus:ring-[#FF6B00]"
                   />
                 </div>
 
@@ -1516,7 +1724,7 @@ export default function HomeownerPortalPage() {
                     value={refAddress}
                     onChange={(e) => setRefAddress(e.target.value)}
                     placeholder="e.g. 1420 Skyline Blvd, Oakland"
-                    className="w-full rounded-xl border border-[#244263] bg-[#081827] px-3.5 py-2.5 text-sm text-white placeholder-[#506A85] focus:border-[#FF6B00] focus:outline-none"
+                    className="w-full rounded-xl border border-[#244263] bg-[#081827] px-3.5 py-2.5 text-sm text-white placeholder-[#506A85] focus:border-[#FF6B00] focus:outline-none focus:ring-1 focus:ring-[#FF6B00]"
                   />
                 </div>
 
@@ -1528,7 +1736,7 @@ export default function HomeownerPortalPage() {
                     id="refNeighborUtility"
                     value={refUtility}
                     onChange={(e) => setRefUtility(e.target.value)}
-                    className="w-full rounded-xl border border-[#244263] bg-[#081827] px-3.5 py-2.5 text-sm text-white focus:border-[#FF6B00] focus:outline-none"
+                    className="w-full rounded-xl border border-[#244263] bg-[#081827] px-3.5 py-2.5 text-sm text-white focus:border-[#FF6B00] focus:outline-none focus:ring-1 focus:ring-[#FF6B00]"
                   >
                     <option value="PG&E">PG&E (California)</option>
                     <option value="Entergy Texas">Entergy Texas</option>
@@ -1546,7 +1754,7 @@ export default function HomeownerPortalPage() {
                     id="refNeighborBill"
                     value={refBill}
                     onChange={(e) => setRefBill(e.target.value)}
-                    className="w-full rounded-xl border border-[#244263] bg-[#081827] px-3.5 py-2.5 text-sm text-white focus:border-[#FF6B00] focus:outline-none"
+                    className="w-full rounded-xl border border-[#244263] bg-[#081827] px-3.5 py-2.5 text-sm text-white focus:border-[#FF6B00] focus:outline-none focus:ring-1 focus:ring-[#FF6B00]"
                   >
                     <option value="$150 - $250">$150 - $250 / month</option>
                     <option value="$250 - $350">$250 - $350 / month</option>
@@ -1565,7 +1773,7 @@ export default function HomeownerPortalPage() {
                     value={refNotes}
                     onChange={(e) => setRefNotes(e.target.value)}
                     placeholder="e.g. Complained about high summer A/C bills and frequent winter storm outages..."
-                    className="w-full rounded-xl border border-[#244263] bg-[#081827] px-3.5 py-2 text-sm text-white placeholder-[#506A85] focus:border-[#FF6B00] focus:outline-none"
+                    className="w-full rounded-xl border border-[#244263] bg-[#081827] px-3.5 py-2 text-sm text-white placeholder-[#506A85] focus:border-[#FF6B00] focus:outline-none focus:ring-1 focus:ring-[#FF6B00]"
                   />
                 </div>
 
@@ -1576,7 +1784,7 @@ export default function HomeownerPortalPage() {
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="w-full sm:w-auto rounded-xl bg-gradient-to-r from-[#FF6B00] to-[#E65100] px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-[#FF6B00]/30 hover:brightness-110 transition cursor-pointer disabled:opacity-50"
+                    className="w-full sm:w-auto rounded-xl bg-gradient-to-r from-[#FF6B00] to-[#E65100] px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-[#FF6B00]/30 hover:brightness-110 transition cursor-pointer disabled:opacity-50 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00]"
                   >
                     {isSubmitting ? 'Submitting to Horace...' : 'Submit Referral & Lock In Cash'}
                   </button>
@@ -1638,7 +1846,7 @@ export default function HomeownerPortalPage() {
         {/* TAB 4: SAVINGS & 25-YEAR PERFORMANCE */}
         {/* ========================================================================= */}
         {activeTab === 'savings' && (
-          <div className="space-y-6">
+          <div className="space-y-6 animate-fade-in">
             <div className="grid gap-6 md:grid-cols-3">
               <div className="rounded-2xl border border-[#1B324B] bg-[#0C1E32] p-5 shadow-xl">
                 <span className="text-xs uppercase font-bold text-[#7E98B0] tracking-wider">Estimated Monthly Savings</span>
@@ -1747,7 +1955,7 @@ export default function HomeownerPortalPage() {
         {/* TAB 5: SUNRUN ADVISOR & WARRANTY */}
         {/* ========================================================================= */}
         {activeTab === 'concierge' && (
-          <div className="space-y-6">
+          <div className="space-y-6 animate-fade-in">
             <div className="rounded-2xl border border-[#1B324B] bg-gradient-to-br from-[#0C1E32] via-[#091D30] to-[#081726] p-6 sm:p-8 shadow-xl">
               <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
                 <div>
@@ -1758,10 +1966,10 @@ export default function HomeownerPortalPage() {
                   <p className="m-0 mt-0.5 text-sm text-[#8BA4BD]">The Block Sales Expert Team Lead · Sunrun Solar Advisor</p>
 
                   <div className="mt-4 flex flex-wrap gap-4 text-sm">
-                    <a href="tel:+15102417007" className="inline-flex items-center gap-2 text-white font-semibold hover:underline">
+                    <a href="tel:+15102417007" className="inline-flex items-center gap-2 text-white font-semibold hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00] rounded">
                       <Phone className="h-4 w-4 text-[#FF6B00]" /> 510-241-7007
                     </a>
-                    <a href="mailto:horace.lawrence@sunrun.com" className="inline-flex items-center gap-2 text-white font-semibold hover:underline">
+                    <a href="mailto:horace.lawrence@sunrun.com" className="inline-flex items-center gap-2 text-white font-semibold hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00] rounded">
                       <Mail className="h-4 w-4 text-[#FF6B00]" /> horace.lawrence@sunrun.com
                     </a>
                   </div>
@@ -1770,13 +1978,13 @@ export default function HomeownerPortalPage() {
                 <div className="flex flex-col gap-2.5 w-full md:w-auto">
                   <a
                     href="/book"
-                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#FF6B00] to-[#E65100] px-5 py-3 text-sm font-bold text-white hover:brightness-110 transition no-underline shadow-lg shadow-[#FF6B00]/25"
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#FF6B00] to-[#E65100] px-5 py-3 text-sm font-bold text-white hover:brightness-110 transition no-underline shadow-lg shadow-[#FF6B00]/25 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00]"
                   >
                     <Calendar className="h-4 w-4" /> Book Time With Horace
                   </a>
                   <a
                     href="tel:+15102417007"
-                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#264A6E] bg-[#0E2841] px-5 py-2.5 text-xs font-semibold text-[#A9C8E8] hover:bg-[#153859] transition no-underline"
+                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#264A6E] bg-[#0E2841] px-5 py-2.5 text-xs font-semibold text-[#A9C8E8] hover:bg-[#153859] transition no-underline active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2196F3]"
                   >
                     Direct Call: 510-241-7007
                   </a>
@@ -1845,8 +2053,9 @@ export default function HomeownerPortalPage() {
                 </div>
               </div>
               <button
+                type="button"
                 onClick={() => setSelectedMilestoneDoc(null)}
-                className="rounded-lg p-1.5 text-[#8FAEC7] hover:bg-white/10 hover:text-white transition cursor-pointer"
+                className="rounded-lg p-1.5 text-[#8FAEC7] hover:bg-white/10 hover:text-white transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
               >
                 ✕
               </button>
@@ -1875,8 +2084,9 @@ export default function HomeownerPortalPage() {
 
             <div className="flex gap-2.5 pt-2">
               <button
+                type="button"
                 onClick={() => setSelectedMilestoneDoc(null)}
-                className="w-full rounded-xl bg-[#1C3A5A] py-2.5 text-xs font-bold text-white hover:bg-[#28507B] transition cursor-pointer"
+                className="w-full rounded-xl bg-[#1C3A5A] py-2.5 text-xs font-bold text-white hover:bg-[#28507B] transition cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2196F3]"
               >
                 Close Certificate
               </button>
@@ -1905,8 +2115,9 @@ export default function HomeownerPortalPage() {
             <p className="m-0 font-mono text-xs text-[#64B5F6]">{referralCode}</p>
 
             <button
+              type="button"
               onClick={() => setShowQrModal(false)}
-              className="mt-5 w-full rounded-xl bg-[#1C3A5A] py-2.5 text-xs font-bold text-white hover:bg-[#28507B] transition cursor-pointer"
+              className="mt-5 w-full rounded-xl bg-[#1C3A5A] py-2.5 text-xs font-bold text-white hover:bg-[#28507B] transition cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
             >
               Close
             </button>
