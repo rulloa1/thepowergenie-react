@@ -212,6 +212,7 @@ button {
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-shrink: 0;
 }
 
 .brand-logo {
@@ -220,9 +221,11 @@ button {
   gap: 10px;
   font-family: var(--font-display);
   font-weight: 800;
-  font-size: 1.35rem;
+  font-size: 1.25rem;
   letter-spacing: -0.02em;
   color: #ffffff;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .brand-icon {
