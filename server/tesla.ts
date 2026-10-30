@@ -1,9 +1,8 @@
 /**
-/**
  * Tesla Gateway & Telemetry API Handler
  * Reconstructs the Tesla Energy Gateway (TEG) / Powerwall API specifications:
  * - /api/tesla/live (Real-time energy flow, battery state of charge, operating mode)
- * - /api/tesla/meters (Aggregated instant power meters for solar, battery, load, and grid)
+ * - /api/tesla/history (24-hour historical generation, consumption, battery charge/discharge, and grid import/export)
  */
 
 import { json } from './http.js'
@@ -33,6 +32,27 @@ export interface TeslaLiveStatus {
     continuous_power_kw: number
     peak_surge_kw: number
   }
+}
+
+export interface HourlyEnergyPoint {
+  hour: string
+  solarKwh: number
+  homeKwh: number
+  batteryChargeKwh: number
+  batteryDischargeKwh: number
+  gridImportKwh: number
+  gridExportKwh: number
+  soePercent: number
+}
+
+export interface TeslaEnergyHistory {
+  period: 'day' | 'week' | 'month'
+  total_solar_kwh: number
+  total_home_kwh: number
+  total_grid_import_kwh: number
+  total_grid_export_kwh: number
+  self_powered_percent: number
+  points: HourlyEnergyPoint[]
 }
 
 export function computeTeslaTelemetry(params: {
@@ -122,6 +142,102 @@ export function computeTeslaTelemetry(params: {
   }
 }
 
+/**
+ * Reconstructs 24-hour diurnally realistic hourly power flow curve:
+ * - Solar curve: Bell curve starting ~6 AM, peaking ~1 PM (8-9 kW), ending ~7 PM.
+ * - Home consumption: Morning baseline, afternoon lull, evening surge (dinner, HVAC, EV charging).
+ * - Powerwall: Charges during solar peak; discharges during evening peak utility rates (4 PM - 9 PM).
+ * - Grid: Minimal import; exports excess midday solar.
+ */
+export function generate24HourHistory(): TeslaEnergyHistory {
+  const points: HourlyEnergyPoint[] = []
+  let totalSolar = 0
+  let totalHome = 0
+  let totalGridImport = 0
+  let totalGridExport = 0
+  let batteryKwh = 18.0 // starting charge ~67%
+
+  for (let h = 0; h < 24; h++) {
+    const hourLabel = h === 0 ? '12 AM' : h < 12 ? `${h} AM` : h === 12 ? '12 PM' : `${h - 12} PM`
+
+    // Solar generation bell curve (sun rises at 6 AM, peaks at 13:00, sets at 19:00)
+    let solar = 0
+    if (h >= 6 && h <= 18) {
+      const x = (h - 6) / 12 // 0 to 1
+      solar = Math.sin(x * Math.PI) * 9.2 // peak 9.2 kWh
+      solar = Math.max(0, Number(solar.toFixed(2)))
+    }
+
+    // Home consumption: morning spike (7-9 AM), evening peak (17-22 PM), night baseline (0.8-1.2)
+    let home = 1.1
+    if (h >= 7 && h <= 9) home = 2.4
+    else if (h >= 17 && h <= 21) home = 3.8
+    else if (h >= 10 && h <= 16) home = 1.8
+    home = Number(home.toFixed(2))
+
+    let batteryCharge = 0
+    let batteryDischarge = 0
+    let gridImport = 0
+    let gridExport = 0
+
+    // Solar powers home first
+    const solarToHome = Math.min(solar, home)
+    const excessSolar = solar - solarToHome
+    const homeDeficit = home - solarToHome
+
+    if (excessSolar > 0) {
+      // Charge battery up to 27 kWh max at up to 5 kW rate
+      const chargeCap = Math.min(excessSolar, 5.0, 27.0 - batteryKwh)
+      if (chargeCap > 0) {
+        batteryCharge = Number(chargeCap.toFixed(2))
+        batteryKwh += batteryCharge
+      }
+      gridExport = Number(Math.max(0, excessSolar - batteryCharge).toFixed(2))
+    } else if (homeDeficit > 0) {
+      // Discharge battery if above reserve (20% = 5.4 kWh)
+      const reserveKwh = 5.4
+      const availableDischarge = Math.max(0, batteryKwh - reserveKwh)
+      const discharge = Math.min(homeDeficit, availableDischarge, 5.0)
+      if (discharge > 0) {
+        batteryDischarge = Number(discharge.toFixed(2))
+        batteryKwh -= batteryDischarge
+      }
+      gridImport = Number(Math.max(0, homeDeficit - batteryDischarge).toFixed(2))
+    }
+
+    const soePct = Math.round((batteryKwh / 27.0) * 100)
+
+    totalSolar += solar
+    totalHome += home
+    totalGridImport += gridImport
+    totalGridExport += gridExport
+
+    points.push({
+      hour: hourLabel,
+      solarKwh: solar,
+      homeKwh: home,
+      batteryChargeKwh: batteryCharge,
+      batteryDischargeKwh: batteryDischarge,
+      gridImportKwh: gridImport,
+      gridExportKwh: gridExport,
+      soePercent: soePct,
+    })
+  }
+
+  const selfPoweredKwh = totalHome - totalGridImport
+  const selfPoweredPercent = Math.min(100, Math.round((selfPoweredKwh / totalHome) * 100))
+
+  return {
+    period: 'day',
+    total_solar_kwh: Number(totalSolar.toFixed(1)),
+    total_home_kwh: Number(totalHome.toFixed(1)),
+    total_grid_import_kwh: Number(totalGridImport.toFixed(1)),
+    total_grid_export_kwh: Number(totalGridExport.toFixed(1)),
+    self_powered_percent: selfPoweredPercent,
+    points,
+  }
+}
+
 export function handleTeslaLive(request: Request): Response {
   const url = new URL(request.url)
   const outage = url.searchParams.get('outage') === 'true'
@@ -135,3 +251,7 @@ export function handleTeslaLive(request: Request): Response {
   return json(data)
 }
 
+export function handleTeslaHistory(): Response {
+  const history = generate24HourHistory()
+  return json(history)
+}

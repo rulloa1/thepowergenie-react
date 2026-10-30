@@ -16,7 +16,7 @@ import { requireHubMember } from './hub-member.js'
 import { notifyPageVisit } from './notify.js'
 import { inviteDashboardMember } from './admin-invite.js'
 import { handleProposalPage, handleWorkflow } from './workflow/routes.js'
-import { handleTeslaLive } from './tesla.js'
+import { handleTeslaLive, handleTeslaHistory } from './tesla.js'
 import { handleSequenceStatus, handleSequenceStart, handleSequencePause, handleSequenceResume, handleUnsubscribe } from './sequence.js'
 
 const TEN_MINUTES = 10 * 60 * 1000
@@ -258,6 +258,7 @@ export async function handleApi(request: Request): Promise<Response> {
     if (pathname === '/api/workflow') return await handleWorkflow(request, url)
     if (pathname === '/api/proposal' && (request.method === 'GET' || request.method === 'POST')) return await handleProposalPage(request, url)
     if (pathname === '/api/tesla/live' && request.method === 'GET') return handleTeslaLive(request)
+    if (pathname === '/api/tesla/history' && request.method === 'GET') return handleTeslaHistory()
     // Sequence management routes
     if (pathname === '/api/sequence' && request.method === 'GET') return await handleSequenceStatus(request)
     if (pathname === '/api/sequence/start' && request.method === 'POST') return await handleSequenceStart(request)

@@ -20,6 +20,9 @@ import {
   Sun,
   Home as HomeIcon,
   Activity,
+  BarChart3,
+  LineChart,
+  TrendingDown,
   ArrowRight,
   CheckCircle2,
   Sparkles,
@@ -296,6 +299,20 @@ export default function HomeownerPortalPage() {
   const [operationMode, setOperationMode] = useState<'self_consumption' | 'autonomous' | 'backup'>('self_consumption');
   const [isStormWatchActive, setIsStormWatchActive] = useState<boolean>(false);
   const [isOutageSimulated, setIsOutageSimulated] = useState<boolean>(false);
+  const [historyData, setHistoryData] = useState<any>(null);
+  const [selectedHistoryHour, setSelectedHistoryHour] = useState<number | null>(null);
+
+  useEffect(() => {
+    fetch('/api/tesla/history')
+      .then(res => res.json())
+      .then(data => {
+        setHistoryData(data);
+        if (data && data.points && data.points.length > 13) {
+          setSelectedHistoryHour(13);
+        }
+      })
+      .catch(() => {});
+  }, []);
   const [backupReserve, setBackupReserve] = useState<number>(25);
   const [batteryPct, setBatteryPct] = useState<number>(88);
   const batteryCapacity = 27.0; // Dual Powerwall 3 (13.5 kWh * 2)
@@ -1419,6 +1436,213 @@ export default function HomeownerPortalPage() {
                 })}
               </div>
             </div>
+
+            {/* Historical 24-Hour Tesla Energy Flow Interactive Chart */}
+            <div className="rounded-2xl border border-[#1F3752] bg-[#0C1E32] p-5 sm:p-6 shadow-xl">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-white/10 pb-4 mb-5">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#FFB300]/15 text-[#FFB300]">
+                      <BarChart3 className="h-4 w-4" />
+                    </span>
+                    <h3 className="m-0 text-base sm:text-lg font-bold text-white">
+                      Tesla Energy 24-Hour Diurnal Flow History
+                    </h3>
+                  </div>
+                  <p className="m-0 text-xs text-[#8EAEC7] mt-1">
+                    Granular hourly breakdown of rooftop solar generation, home load, Powerwall charge/discharge, and grid exchange.
+                  </p>
+                </div>
+
+                {historyData && (
+                  <div className="flex items-center gap-3 bg-[#081827] border border-[#234567] rounded-xl px-4 py-2">
+                    <div className="text-right">
+                      <span className="text-[10px] uppercase font-bold text-[#8EAEC7] tracking-wider block">Self-Powered Score</span>
+                      <strong className="text-base sm:text-lg font-mono font-black text-[#10B981]">
+                        {historyData.self_powered_percent}% Off-Grid
+                      </strong>
+                    </div>
+                    <div className="h-8 w-8 rounded-full border-2 border-[#10B981] flex items-center justify-center bg-[#10B981]/15 text-[#10B981] text-xs font-bold font-mono">
+                      ✓
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {historyData && (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+                  <div className="rounded-xl bg-[#081827] p-3 border border-[#234567]">
+                    <span className="text-[10px] uppercase font-bold text-[#FFB300] tracking-wider block">Solar Generated</span>
+                    <p className="m-0 text-lg font-bold text-white font-mono">{historyData.total_solar_kwh} kWh</p>
+                    <span className="text-[10px] text-[#81C784]">100% Clean DC</span>
+                  </div>
+                  <div className="rounded-xl bg-[#081827] p-3 border border-[#234567]">
+                    <span className="text-[10px] uppercase font-bold text-[#64B5F6] tracking-wider block">Home Consumed</span>
+                    <p className="m-0 text-lg font-bold text-white font-mono">{historyData.total_home_kwh} kWh</p>
+                    <span className="text-[10px] text-[#8EAEC7]">HVAC & Lifestyle</span>
+                  </div>
+                  <div className="rounded-xl bg-[#081827] p-3 border border-[#234567]">
+                    <span className="text-[10px] uppercase font-bold text-[#10B981] tracking-wider block">NEM Grid Export</span>
+                    <p className="m-0 text-lg font-bold text-[#10B981] font-mono">+{historyData.total_grid_export_kwh} kWh</p>
+                    <span className="text-[10px] text-[#81C784]">Utility NEM Credit</span>
+                  </div>
+                  <div className="rounded-xl bg-[#081827] p-3 border border-[#234567]">
+                    <span className="text-[10px] uppercase font-bold text-[#38BDF8] tracking-wider block">Grid Imported</span>
+                    <p className="m-0 text-lg font-bold text-white font-mono">{historyData.total_grid_import_kwh} kWh</p>
+                    <span className="text-[10px] text-[#81C784]">Near Zero Cost</span>
+                  </div>
+                </div>
+              )}
+
+              {historyData && (
+                <div className="space-y-4">
+                  <div className="relative bg-[#07131F] rounded-xl p-4 border border-[#162B42] overflow-x-auto">
+                    <svg viewBox="0 0 720 180" className="w-full min-w-[620px] h-48">
+                      <line x1="40" y1="30" x2="700" y2="30" stroke="#162B42" strokeWidth="1" strokeDasharray="2 4" />
+                      <line x1="40" y1="80" x2="700" y2="80" stroke="#162B42" strokeWidth="1" strokeDasharray="2 4" />
+                      <line x1="40" y1="130" x2="700" y2="130" stroke="#243C56" strokeWidth="1" />
+
+                      <text x="32" y="34" fill="#6A87A2" fontSize="9" textAnchor="end" fontFamily="monospace">8kW</text>
+                      <text x="32" y="84" fill="#6A87A2" fontSize="9" textAnchor="end" fontFamily="monospace">4kW</text>
+                      <text x="32" y="134" fill="#6A87A2" fontSize="9" textAnchor="end" fontFamily="monospace">0</text>
+
+                      {(() => {
+                        const pointsStr = historyData.points.map((p: any, idx: number) => {
+                          const x = 50 + idx * 27;
+                          const y = 130 - (p.soePercent / 100) * 100;
+                          return `${x},${y}`;
+                        }).join(' ');
+                        return (
+                          <polyline
+                            fill="none"
+                            stroke="#10B981"
+                            strokeWidth="2"
+                            strokeDasharray="4 2"
+                            opacity="0.8"
+                            points={pointsStr}
+                          />
+                        );
+                      })()}
+
+                      {historyData.points.map((p: any, idx: number) => {
+                        const x = 45 + idx * 27;
+                        const solarHeight = Math.min(100, (p.solarKwh / 9.2) * 100);
+                        const homeHeight = Math.min(100, (p.homeKwh / 9.2) * 100);
+                        const isSelected = selectedHistoryHour === idx;
+
+                        return (
+                          <g
+                            key={p.hour}
+                            className="cursor-pointer transition-opacity"
+                            onClick={() => setSelectedHistoryHour(idx)}
+                          >
+                            {isSelected && (
+                              <rect
+                                x={x - 2}
+                                y="10"
+                                width="20"
+                                height="135"
+                                rx="4"
+                                fill="#2A4A6D"
+                                opacity="0.45"
+                              />
+                            )}
+
+                            <rect
+                              x={x}
+                              y={130 - solarHeight}
+                              width="7"
+                              height={solarHeight}
+                              rx="2"
+                              fill="#FFB300"
+                              opacity={isSelected ? 1 : 0.85}
+                            />
+
+                            <rect
+                              x={x + 8}
+                              y={130 - homeHeight}
+                              width="7"
+                              height={homeHeight}
+                              rx="2"
+                              fill="#38BDF8"
+                              opacity={isSelected ? 1 : 0.75}
+                            />
+
+                            {idx % 3 === 0 && (
+                              <text
+                                x={x + 7}
+                                y="152"
+                                fill={isSelected ? '#FFFFFF' : '#8EAEC7'}
+                                fontSize="9"
+                                textAnchor="middle"
+                                fontFamily="monospace"
+                                fontWeight={isSelected ? 'bold' : 'normal'}
+                              >
+                                {p.hour}
+                              </text>
+                            )}
+                          </g>
+                        );
+                      })}
+                    </svg>
+
+                    <div className="flex flex-wrap items-center justify-between gap-3 text-xs pt-2 border-t border-[#162B42]">
+                      <div className="flex items-center gap-4">
+                        <span className="flex items-center gap-1.5 text-white font-medium">
+                          <span className="h-3 w-3 rounded-sm bg-[#FFB300]" /> Solar (kW)
+                        </span>
+                        <span className="flex items-center gap-1.5 text-white font-medium">
+                          <span className="h-3 w-3 rounded-sm bg-[#38BDF8]" /> Home Load (kW)
+                        </span>
+                        <span className="flex items-center gap-1.5 text-[#10B981] font-medium">
+                          <span className="h-0.5 w-4 bg-[#10B981] inline-block border-t border-dashed" /> Powerwall SOE (%)
+                        </span>
+                      </div>
+                      <span className="text-[11px] text-[#6A87A2]">Click any hour to inspect exact energy exchange</span>
+                    </div>
+                  </div>
+
+                  {selectedHistoryHour !== null && historyData.points[selectedHistoryHour] && (
+                    <div className="rounded-xl bg-[#091D2F] p-4 border border-[#254A70] flex flex-wrap items-center justify-between gap-4 animate-fade-in">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="rounded-full bg-[#FF6B00]/20 px-2.5 py-0.5 text-xs font-bold text-[#FF8A2B]">
+                            {historyData.points[selectedHistoryHour].hour}
+                          </span>
+                          <strong className="text-white text-sm">Telemetry Snapshot</strong>
+                        </div>
+                        <span className="text-xs text-[#8EAEC7] mt-0.5 block">
+                          Battery State of Energy: <strong className="text-[#10B981] font-mono">{historyData.points[selectedHistoryHour].soePercent}%</strong>
+                        </span>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-4 text-xs font-mono">
+                        <div className="bg-[#061421] px-3 py-1.5 rounded-lg border border-[#162D44]">
+                          <span className="text-[#8EAEC7] text-[10px] block">SOLAR</span>
+                          <strong className="text-[#FFB300]">{historyData.points[selectedHistoryHour].solarKwh.toFixed(2)} kWh</strong>
+                        </div>
+                        <div className="bg-[#061421] px-3 py-1.5 rounded-lg border border-[#162D44]">
+                          <span className="text-[#8EAEC7] text-[10px] block">HOME LOAD</span>
+                          <strong className="text-[#38BDF8]">{historyData.points[selectedHistoryHour].homeKwh.toFixed(2)} kWh</strong>
+                        </div>
+                        <div className="bg-[#061421] px-3 py-1.5 rounded-lg border border-[#162D44]">
+                          <span className="text-[#8EAEC7] text-[10px] block">BATTERY CHARGE</span>
+                          <strong className="text-[#10B981]">+{historyData.points[selectedHistoryHour].batteryChargeKwh.toFixed(2)} kWh</strong>
+                        </div>
+                        <div className="bg-[#061421] px-3 py-1.5 rounded-lg border border-[#162D44]">
+                          <span className="text-[#8EAEC7] text-[10px] block">BATTERY DISCHARGE</span>
+                          <strong className="text-[#FF8A2B]">-{historyData.points[selectedHistoryHour].batteryDischargeKwh.toFixed(2)} kWh</strong>
+                        </div>
+                        <div className="bg-[#061421] px-3 py-1.5 rounded-lg border border-[#162D44]">
+                          <span className="text-[#8EAEC7] text-[10px] block">GRID EXPORT</span>
+                          <strong className="text-[#10B981]">+{historyData.points[selectedHistoryHour].gridExportKwh.toFixed(2)} kWh</strong>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -1839,6 +2063,213 @@ export default function HomeownerPortalPage() {
                 </table>
               </div>
             </div>
+
+            {/* Historical 24-Hour Tesla Energy Flow Interactive Chart */}
+            <div className="rounded-2xl border border-[#1F3752] bg-[#0C1E32] p-5 sm:p-6 shadow-xl">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-white/10 pb-4 mb-5">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#FFB300]/15 text-[#FFB300]">
+                      <BarChart3 className="h-4 w-4" />
+                    </span>
+                    <h3 className="m-0 text-base sm:text-lg font-bold text-white">
+                      Tesla Energy 24-Hour Diurnal Flow History
+                    </h3>
+                  </div>
+                  <p className="m-0 text-xs text-[#8EAEC7] mt-1">
+                    Granular hourly breakdown of rooftop solar generation, home load, Powerwall charge/discharge, and grid exchange.
+                  </p>
+                </div>
+
+                {historyData && (
+                  <div className="flex items-center gap-3 bg-[#081827] border border-[#234567] rounded-xl px-4 py-2">
+                    <div className="text-right">
+                      <span className="text-[10px] uppercase font-bold text-[#8EAEC7] tracking-wider block">Self-Powered Score</span>
+                      <strong className="text-base sm:text-lg font-mono font-black text-[#10B981]">
+                        {historyData.self_powered_percent}% Off-Grid
+                      </strong>
+                    </div>
+                    <div className="h-8 w-8 rounded-full border-2 border-[#10B981] flex items-center justify-center bg-[#10B981]/15 text-[#10B981] text-xs font-bold font-mono">
+                      ✓
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {historyData && (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+                  <div className="rounded-xl bg-[#081827] p-3 border border-[#234567]">
+                    <span className="text-[10px] uppercase font-bold text-[#FFB300] tracking-wider block">Solar Generated</span>
+                    <p className="m-0 text-lg font-bold text-white font-mono">{historyData.total_solar_kwh} kWh</p>
+                    <span className="text-[10px] text-[#81C784]">100% Clean DC</span>
+                  </div>
+                  <div className="rounded-xl bg-[#081827] p-3 border border-[#234567]">
+                    <span className="text-[10px] uppercase font-bold text-[#64B5F6] tracking-wider block">Home Consumed</span>
+                    <p className="m-0 text-lg font-bold text-white font-mono">{historyData.total_home_kwh} kWh</p>
+                    <span className="text-[10px] text-[#8EAEC7]">HVAC & Lifestyle</span>
+                  </div>
+                  <div className="rounded-xl bg-[#081827] p-3 border border-[#234567]">
+                    <span className="text-[10px] uppercase font-bold text-[#10B981] tracking-wider block">NEM Grid Export</span>
+                    <p className="m-0 text-lg font-bold text-[#10B981] font-mono">+{historyData.total_grid_export_kwh} kWh</p>
+                    <span className="text-[10px] text-[#81C784]">Utility NEM Credit</span>
+                  </div>
+                  <div className="rounded-xl bg-[#081827] p-3 border border-[#234567]">
+                    <span className="text-[10px] uppercase font-bold text-[#38BDF8] tracking-wider block">Grid Imported</span>
+                    <p className="m-0 text-lg font-bold text-white font-mono">{historyData.total_grid_import_kwh} kWh</p>
+                    <span className="text-[10px] text-[#81C784]">Near Zero Cost</span>
+                  </div>
+                </div>
+              )}
+
+              {historyData && (
+                <div className="space-y-4">
+                  <div className="relative bg-[#07131F] rounded-xl p-4 border border-[#162B42] overflow-x-auto">
+                    <svg viewBox="0 0 720 180" className="w-full min-w-[620px] h-48">
+                      <line x1="40" y1="30" x2="700" y2="30" stroke="#162B42" strokeWidth="1" strokeDasharray="2 4" />
+                      <line x1="40" y1="80" x2="700" y2="80" stroke="#162B42" strokeWidth="1" strokeDasharray="2 4" />
+                      <line x1="40" y1="130" x2="700" y2="130" stroke="#243C56" strokeWidth="1" />
+
+                      <text x="32" y="34" fill="#6A87A2" fontSize="9" textAnchor="end" fontFamily="monospace">8kW</text>
+                      <text x="32" y="84" fill="#6A87A2" fontSize="9" textAnchor="end" fontFamily="monospace">4kW</text>
+                      <text x="32" y="134" fill="#6A87A2" fontSize="9" textAnchor="end" fontFamily="monospace">0</text>
+
+                      {(() => {
+                        const pointsStr = historyData.points.map((p: any, idx: number) => {
+                          const x = 50 + idx * 27;
+                          const y = 130 - (p.soePercent / 100) * 100;
+                          return `${x},${y}`;
+                        }).join(' ');
+                        return (
+                          <polyline
+                            fill="none"
+                            stroke="#10B981"
+                            strokeWidth="2"
+                            strokeDasharray="4 2"
+                            opacity="0.8"
+                            points={pointsStr}
+                          />
+                        );
+                      })()}
+
+                      {historyData.points.map((p: any, idx: number) => {
+                        const x = 45 + idx * 27;
+                        const solarHeight = Math.min(100, (p.solarKwh / 9.2) * 100);
+                        const homeHeight = Math.min(100, (p.homeKwh / 9.2) * 100);
+                        const isSelected = selectedHistoryHour === idx;
+
+                        return (
+                          <g
+                            key={p.hour}
+                            className="cursor-pointer transition-opacity"
+                            onClick={() => setSelectedHistoryHour(idx)}
+                          >
+                            {isSelected && (
+                              <rect
+                                x={x - 2}
+                                y="10"
+                                width="20"
+                                height="135"
+                                rx="4"
+                                fill="#2A4A6D"
+                                opacity="0.45"
+                              />
+                            )}
+
+                            <rect
+                              x={x}
+                              y={130 - solarHeight}
+                              width="7"
+                              height={solarHeight}
+                              rx="2"
+                              fill="#FFB300"
+                              opacity={isSelected ? 1 : 0.85}
+                            />
+
+                            <rect
+                              x={x + 8}
+                              y={130 - homeHeight}
+                              width="7"
+                              height={homeHeight}
+                              rx="2"
+                              fill="#38BDF8"
+                              opacity={isSelected ? 1 : 0.75}
+                            />
+
+                            {idx % 3 === 0 && (
+                              <text
+                                x={x + 7}
+                                y="152"
+                                fill={isSelected ? '#FFFFFF' : '#8EAEC7'}
+                                fontSize="9"
+                                textAnchor="middle"
+                                fontFamily="monospace"
+                                fontWeight={isSelected ? 'bold' : 'normal'}
+                              >
+                                {p.hour}
+                              </text>
+                            )}
+                          </g>
+                        );
+                      })}
+                    </svg>
+
+                    <div className="flex flex-wrap items-center justify-between gap-3 text-xs pt-2 border-t border-[#162B42]">
+                      <div className="flex items-center gap-4">
+                        <span className="flex items-center gap-1.5 text-white font-medium">
+                          <span className="h-3 w-3 rounded-sm bg-[#FFB300]" /> Solar (kW)
+                        </span>
+                        <span className="flex items-center gap-1.5 text-white font-medium">
+                          <span className="h-3 w-3 rounded-sm bg-[#38BDF8]" /> Home Load (kW)
+                        </span>
+                        <span className="flex items-center gap-1.5 text-[#10B981] font-medium">
+                          <span className="h-0.5 w-4 bg-[#10B981] inline-block border-t border-dashed" /> Powerwall SOE (%)
+                        </span>
+                      </div>
+                      <span className="text-[11px] text-[#6A87A2]">Click any hour to inspect exact energy exchange</span>
+                    </div>
+                  </div>
+
+                  {selectedHistoryHour !== null && historyData.points[selectedHistoryHour] && (
+                    <div className="rounded-xl bg-[#091D2F] p-4 border border-[#254A70] flex flex-wrap items-center justify-between gap-4 animate-fade-in">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="rounded-full bg-[#FF6B00]/20 px-2.5 py-0.5 text-xs font-bold text-[#FF8A2B]">
+                            {historyData.points[selectedHistoryHour].hour}
+                          </span>
+                          <strong className="text-white text-sm">Telemetry Snapshot</strong>
+                        </div>
+                        <span className="text-xs text-[#8EAEC7] mt-0.5 block">
+                          Battery State of Energy: <strong className="text-[#10B981] font-mono">{historyData.points[selectedHistoryHour].soePercent}%</strong>
+                        </span>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-4 text-xs font-mono">
+                        <div className="bg-[#061421] px-3 py-1.5 rounded-lg border border-[#162D44]">
+                          <span className="text-[#8EAEC7] text-[10px] block">SOLAR</span>
+                          <strong className="text-[#FFB300]">{historyData.points[selectedHistoryHour].solarKwh.toFixed(2)} kWh</strong>
+                        </div>
+                        <div className="bg-[#061421] px-3 py-1.5 rounded-lg border border-[#162D44]">
+                          <span className="text-[#8EAEC7] text-[10px] block">HOME LOAD</span>
+                          <strong className="text-[#38BDF8]">{historyData.points[selectedHistoryHour].homeKwh.toFixed(2)} kWh</strong>
+                        </div>
+                        <div className="bg-[#061421] px-3 py-1.5 rounded-lg border border-[#162D44]">
+                          <span className="text-[#8EAEC7] text-[10px] block">BATTERY CHARGE</span>
+                          <strong className="text-[#10B981]">+{historyData.points[selectedHistoryHour].batteryChargeKwh.toFixed(2)} kWh</strong>
+                        </div>
+                        <div className="bg-[#061421] px-3 py-1.5 rounded-lg border border-[#162D44]">
+                          <span className="text-[#8EAEC7] text-[10px] block">BATTERY DISCHARGE</span>
+                          <strong className="text-[#FF8A2B]">-{historyData.points[selectedHistoryHour].batteryDischargeKwh.toFixed(2)} kWh</strong>
+                        </div>
+                        <div className="bg-[#061421] px-3 py-1.5 rounded-lg border border-[#162D44]">
+                          <span className="text-[#8EAEC7] text-[10px] block">GRID EXPORT</span>
+                          <strong className="text-[#10B981]">+{historyData.points[selectedHistoryHour].gridExportKwh.toFixed(2)} kWh</strong>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -1948,6 +2379,213 @@ export default function HomeownerPortalPage() {
                 </span>
               </div>
             </div>
+
+            {/* Historical 24-Hour Tesla Energy Flow Interactive Chart */}
+            <div className="rounded-2xl border border-[#1F3752] bg-[#0C1E32] p-5 sm:p-6 shadow-xl">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-white/10 pb-4 mb-5">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#FFB300]/15 text-[#FFB300]">
+                      <BarChart3 className="h-4 w-4" />
+                    </span>
+                    <h3 className="m-0 text-base sm:text-lg font-bold text-white">
+                      Tesla Energy 24-Hour Diurnal Flow History
+                    </h3>
+                  </div>
+                  <p className="m-0 text-xs text-[#8EAEC7] mt-1">
+                    Granular hourly breakdown of rooftop solar generation, home load, Powerwall charge/discharge, and grid exchange.
+                  </p>
+                </div>
+
+                {historyData && (
+                  <div className="flex items-center gap-3 bg-[#081827] border border-[#234567] rounded-xl px-4 py-2">
+                    <div className="text-right">
+                      <span className="text-[10px] uppercase font-bold text-[#8EAEC7] tracking-wider block">Self-Powered Score</span>
+                      <strong className="text-base sm:text-lg font-mono font-black text-[#10B981]">
+                        {historyData.self_powered_percent}% Off-Grid
+                      </strong>
+                    </div>
+                    <div className="h-8 w-8 rounded-full border-2 border-[#10B981] flex items-center justify-center bg-[#10B981]/15 text-[#10B981] text-xs font-bold font-mono">
+                      ✓
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {historyData && (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+                  <div className="rounded-xl bg-[#081827] p-3 border border-[#234567]">
+                    <span className="text-[10px] uppercase font-bold text-[#FFB300] tracking-wider block">Solar Generated</span>
+                    <p className="m-0 text-lg font-bold text-white font-mono">{historyData.total_solar_kwh} kWh</p>
+                    <span className="text-[10px] text-[#81C784]">100% Clean DC</span>
+                  </div>
+                  <div className="rounded-xl bg-[#081827] p-3 border border-[#234567]">
+                    <span className="text-[10px] uppercase font-bold text-[#64B5F6] tracking-wider block">Home Consumed</span>
+                    <p className="m-0 text-lg font-bold text-white font-mono">{historyData.total_home_kwh} kWh</p>
+                    <span className="text-[10px] text-[#8EAEC7]">HVAC & Lifestyle</span>
+                  </div>
+                  <div className="rounded-xl bg-[#081827] p-3 border border-[#234567]">
+                    <span className="text-[10px] uppercase font-bold text-[#10B981] tracking-wider block">NEM Grid Export</span>
+                    <p className="m-0 text-lg font-bold text-[#10B981] font-mono">+{historyData.total_grid_export_kwh} kWh</p>
+                    <span className="text-[10px] text-[#81C784]">Utility NEM Credit</span>
+                  </div>
+                  <div className="rounded-xl bg-[#081827] p-3 border border-[#234567]">
+                    <span className="text-[10px] uppercase font-bold text-[#38BDF8] tracking-wider block">Grid Imported</span>
+                    <p className="m-0 text-lg font-bold text-white font-mono">{historyData.total_grid_import_kwh} kWh</p>
+                    <span className="text-[10px] text-[#81C784]">Near Zero Cost</span>
+                  </div>
+                </div>
+              )}
+
+              {historyData && (
+                <div className="space-y-4">
+                  <div className="relative bg-[#07131F] rounded-xl p-4 border border-[#162B42] overflow-x-auto">
+                    <svg viewBox="0 0 720 180" className="w-full min-w-[620px] h-48">
+                      <line x1="40" y1="30" x2="700" y2="30" stroke="#162B42" strokeWidth="1" strokeDasharray="2 4" />
+                      <line x1="40" y1="80" x2="700" y2="80" stroke="#162B42" strokeWidth="1" strokeDasharray="2 4" />
+                      <line x1="40" y1="130" x2="700" y2="130" stroke="#243C56" strokeWidth="1" />
+
+                      <text x="32" y="34" fill="#6A87A2" fontSize="9" textAnchor="end" fontFamily="monospace">8kW</text>
+                      <text x="32" y="84" fill="#6A87A2" fontSize="9" textAnchor="end" fontFamily="monospace">4kW</text>
+                      <text x="32" y="134" fill="#6A87A2" fontSize="9" textAnchor="end" fontFamily="monospace">0</text>
+
+                      {(() => {
+                        const pointsStr = historyData.points.map((p: any, idx: number) => {
+                          const x = 50 + idx * 27;
+                          const y = 130 - (p.soePercent / 100) * 100;
+                          return `${x},${y}`;
+                        }).join(' ');
+                        return (
+                          <polyline
+                            fill="none"
+                            stroke="#10B981"
+                            strokeWidth="2"
+                            strokeDasharray="4 2"
+                            opacity="0.8"
+                            points={pointsStr}
+                          />
+                        );
+                      })()}
+
+                      {historyData.points.map((p: any, idx: number) => {
+                        const x = 45 + idx * 27;
+                        const solarHeight = Math.min(100, (p.solarKwh / 9.2) * 100);
+                        const homeHeight = Math.min(100, (p.homeKwh / 9.2) * 100);
+                        const isSelected = selectedHistoryHour === idx;
+
+                        return (
+                          <g
+                            key={p.hour}
+                            className="cursor-pointer transition-opacity"
+                            onClick={() => setSelectedHistoryHour(idx)}
+                          >
+                            {isSelected && (
+                              <rect
+                                x={x - 2}
+                                y="10"
+                                width="20"
+                                height="135"
+                                rx="4"
+                                fill="#2A4A6D"
+                                opacity="0.45"
+                              />
+                            )}
+
+                            <rect
+                              x={x}
+                              y={130 - solarHeight}
+                              width="7"
+                              height={solarHeight}
+                              rx="2"
+                              fill="#FFB300"
+                              opacity={isSelected ? 1 : 0.85}
+                            />
+
+                            <rect
+                              x={x + 8}
+                              y={130 - homeHeight}
+                              width="7"
+                              height={homeHeight}
+                              rx="2"
+                              fill="#38BDF8"
+                              opacity={isSelected ? 1 : 0.75}
+                            />
+
+                            {idx % 3 === 0 && (
+                              <text
+                                x={x + 7}
+                                y="152"
+                                fill={isSelected ? '#FFFFFF' : '#8EAEC7'}
+                                fontSize="9"
+                                textAnchor="middle"
+                                fontFamily="monospace"
+                                fontWeight={isSelected ? 'bold' : 'normal'}
+                              >
+                                {p.hour}
+                              </text>
+                            )}
+                          </g>
+                        );
+                      })}
+                    </svg>
+
+                    <div className="flex flex-wrap items-center justify-between gap-3 text-xs pt-2 border-t border-[#162B42]">
+                      <div className="flex items-center gap-4">
+                        <span className="flex items-center gap-1.5 text-white font-medium">
+                          <span className="h-3 w-3 rounded-sm bg-[#FFB300]" /> Solar (kW)
+                        </span>
+                        <span className="flex items-center gap-1.5 text-white font-medium">
+                          <span className="h-3 w-3 rounded-sm bg-[#38BDF8]" /> Home Load (kW)
+                        </span>
+                        <span className="flex items-center gap-1.5 text-[#10B981] font-medium">
+                          <span className="h-0.5 w-4 bg-[#10B981] inline-block border-t border-dashed" /> Powerwall SOE (%)
+                        </span>
+                      </div>
+                      <span className="text-[11px] text-[#6A87A2]">Click any hour to inspect exact energy exchange</span>
+                    </div>
+                  </div>
+
+                  {selectedHistoryHour !== null && historyData.points[selectedHistoryHour] && (
+                    <div className="rounded-xl bg-[#091D2F] p-4 border border-[#254A70] flex flex-wrap items-center justify-between gap-4 animate-fade-in">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="rounded-full bg-[#FF6B00]/20 px-2.5 py-0.5 text-xs font-bold text-[#FF8A2B]">
+                            {historyData.points[selectedHistoryHour].hour}
+                          </span>
+                          <strong className="text-white text-sm">Telemetry Snapshot</strong>
+                        </div>
+                        <span className="text-xs text-[#8EAEC7] mt-0.5 block">
+                          Battery State of Energy: <strong className="text-[#10B981] font-mono">{historyData.points[selectedHistoryHour].soePercent}%</strong>
+                        </span>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-4 text-xs font-mono">
+                        <div className="bg-[#061421] px-3 py-1.5 rounded-lg border border-[#162D44]">
+                          <span className="text-[#8EAEC7] text-[10px] block">SOLAR</span>
+                          <strong className="text-[#FFB300]">{historyData.points[selectedHistoryHour].solarKwh.toFixed(2)} kWh</strong>
+                        </div>
+                        <div className="bg-[#061421] px-3 py-1.5 rounded-lg border border-[#162D44]">
+                          <span className="text-[#8EAEC7] text-[10px] block">HOME LOAD</span>
+                          <strong className="text-[#38BDF8]">{historyData.points[selectedHistoryHour].homeKwh.toFixed(2)} kWh</strong>
+                        </div>
+                        <div className="bg-[#061421] px-3 py-1.5 rounded-lg border border-[#162D44]">
+                          <span className="text-[#8EAEC7] text-[10px] block">BATTERY CHARGE</span>
+                          <strong className="text-[#10B981]">+{historyData.points[selectedHistoryHour].batteryChargeKwh.toFixed(2)} kWh</strong>
+                        </div>
+                        <div className="bg-[#061421] px-3 py-1.5 rounded-lg border border-[#162D44]">
+                          <span className="text-[#8EAEC7] text-[10px] block">BATTERY DISCHARGE</span>
+                          <strong className="text-[#FF8A2B]">-{historyData.points[selectedHistoryHour].batteryDischargeKwh.toFixed(2)} kWh</strong>
+                        </div>
+                        <div className="bg-[#061421] px-3 py-1.5 rounded-lg border border-[#162D44]">
+                          <span className="text-[#8EAEC7] text-[10px] block">GRID EXPORT</span>
+                          <strong className="text-[#10B981]">+{historyData.points[selectedHistoryHour].gridExportKwh.toFixed(2)} kWh</strong>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -2033,6 +2671,213 @@ export default function HomeownerPortalPage() {
                   </li>
                 </ul>
               </div>
+            </div>
+
+            {/* Historical 24-Hour Tesla Energy Flow Interactive Chart */}
+            <div className="rounded-2xl border border-[#1F3752] bg-[#0C1E32] p-5 sm:p-6 shadow-xl">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-white/10 pb-4 mb-5">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#FFB300]/15 text-[#FFB300]">
+                      <BarChart3 className="h-4 w-4" />
+                    </span>
+                    <h3 className="m-0 text-base sm:text-lg font-bold text-white">
+                      Tesla Energy 24-Hour Diurnal Flow History
+                    </h3>
+                  </div>
+                  <p className="m-0 text-xs text-[#8EAEC7] mt-1">
+                    Granular hourly breakdown of rooftop solar generation, home load, Powerwall charge/discharge, and grid exchange.
+                  </p>
+                </div>
+
+                {historyData && (
+                  <div className="flex items-center gap-3 bg-[#081827] border border-[#234567] rounded-xl px-4 py-2">
+                    <div className="text-right">
+                      <span className="text-[10px] uppercase font-bold text-[#8EAEC7] tracking-wider block">Self-Powered Score</span>
+                      <strong className="text-base sm:text-lg font-mono font-black text-[#10B981]">
+                        {historyData.self_powered_percent}% Off-Grid
+                      </strong>
+                    </div>
+                    <div className="h-8 w-8 rounded-full border-2 border-[#10B981] flex items-center justify-center bg-[#10B981]/15 text-[#10B981] text-xs font-bold font-mono">
+                      ✓
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {historyData && (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+                  <div className="rounded-xl bg-[#081827] p-3 border border-[#234567]">
+                    <span className="text-[10px] uppercase font-bold text-[#FFB300] tracking-wider block">Solar Generated</span>
+                    <p className="m-0 text-lg font-bold text-white font-mono">{historyData.total_solar_kwh} kWh</p>
+                    <span className="text-[10px] text-[#81C784]">100% Clean DC</span>
+                  </div>
+                  <div className="rounded-xl bg-[#081827] p-3 border border-[#234567]">
+                    <span className="text-[10px] uppercase font-bold text-[#64B5F6] tracking-wider block">Home Consumed</span>
+                    <p className="m-0 text-lg font-bold text-white font-mono">{historyData.total_home_kwh} kWh</p>
+                    <span className="text-[10px] text-[#8EAEC7]">HVAC & Lifestyle</span>
+                  </div>
+                  <div className="rounded-xl bg-[#081827] p-3 border border-[#234567]">
+                    <span className="text-[10px] uppercase font-bold text-[#10B981] tracking-wider block">NEM Grid Export</span>
+                    <p className="m-0 text-lg font-bold text-[#10B981] font-mono">+{historyData.total_grid_export_kwh} kWh</p>
+                    <span className="text-[10px] text-[#81C784]">Utility NEM Credit</span>
+                  </div>
+                  <div className="rounded-xl bg-[#081827] p-3 border border-[#234567]">
+                    <span className="text-[10px] uppercase font-bold text-[#38BDF8] tracking-wider block">Grid Imported</span>
+                    <p className="m-0 text-lg font-bold text-white font-mono">{historyData.total_grid_import_kwh} kWh</p>
+                    <span className="text-[10px] text-[#81C784]">Near Zero Cost</span>
+                  </div>
+                </div>
+              )}
+
+              {historyData && (
+                <div className="space-y-4">
+                  <div className="relative bg-[#07131F] rounded-xl p-4 border border-[#162B42] overflow-x-auto">
+                    <svg viewBox="0 0 720 180" className="w-full min-w-[620px] h-48">
+                      <line x1="40" y1="30" x2="700" y2="30" stroke="#162B42" strokeWidth="1" strokeDasharray="2 4" />
+                      <line x1="40" y1="80" x2="700" y2="80" stroke="#162B42" strokeWidth="1" strokeDasharray="2 4" />
+                      <line x1="40" y1="130" x2="700" y2="130" stroke="#243C56" strokeWidth="1" />
+
+                      <text x="32" y="34" fill="#6A87A2" fontSize="9" textAnchor="end" fontFamily="monospace">8kW</text>
+                      <text x="32" y="84" fill="#6A87A2" fontSize="9" textAnchor="end" fontFamily="monospace">4kW</text>
+                      <text x="32" y="134" fill="#6A87A2" fontSize="9" textAnchor="end" fontFamily="monospace">0</text>
+
+                      {(() => {
+                        const pointsStr = historyData.points.map((p: any, idx: number) => {
+                          const x = 50 + idx * 27;
+                          const y = 130 - (p.soePercent / 100) * 100;
+                          return `${x},${y}`;
+                        }).join(' ');
+                        return (
+                          <polyline
+                            fill="none"
+                            stroke="#10B981"
+                            strokeWidth="2"
+                            strokeDasharray="4 2"
+                            opacity="0.8"
+                            points={pointsStr}
+                          />
+                        );
+                      })()}
+
+                      {historyData.points.map((p: any, idx: number) => {
+                        const x = 45 + idx * 27;
+                        const solarHeight = Math.min(100, (p.solarKwh / 9.2) * 100);
+                        const homeHeight = Math.min(100, (p.homeKwh / 9.2) * 100);
+                        const isSelected = selectedHistoryHour === idx;
+
+                        return (
+                          <g
+                            key={p.hour}
+                            className="cursor-pointer transition-opacity"
+                            onClick={() => setSelectedHistoryHour(idx)}
+                          >
+                            {isSelected && (
+                              <rect
+                                x={x - 2}
+                                y="10"
+                                width="20"
+                                height="135"
+                                rx="4"
+                                fill="#2A4A6D"
+                                opacity="0.45"
+                              />
+                            )}
+
+                            <rect
+                              x={x}
+                              y={130 - solarHeight}
+                              width="7"
+                              height={solarHeight}
+                              rx="2"
+                              fill="#FFB300"
+                              opacity={isSelected ? 1 : 0.85}
+                            />
+
+                            <rect
+                              x={x + 8}
+                              y={130 - homeHeight}
+                              width="7"
+                              height={homeHeight}
+                              rx="2"
+                              fill="#38BDF8"
+                              opacity={isSelected ? 1 : 0.75}
+                            />
+
+                            {idx % 3 === 0 && (
+                              <text
+                                x={x + 7}
+                                y="152"
+                                fill={isSelected ? '#FFFFFF' : '#8EAEC7'}
+                                fontSize="9"
+                                textAnchor="middle"
+                                fontFamily="monospace"
+                                fontWeight={isSelected ? 'bold' : 'normal'}
+                              >
+                                {p.hour}
+                              </text>
+                            )}
+                          </g>
+                        );
+                      })}
+                    </svg>
+
+                    <div className="flex flex-wrap items-center justify-between gap-3 text-xs pt-2 border-t border-[#162B42]">
+                      <div className="flex items-center gap-4">
+                        <span className="flex items-center gap-1.5 text-white font-medium">
+                          <span className="h-3 w-3 rounded-sm bg-[#FFB300]" /> Solar (kW)
+                        </span>
+                        <span className="flex items-center gap-1.5 text-white font-medium">
+                          <span className="h-3 w-3 rounded-sm bg-[#38BDF8]" /> Home Load (kW)
+                        </span>
+                        <span className="flex items-center gap-1.5 text-[#10B981] font-medium">
+                          <span className="h-0.5 w-4 bg-[#10B981] inline-block border-t border-dashed" /> Powerwall SOE (%)
+                        </span>
+                      </div>
+                      <span className="text-[11px] text-[#6A87A2]">Click any hour to inspect exact energy exchange</span>
+                    </div>
+                  </div>
+
+                  {selectedHistoryHour !== null && historyData.points[selectedHistoryHour] && (
+                    <div className="rounded-xl bg-[#091D2F] p-4 border border-[#254A70] flex flex-wrap items-center justify-between gap-4 animate-fade-in">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="rounded-full bg-[#FF6B00]/20 px-2.5 py-0.5 text-xs font-bold text-[#FF8A2B]">
+                            {historyData.points[selectedHistoryHour].hour}
+                          </span>
+                          <strong className="text-white text-sm">Telemetry Snapshot</strong>
+                        </div>
+                        <span className="text-xs text-[#8EAEC7] mt-0.5 block">
+                          Battery State of Energy: <strong className="text-[#10B981] font-mono">{historyData.points[selectedHistoryHour].soePercent}%</strong>
+                        </span>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-4 text-xs font-mono">
+                        <div className="bg-[#061421] px-3 py-1.5 rounded-lg border border-[#162D44]">
+                          <span className="text-[#8EAEC7] text-[10px] block">SOLAR</span>
+                          <strong className="text-[#FFB300]">{historyData.points[selectedHistoryHour].solarKwh.toFixed(2)} kWh</strong>
+                        </div>
+                        <div className="bg-[#061421] px-3 py-1.5 rounded-lg border border-[#162D44]">
+                          <span className="text-[#8EAEC7] text-[10px] block">HOME LOAD</span>
+                          <strong className="text-[#38BDF8]">{historyData.points[selectedHistoryHour].homeKwh.toFixed(2)} kWh</strong>
+                        </div>
+                        <div className="bg-[#061421] px-3 py-1.5 rounded-lg border border-[#162D44]">
+                          <span className="text-[#8EAEC7] text-[10px] block">BATTERY CHARGE</span>
+                          <strong className="text-[#10B981]">+{historyData.points[selectedHistoryHour].batteryChargeKwh.toFixed(2)} kWh</strong>
+                        </div>
+                        <div className="bg-[#061421] px-3 py-1.5 rounded-lg border border-[#162D44]">
+                          <span className="text-[#8EAEC7] text-[10px] block">BATTERY DISCHARGE</span>
+                          <strong className="text-[#FF8A2B]">-{historyData.points[selectedHistoryHour].batteryDischargeKwh.toFixed(2)} kWh</strong>
+                        </div>
+                        <div className="bg-[#061421] px-3 py-1.5 rounded-lg border border-[#162D44]">
+                          <span className="text-[#8EAEC7] text-[10px] block">GRID EXPORT</span>
+                          <strong className="text-[#10B981]">+{historyData.points[selectedHistoryHour].gridExportKwh.toFixed(2)} kWh</strong>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         )}

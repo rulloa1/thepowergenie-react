@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { computeTeslaTelemetry } from '../server/tesla.js'
+import { computeTeslaTelemetry, generate24HourHistory } from '../server/tesla.js'
 
 test('Tesla Telemetry returns normal self_consumption flow with solar charging battery and exporting', () => {
   const telemetry = computeTeslaTelemetry({
@@ -48,3 +48,14 @@ test('Tesla Storm Watch forces 100% reserve and backup mode', () => {
   assert.equal(telemetry.battery_charge_percentage, 100)
 })
 
+test('Tesla 24-Hour Energy History models diurnal curves and high self-powered score', () => {
+  const history = generate24HourHistory()
+
+  assert.equal(history.period, 'day')
+  assert.equal(history.points.length, 24)
+  assert.ok(history.total_solar_kwh > 30, 'Total solar should be >30 kWh on a sunny day')
+  assert.ok(history.self_powered_percent >= 85, 'Self-powered percentage should exceed 85% with Dual Powerwalls')
+  assert.equal(history.points[0].hour, '12 AM')
+  assert.equal(history.points[12].hour, '12 PM')
+  assert.ok(history.points[13].solarKwh > 5.0, 'Peak midday solar generation at 1 PM')
+})
