@@ -24,16 +24,20 @@
   ],
   "rewrites": [
     {
+      "source": "/((?!api(?:/|$)|assets(?:/|$)|assets-v2(?:/|$)|brand-lockups(?:/|$)|privacy(?:/|$|\\.html$)|terms(?:/|$|\\.html$)|paused\\.html$).*)",
+      "destination": "/paused.html"
+    },
+    {
       "source": "/api/(chat|uploads|bill|lead|slots|visit|invite)",
       "destination": "/api/assistant?route=$1"
     },
     {
       "source": "/proposal/:token/interested",
-      "destination": "/api/assistant?route=proposal&t=:token&action=interested"
+      "destination": "/paused.html"
     },
     {
       "source": "/proposal/:token",
-      "destination": "/api/assistant?route=proposal&t=:token"
+      "destination": "/paused.html"
     },
     {
       "source": "/privacy",
@@ -53,27 +57,27 @@
     },
     {
       "source": "/launch/gas-genie",
-      "destination": "/gas-genie.html"
+      "destination": "/paused.html"
     },
     {
       "source": "/launch/celebrity-solar",
-      "destination": "/celebrity-solar.html"
+      "destination": "/paused.html"
     },
     {
       "source": "/launch/hip-hop-solar",
-      "destination": "/hip-hop-solar.html"
+      "destination": "/paused.html"
     },
     {
       "source": "/launch/sport-and-solar",
-      "destination": "/sport-and-solar.html"
+      "destination": "/paused.html"
     },
     {
       "source": "/sport-and-solar",
-      "destination": "/sport-and-solar.html"
+      "destination": "/paused.html"
     },
     {
       "source": "/((?!api/|brand-lockups(?:/|$)).*)",
-      "destination": "/index.html"
+      "destination": "/paused.html"
     }
   ],
   "headers": [

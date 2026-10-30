@@ -1021,7 +1021,7 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
               </ul>
             )}
             {s.cta && (
-              <div className="sw-copy__cta max-md:hidden flex flex-wrap gap-3 mt-7 pointer-events-auto">
+              <div className="sw-copy__cta flex flex-wrap gap-3 mt-7 pointer-events-auto">
                 {s.cta.primary && (
                   <a href={s.cta.primary.href} className="sw-btn sw-btn--primary no-underline font-semibold text-[0.95rem] px-6 py-3 rounded-full text-white bg-[var(--sw-ink)] hover:bg-[#262642] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] transition-all duration-200 shadow-[0_6px_20px_rgba(26,26,46,0.2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-accent)] focus-visible:ring-offset-2">
                     {s.cta.primary.label}
@@ -1074,7 +1074,7 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
       </nav>
 
       {/* Hint */}
-      <div ref={hintRef} className="sw-hint fixed left-1/2 bottom-[26px] z-30 -translate-x-1/2 flex flex-col items-center gap-2.5 text-[0.76rem] tracking-[0.14em] uppercase text-[var(--sw-ink-soft)] transition-opacity duration-300 max-md:bottom-[calc(84px+env(safe-area-inset-bottom))]">
+      <div ref={hintRef} className="sw-hint hidden md:flex fixed left-1/2 bottom-[26px] z-30 -translate-x-1/2 flex flex-col items-center gap-2.5 text-[0.76rem] tracking-[0.14em] uppercase text-[var(--sw-ink-soft)] transition-opacity duration-300 max-md:bottom-[calc(84px+env(safe-area-inset-bottom))]">
         <span className="hint-text">{config.hint || 'scroll'}</span>
         <i className="w-[22px] h-[34px] rounded-[12px] border-2 border-[color-mix(in_srgb,var(--sw-ink)_28%,transparent)] relative after:content-[''] after:absolute after:left-1/2 after:top-[7px] after:w-1 after:h-[7px] after:rounded-[2px] after:bg-[var(--sw-accent)] after:-translate-x-1/2 after:animate-[sw-wheel_1.7s_ease-in-out_infinite]" />
       </div>
@@ -1136,12 +1136,19 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
             bottom: auto;
             height: min(84vw, 42vh);
             /* Ends just above the headline: the text block needs ~460px. */
-            height: clamp(160px, calc(100svh - 494px), 84vw);
+            height: clamp(100px, 22svh, 180px);
             -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 80%, transparent 100%);
             mask-image: linear-gradient(180deg, #000 0%, #000 80%, transparent 100%);
           }
         }
 
+        @media (max-width: 767px) {
+          .sw-copy { top: calc(86px + 22svh) !important; bottom: auto !important; }
+          .sw-copy__title { font-size: clamp(1.6rem, 5.5vw, 2.3rem); line-height: 1.08; }
+          .sw-copy__body { margin-top: 12px; font-size: .95rem; line-height: 1.45; }
+          .sw-copy__cta { margin-top: 16px; gap: 8px; }
+          .sw-copy__cta a { padding: 10px 16px; font-size: .85rem; }
+        }
         @media (max-width: 640px) {
           .sw-topbar {
             position: fixed;
@@ -1157,11 +1164,11 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
             max-width: 65%;
           }
           .sw-copy {
-            padding: 24px 20px 112px;
+            padding: 0;
           }
           .sw-copy__title {
             margin: 0;
-            font-size: clamp(2.25rem, 10vw, 3.5rem);
+            font-size: clamp(1.6rem, 6vw, 2.3rem);
             line-height: 0.98;
             overflow-wrap: anywhere;
           }

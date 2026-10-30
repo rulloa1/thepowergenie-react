@@ -7,3 +7,16 @@ assets/Vid4.mp4
 assets/sunrun_3d_preview.png
 assets/house-*.webp
 assets/SunrunLogo_HeroBlue_PNG.png
+
+.env*
+private-assets/
+scratch/
+scroll-world-repo/
+.playwright-mcp/
+.agents/
+site/
+powergenie-site/
+node_modules/
+dist/
+*.log
+

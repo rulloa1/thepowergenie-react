@@ -21,6 +21,11 @@ const BILL_TYPES = new Set(['application/pdf', 'image/jpeg', 'image/png', 'image
 
 type LoadState = 'loading' | 'ready' | 'not_configured' | 'unavailable' | 'error';
 
+export function availableBookingSlot(state: LoadState, slots: Slot[], selected: Slot | null): Slot | null {
+  if (state !== 'ready' || !selected) return null;
+  return slots.find((candidate) => candidate.start === selected.start && candidate.end === selected.end) ?? null;
+}
+
 export default function BookingPage() {
   const [state, setState] = useState<LoadState>(supabase ? 'loading' : 'not_configured');
   const [slots, setSlots] = useState<Slot[]>([]);
@@ -33,6 +38,7 @@ export default function BookingPage() {
   const [meter, setMeter] = useState<MeterFormValues>(emptyMeter);
   const [meterStatus, setMeterStatus] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
+  const preparationRef = useRef<HTMLDetailsElement>(null);
   const pickerRef = useRef<SlotPickerHandle>(null);
 
   useEffect(() => {
@@ -76,13 +82,14 @@ export default function BookingPage() {
     e.preventDefault();
     if (submitting) return;
 
-    if (!slot) {
-      if (slots.length > 0) {
-        setFormError('Please pick a date and time to complete your booking.');
-        document.getElementById('pick-time')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        pickerRef.current?.focus();
-        return;
-      }
+    const bookingSlot = availableBookingSlot(state, slots, slot);
+    if (!bookingSlot) {
+      setFormError(state === 'ready' && slots.length > 0
+        ? 'Please pick an available date and time to complete your booking.'
+        : 'There are no confirmed appointment times available. Please try again or call 510-241-7007.');
+      document.getElementById('pick-time')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      pickerRef.current?.focus();
+      return;
     }
 
     setFormError(null);
@@ -90,13 +97,10 @@ export default function BookingPage() {
     const meterCheck = readMeterRequest(meterBodyFrom(meter), String(fd.get('email') || ''));
     if (!meterCheck.ok) {
       setFormError(meterCheck.message);
+      if (preparationRef.current) preparationRef.current.open = true;
       document.getElementById('connect-meter')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
-    const bookingSlot = slot || {
-      start: new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
-      end: new Date(Date.now() + 25 * 3600 * 1000).toISOString(),
-    };
     fd.set('start', bookingSlot.start);
     fd.delete('bill');
     if (bill) fd.set('bill', bill, bill.name);
@@ -159,8 +163,8 @@ export default function BookingPage() {
               Pick a time that works for you.
             </h1>
             <p className="mt-3 max-w-[62ch] text-[1.02rem] leading-relaxed text-[#4A5568]">
-              One hour with Horace Lawrence, your Sunrun solar advisor. He'll walk through your bill, your roof layout,
-              and design your custom 14.76 kW + Tesla Powerwall 3 microgrid proposal. All times Central.
+              One hour with Horace Lawrence, your Sunrun solar advisor. Review your electricity use, roof layout,
+              and solar and battery options tailored to your home. Your electric bill is optional when booking. All times Central.
             </p>
 
             <div className="mt-4 flex flex-wrap items-center gap-2 text-[0.78rem] font-semibold text-[#64748B]">
@@ -171,7 +175,7 @@ export default function BookingPage() {
                 <Clock className="h-3.5 w-3.5 text-[#64748B]" /> 1-on-1 Screen Share or Call
               </span>
               <span className="inline-flex items-center gap-1.5 rounded-md bg-white border border-[#E2E8F0] px-2.5 py-1">
-                <Layers className="h-3.5 w-3.5 text-[#64748B]" /> Exact CAD Blueprint Review
+                <Layers className="h-3.5 w-3.5 text-[#64748B]" /> Personalized Solar & Battery Review
               </span>
             </div>
 
@@ -308,66 +312,74 @@ export default function BookingPage() {
                     <textarea id="b-note" name="note" rows={3} maxLength={1000} placeholder="e.g. Disconnect notice issued, high summer AC bill, interested in Powerwall 3..." className={cn(inputClass, 'resize-y')} />
                   </div>
 
-                  <div>
-                    <span className={labelClass} id="bill-label">Upload electric bill statement (optional)</span>
-                    {bill ? (
-                      <div className="flex items-center justify-between gap-3 rounded-2xl border border-[#86EFAC] bg-[#F0FDF4] px-4 py-3 shadow-sm">
-                        <span className="flex min-w-0 items-center gap-2.5 text-[0.92rem]">
-                          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#DCFCE7] text-[#166534]">
-                            <Check className="h-4 w-4 stroke-[2.5]" />
-                          </span>
-                          <span className="truncate">
-                            <span className="font-bold text-[#14532D]">{bill.name}</span>{' '}
-                            <span className="text-[0.8rem] text-[#166534]">({formatBytes(bill.size)})</span>
-                          </span>
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => pickFile(null)}
-                          className="shrink-0 rounded-lg p-1.5 text-[#166534] transition hover:bg-[#DCFCE7]"
-                          aria-label="Remove bill"
-                          title="Remove uploaded bill"
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
-                      </div>
-                    ) : (
-                      <label className="flex cursor-pointer flex-col items-center gap-1.5 rounded-2xl border-2 border-dashed border-[#CBD5E1] bg-[#FAFBFD] px-4 py-5 text-center transition-all hover:border-[#FF6B00] hover:bg-[#FFFBF7]">
-                        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#FFF5EC] text-[#FF6B00]">
-                          <FileUp className="h-5 w-5" />
-                        </span>
-                        <span className="text-[0.95rem] font-bold text-[#1A1A2E]">Click to upload or take a photo of your electric bill</span>
-                        <div className="flex flex-wrap items-center justify-center gap-1.5 text-[0.74rem] text-[#64748B]">
-                          <span className="rounded bg-white px-1.5 py-0.5 border border-[#E2E8F0]">PDF</span>
-                          <span className="rounded bg-white px-1.5 py-0.5 border border-[#E2E8F0]">JPG</span>
-                          <span className="rounded bg-white px-1.5 py-0.5 border border-[#E2E8F0]">PNG</span>
-                          <span className="rounded bg-white px-1.5 py-0.5 border border-[#E2E8F0]">WEBP</span>
-                          <span className="rounded bg-white px-1.5 py-0.5 border border-[#E2E8F0]">HEIC</span>
-                          <span>· Up to 10 MB</span>
-                        </div>
-                        <input
-                          type="file"
-                          accept={BILL_ACCEPT}
-                          aria-labelledby="bill-label"
-                          className="sr-only"
-                          onChange={(e) => pickFile(e.target.files?.[0] ?? null)}
-                        />
-                      </label>
-                    )}
-                    {fileError && <p className="mt-2 text-[0.86rem] font-bold text-[#B42318]">{fileError}</p>}
-                    <p className="mt-2 text-[0.78rem] text-[#64748B] flex items-center gap-1.5">
-                      <Lock className="h-3.5 w-3.5 shrink-0 text-[#64748B]" /> Stored securely and only reviewed by Horace Lawrence to analyze your past 12 months kWh consumption before the call.
+                  <details ref={preparationRef} className="rounded-2xl border border-[#E2E8F0] bg-[#F8FAFC] p-4">
+                    <summary className="cursor-pointer rounded-md text-[0.94rem] font-bold text-[#1A1A2E] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00]">
+                      Prepare for your call (optional)
+                    </summary>
+                    <p className="mb-4 mt-2 text-[0.84rem] leading-relaxed text-[#64748B]">
+                      You can book without uploading a bill or connecting your meter. Add these only if you want Horace to review your electricity use before the call.
                     </p>
-                  </div>
+                    <div>
+                      <span className={labelClass} id="bill-label">Upload electric bill statement (optional)</span>
+                      {bill ? (
+                        <div className="flex items-center justify-between gap-3 rounded-2xl border border-[#86EFAC] bg-[#F0FDF4] px-4 py-3 shadow-sm">
+                          <span className="flex min-w-0 items-center gap-2.5 text-[0.92rem]">
+                            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#DCFCE7] text-[#166534]">
+                              <Check className="h-4 w-4 stroke-[2.5]" />
+                            </span>
+                            <span className="truncate">
+                              <span className="font-bold text-[#14532D]">{bill.name}</span>{' '}
+                              <span className="text-[0.8rem] text-[#166534]">({formatBytes(bill.size)})</span>
+                            </span>
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => pickFile(null)}
+                            className="shrink-0 rounded-lg p-1.5 text-[#166534] transition hover:bg-[#DCFCE7]"
+                            aria-label="Remove bill"
+                            title="Remove uploaded bill"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <label className="flex cursor-pointer flex-col items-center gap-1.5 rounded-2xl border-2 border-dashed border-[#CBD5E1] bg-[#FAFBFD] px-4 py-5 text-center transition-all hover:border-[#FF6B00] hover:bg-[#FFFBF7]">
+                          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#FFF5EC] text-[#FF6B00]">
+                            <FileUp className="h-5 w-5" />
+                          </span>
+                          <span className="text-[0.95rem] font-bold text-[#1A1A2E]">Click to upload or take a photo of your electric bill</span>
+                          <div className="flex flex-wrap items-center justify-center gap-1.5 text-[0.74rem] text-[#64748B]">
+                            <span className="rounded bg-white px-1.5 py-0.5 border border-[#E2E8F0]">PDF</span>
+                            <span className="rounded bg-white px-1.5 py-0.5 border border-[#E2E8F0]">JPG</span>
+                            <span className="rounded bg-white px-1.5 py-0.5 border border-[#E2E8F0]">PNG</span>
+                            <span className="rounded bg-white px-1.5 py-0.5 border border-[#E2E8F0]">WEBP</span>
+                            <span className="rounded bg-white px-1.5 py-0.5 border border-[#E2E8F0]">HEIC</span>
+                            <span>· Up to 10 MB</span>
+                          </div>
+                          <input
+                            type="file"
+                            accept={BILL_ACCEPT}
+                            aria-labelledby="bill-label"
+                            className="sr-only"
+                            onChange={(e) => pickFile(e.target.files?.[0] ?? null)}
+                          />
+                        </label>
+                      )}
+                      {fileError && <p className="mt-2 text-[0.86rem] font-bold text-[#B42318]">{fileError}</p>}
+                      <p className="mt-2 text-[0.78rem] text-[#64748B] flex items-center gap-1.5">
+                        <Lock className="h-3.5 w-3.5 shrink-0 text-[#64748B]" /> Stored securely and only reviewed by Horace Lawrence to analyze your past 12 months kWh consumption before the call.
+                      </p>
+                    </div>
 
-                  <MeterFields values={meter} onChange={setMeter} />
+                    <MeterFields values={meter} onChange={setMeter} />
+                  </details>
 
                   {formError && <Notice tone="error">{formError}</Notice>}
 
                   <Button
                     type="submit"
                     variant={slot ? 'accent' : 'primary'}
-                    disabled={submitting}
+                    disabled={submitting || !availableBookingSlot(state, slots, slot)}
                     className="min-h-[52px] w-full text-[1rem] shadow-md"
                   >
                     {submitting ? (

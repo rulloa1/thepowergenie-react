@@ -20,8 +20,8 @@ export default function LegalFooter({ homeChrome = false }: { homeChrome?: boole
     <footer
       className={`relative z-[46] border-t border-[#E3E8EF] bg-[#F6F7FB] px-4 text-center text-[13px] leading-relaxed text-[#4A5568] ${homeChrome ? 'pt-5 pb-28 sm:py-5' : 'py-4'}`}
     >
-      <nav aria-label="Launch pages" className="mx-auto mb-2 flex max-w-3xl flex-wrap items-center justify-center gap-x-2 gap-y-1">
-        <span>Launch pages:</span>
+      <nav aria-label="Explore our programs" className="mx-auto mb-2 flex max-w-3xl flex-wrap items-center justify-center gap-x-2 gap-y-1">
+        <span>Explore our programs:</span>
         {LAUNCH_PAGES.map((page, i) => (
           <span key={page.href} className="inline-flex items-center gap-x-2">
             {i > 0 ? <span aria-hidden="true">·</span> : null}
