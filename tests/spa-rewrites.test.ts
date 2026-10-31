@@ -31,7 +31,7 @@ test('the Vercel SPA rewrite serves /privacy and /terms', () => {
     assert.equal(destination.includes('/api/'), false, source)
   }
 
-  const spa = vercel.rewrites.find(rule => (rule.destination === '/index.html' || rule.destination === '/paused.html') && rule.source.includes('(?!api/'))
+  const spa = vercel.rewrites.find(rule => rule.destination === '/index.html' && rule.source.includes('(?!api/'))
   assert.ok(spa, 'expected a catch-all rewrite to /index.html that skips /api')
   const explicitFirst = vercel.rewrites.findIndex(rule => rule.source === '/privacy')
   const catchAll = vercel.rewrites.findIndex(rule => rule.source === spa.source)
