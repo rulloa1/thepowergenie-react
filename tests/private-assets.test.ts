@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { readdirSync, readFileSync, statSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { test } from 'node:test'
 import { parseOptionBWorkflow } from '../src/hub/optionB'
@@ -54,4 +54,23 @@ test('the client, public site, and shared code do not contain the homeowner reco
   const config = readFileSync('vite.config.ts', 'utf8')
   assert.match(config, /private-assets/)
   assert.match(config, /publicDir: 'public'/)
+})
+
+test('customer documents are not in any statically served folder', () => {
+  const removed = [
+    'public/assets/bills/patricia-ferrell-entergy-bill.png',
+    'public/assets/plans/patricia-ferrell-solar-plan.jpg',
+    'public/assets/plans/patricia-ferrell-footprint-plan.jpg',
+  ]
+  for (const path of removed) assert.equal(existsSync(path), false, path)
+
+  const filenameNeedles = ['patricia-ferrell', 'cust_patricia', 'ferrell', 'hanna-ward', 'hannah-ward', 'entergy-bill']
+  for (const root of ['public', 'site', 'assets']) {
+    for (const path of files(root)) {
+      const lower = path.toLowerCase()
+      for (const needle of filenameNeedles) {
+        assert.equal(lower.includes(needle), false, `${path} contains ${needle}`)
+      }
+    }
+  }
 })

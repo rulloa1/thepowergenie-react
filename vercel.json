@@ -72,7 +72,23 @@
       "destination": "/sport-and-solar.html"
     },
     {
-      "source": "/((?!api/|brand-lockups(?:/|$)).*)",
+      "source": "/assets/bills",
+      "destination": "/api/not-found"
+    },
+    {
+      "source": "/assets/bills/:path*",
+      "destination": "/api/not-found"
+    },
+    {
+      "source": "/assets/plans",
+      "destination": "/api/not-found"
+    },
+    {
+      "source": "/assets/plans/:path*",
+      "destination": "/api/not-found"
+    },
+    {
+      "source": "/((?!api/|brand-lockups(?:/|$)|assets/bills(?:/|$)|assets/plans(?:/|$)).*)",
       "destination": "/index.html"
     }
   ],

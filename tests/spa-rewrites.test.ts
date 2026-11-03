@@ -37,6 +37,13 @@ test('the Vercel SPA rewrite serves /privacy and /terms', () => {
   const catchAll = vercel.rewrites.findIndex(rule => rule.source === spa.source)
   assert.ok(explicitFirst >= 0 && explicitFirst < catchAll, 'explicit legal rewrites come before the catch-all')
 
+  for (const source of ['/assets/bills', '/assets/bills/:path*', '/assets/plans', '/assets/plans/:path*']) {
+    const rule = vercel.rewrites.find(item => item.source === source)
+    assert.equal(rule?.destination, '/api/not-found', source)
+    const index = vercel.rewrites.findIndex(item => item.source === source)
+    assert.ok(index >= 0 && index < catchAll, `${source} is handled before the SPA catch-all`)
+  }
+
   const pattern = new RegExp(`^${spa.source}$`)
   assert.equal(pattern.test('/privacy'), true)
   assert.equal(pattern.test('/terms'), true)
@@ -57,6 +64,11 @@ test('the Vercel SPA rewrite serves /privacy and /terms', () => {
   assert.equal(pattern.test('/brand-lockups/gas-genie-icon.png'), false)
   assert.equal(pattern.test('/brand-lockups'), false)
   assert.equal(pattern.test('/assets/brand/power-genie-lockup.webp'), true)
+  assert.equal(pattern.test('/assets/bills/patricia-ferrell-entergy-bill.png'), false)
+  assert.equal(pattern.test('/assets/plans/patricia-ferrell-solar-plan.jpg'), false)
+  assert.equal(pattern.test('/assets/plans/patricia-ferrell-footprint-plan.jpg'), false)
+  assert.equal(pattern.test('/assets/bills'), false)
+  assert.equal(pattern.test('/assets/plans'), false)
 
   const main = readFileSync('src/main.tsx', 'utf8')
   assert.match(main, /sitePage\(path\) === 'privacy'/)
