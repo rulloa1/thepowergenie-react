@@ -19,7 +19,7 @@ const config: Config = {
   brand: { name: 'The Power Genie', href: '#top', logo: 'assets/brand/power-genie-lockup.webp' },
   mobileClipsUseDesktopFraming: true,
   diveScroll: 1.5,
-  connScroll: 1.1,
+  connScroll: 1.4,
   hint: 'scroll to explore',
   nav: true,
   atmosphere: true,
@@ -123,8 +123,22 @@ const config: Config = {
       }
     }
   ],
-  connectors: [],
-  connectorsMobile: []
+  // Frame-matched flights: each starts on a scene's last frame and lands on the next scene's first.
+  // Community -> CTA already lines up, so that seam stays a short dissolve.
+  connectors: [
+    'assets-v2/vid/encoded/c01-sun-roof-v2.mp4',
+    'assets-v2/vid/encoded/c02-roof-battery-v2.mp4',
+    'assets-v2/vid/encoded/c03-battery-home-v2.mp4',
+    'assets-v2/vid/encoded/c04-home-community-v2.mp4',
+    null,
+  ],
+  connectorsMobile: [
+    'assets-v2/vid/mobile/c01-sun-roof-v2.mp4',
+    'assets-v2/vid/mobile/c02-roof-battery-v2.mp4',
+    'assets-v2/vid/mobile/c03-battery-home-v2.mp4',
+    'assets-v2/vid/mobile/c04-home-community-v2.mp4',
+    null,
+  ]
 };
 
 // Main application component
