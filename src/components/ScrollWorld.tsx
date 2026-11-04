@@ -974,8 +974,8 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
 
       {/* Copy Layer */}
       <div ref={copylayerRef} className="sw-copylayer fixed inset-0 z-20 pointer-events-none">
-        <div className="absolute inset-0 w-[min(64vw,840px)] bg-[linear-gradient(90deg,var(--sw-bg)_0%,color-mix(in_srgb,var(--sw-bg)_92%,transparent)_38%,color-mix(in_srgb,var(--sw-bg)_70%,transparent)_68%,transparent_100%)] md:block hidden" />
-        <div className="absolute inset-0 w-full h-3/5 top-auto bottom-0 bg-[linear-gradient(0deg,var(--sw-bg)_22%,color-mix(in_srgb,var(--sw-bg)_82%,transparent)_50%,transparent_100%)] md:hidden" />
+        <div className="absolute inset-0 w-[min(54vw,760px)] bg-[linear-gradient(90deg,color-mix(in_srgb,var(--sw-bg)_88%,transparent)_0%,color-mix(in_srgb,var(--sw-bg)_72%,transparent)_34%,color-mix(in_srgb,var(--sw-bg)_34%,transparent)_70%,transparent_100%)] md:block hidden" />
+        <div className="absolute inset-0 w-full h-[46%] top-auto bottom-0 bg-[linear-gradient(0deg,var(--sw-bg)_45%,color-mix(in_srgb,var(--sw-bg)_80%,transparent)_70%,transparent_100%)] md:hidden" />
         
         {config.sections.map((s, i) => (
           <article
@@ -1144,24 +1144,24 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
           text-shadow: 0 1px 0 rgba(255,255,255,0.72), 0 8px 18px rgba(232,244,253,0.92);
         }
 
-        /* Phones: the scenes are wide (16:9) shots. Filling a tall phone
-           screen cropped them to about a quarter of their width. Show them in
-           a band under the bar instead (two-thirds of the width or more),
-           fading into the page above the headline. */
+        /* Phones: the scenes are wide (16:9) shots. Filling the whole tall
+           screen would crop them to about a quarter of their width, and a thin
+           band left most of the screen empty. Fill everything between the top
+           bar and the copy (two-thirds of the width or more stays visible),
+           fading into the page behind the headline. The copy sits at the
+           bottom, above the sticky booking button. */
         @media (max-width: 767px) {
           .sw-stage {
             top: calc(64px + env(safe-area-inset-top));
             bottom: auto;
-            height: min(84vw, 42vh);
-            /* Ends just above the headline: the text block needs ~460px. */
-            height: clamp(100px, 22svh, 180px);
-            -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 80%, transparent 100%);
-            mask-image: linear-gradient(180deg, #000 0%, #000 80%, transparent 100%);
+            height: max(200px, calc(100svh - 64px - env(safe-area-inset-top) - 250px));
+            -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 72%, transparent 100%);
+            mask-image: linear-gradient(180deg, #000 0%, #000 72%, transparent 100%);
           }
         }
 
         @media (max-width: 767px) {
-          .sw-copy { top: calc(86px + 22svh) !important; bottom: auto !important; }
+          .sw-copy { top: auto !important; bottom: calc(92px + env(safe-area-inset-bottom)) !important; }
           .sw-copy__title { font-size: clamp(1.6rem, 5.5vw, 2.3rem); line-height: 1.08; }
           .sw-copy__body { margin-top: 12px; font-size: .95rem; line-height: 1.45; }
           .sw-copy__cta { margin-top: 16px; gap: 8px; }
