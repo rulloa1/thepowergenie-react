@@ -4,6 +4,7 @@ import { openAssistant } from '../lib/openAssistant';
 import { lockPageScroll } from '../lib/scrollLock';
 import { preservedScrollTop } from '../lib/scrollPosition';
 import { shouldHandleClientNavigation } from '../lib/siteRoutes';
+import { motionCurve, timeForMotion } from '../lib/motionPacing';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -16,6 +17,10 @@ function syncFrame(s: Segment) {
   const video = s.video;
   if (!video) return;
   if ((video.readyState >= 2 && video.videoWidth > 0) || s.sawFrame) {
+    // Keep the still up until the video shows the frame this scroll position
+    // wants; otherwise the first painted frame (time 0) flashes, then jumps.
+    if (!s.frameVisible && s.visible && video.duration > 0
+      && Math.abs(video.currentTime - Math.min(0.999, Math.max(0, s.cur || 0)) * video.duration) > 0.1) return;
     s.sawFrame = true;
     s.frameVisible = true;
     s.el?.classList.add('is-framed');
@@ -217,11 +222,13 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
 
   const primeVideo = useCallback((v: HTMLVideoElement | null | undefined) => {
     if (!isMobile || !v) return;
+    const t = v.currentTime;
     try {
       const p = v.play();
       if (p && p.then) {
         p.then(() => {
-          try { v.pause(); wake(); } catch (e) {}
+          // Playing to unlock iOS decoding moves the clip; put it back.
+          try { v.pause(); v.currentTime = t; wake(); } catch (e) {}
         }).catch(wake);
       }
     } catch (e) {}
@@ -239,7 +246,8 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
     if (document.hidden) return;
     
     let moving = false;
-    const eps = isMobile ? 0.02 : 0.008;
+    // Half a frame: never re-seek to the frame already on screen.
+    const eps = isMobile ? 1 / 48 : 1 / 60;
     
     segmentsRef.current.forEach((s, i) => {
       if (s.video) syncFrame(s);
@@ -301,6 +309,7 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
 
     v.addEventListener('loadedmetadata', () => {
       s.ready = Number.isFinite(v.duration) && v.duration > 0;
+      s.cur = s.target;   // start where the scroll already is, not at frame 0
       requestRead();
     });
 
@@ -429,10 +438,13 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
     segmentsRef.current.forEach((s, i) => {
       const span = Math.max(1, (s.end || 0) - (s.start || 0));
       const local = clamp((y - (s.start || 0)) / span, 0, 1);
-      s.target = s.linger ? lingerEase(local, s.linger) : local;
+      const eased = s.linger ? lingerEase(local, s.linger) : local;
+      s.target = s.motion ? timeForMotion(s.motion, eased) : eased;
 
       const op = stageOpacity(y, i, spansForFade, imageFade);
       const inRange = op > 0.001;
+      // A scene coming back into view starts on its frame instead of rewinding to it.
+      if (inRange && !s.visible) s.cur = s.target;
 
       if (s.el) {
         s.el.style.opacity = inRange ? String(op) : '0';
@@ -662,6 +674,7 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
         accent: s.accent,
         w: s.scroll || (config.diveScroll ?? 1.3),
         linger: s.linger || 0,
+        motion: motionCurve(s.clip),
         cur: 0,
         target: 0
       };
@@ -683,6 +696,7 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
           stillM: s.stillMobile || null,
           accent: next.accent,
           w: clip || clipM ? (config.connScroll ?? 1.1) : DISSOLVE_SCROLL,
+          motion: motionCurve(clip),
           cur: 0,
           target: 0,
           linger: 0
@@ -1115,6 +1129,10 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
           to { transform: rotate(360deg); }
         }
         .sw-scene__still { opacity: 1; }
+        /* Phones: a live blur over a scrubbing video repaints every frame and can flicker on iOS. */
+        @media (hover: none) and (pointer: coarse), (max-width: 860px) {
+          .sw-topbar { -webkit-backdrop-filter: none; backdrop-filter: none; background: rgba(245, 250, 249, 0.96); }
+        }
         .sw-scene.is-framed .sw-scene__still {
           opacity: 0;
           transition: opacity 180ms linear;
