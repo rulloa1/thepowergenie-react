@@ -58,6 +58,7 @@ export default function Toast({ message, submessage, isVisible, onClose, duratio
         </div>
         <button
           onClick={onClose}
+          tabIndex={isVisible ? 0 : -1}
           className="absolute top-3 right-3 p-1.5 text-[#4A5568] hover:text-[#1A1A2E] hover:bg-gray-100 active:scale-95 rounded-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600 focus-visible:ring-offset-1"
           aria-label="Close notification"
         >
