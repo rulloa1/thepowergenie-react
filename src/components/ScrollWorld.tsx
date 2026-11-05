@@ -383,6 +383,9 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
       segs.forEach((seg, index) => {
         if (seg.video || seg.loading || seg.failed || !seg.el || !clipUrl(seg, isMobile)) return;
         const distance = index - loader.current;
+        // Only fetch clips near the reader. Fetching all of them up front cost
+        // a phone about 18 MB before anyone scrolled.
+        if (distance > (isMobile ? 2 : 3) || distance < -1) return;
         const score = distance >= 0 ? distance : 0.5 - distance * 1.5;
         if (score < bestScore) {
           bestScore = score;
@@ -843,7 +846,7 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
         {config.brand && (
           <button onClick={() => jumpTo(0)} className="sw-brand shrink-0 flex items-center gap-[10px] no-underline text-[var(--sw-ink)] bg-transparent border-0 p-0 cursor-pointer group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-accent)] rounded-xl" aria-label={`${config.brand.name} home`}>
             {config.brand.logo ? (
-              <img src={config.brand.logo} alt="" className="sw-brand__logo block h-11 w-auto max-w-[150px] max-sm:h-10 max-sm:max-w-[130px] shrink-0 object-contain rounded-xl bg-[#071b27] px-2.5 py-1 shadow-[0_4px_12px_rgba(7,27,39,0.18)]" />
+              <img src={config.brand.logo} alt="" width={647} height={180} className="sw-brand__logo block h-11 w-auto max-w-[150px] max-sm:h-10 max-sm:max-w-[130px] shrink-0 object-contain rounded-xl bg-[#071b27] px-2.5 py-1 shadow-[0_4px_12px_rgba(7,27,39,0.18)]" />
             ) : (
               <span className="sw-brand__mark w-6 h-7 rounded-[7px_7px_10px_10px] bg-[linear-gradient(160deg,var(--sw-accent),color-mix(in_srgb,var(--sw-accent)_60%,#000))] shadow-[0_6px_14px_color-mix(in_srgb,var(--sw-accent)_40%,transparent)]" />
             )}
@@ -960,6 +963,7 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
               alt=""
               decoding="async"
               loading="eager"
+              {...{ fetchpriority: i === 0 ? 'high' : 'low' }}
               className="sw-scene__still absolute inset-0 z-[2] w-full h-full object-cover object-[center_42%] will-change-transform"
             />
             {s.kind === 'dive' && s.si === 0 && (
