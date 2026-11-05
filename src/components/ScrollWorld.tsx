@@ -974,7 +974,7 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
 
       {/* Copy Layer */}
       <div ref={copylayerRef} className="sw-copylayer fixed inset-0 z-20 pointer-events-none">
-        <div className="absolute inset-0 w-[min(54vw,760px)] bg-[linear-gradient(90deg,color-mix(in_srgb,var(--sw-bg)_88%,transparent)_0%,color-mix(in_srgb,var(--sw-bg)_72%,transparent)_34%,color-mix(in_srgb,var(--sw-bg)_34%,transparent)_70%,transparent_100%)] md:block hidden" />
+        <div className="absolute inset-0 w-[min(58vw,800px)] bg-[linear-gradient(90deg,color-mix(in_srgb,var(--sw-bg)_94%,transparent)_0%,color-mix(in_srgb,var(--sw-bg)_86%,transparent)_40%,color-mix(in_srgb,var(--sw-bg)_50%,transparent)_72%,transparent_100%)] md:block hidden" />
         <div className="absolute inset-0 w-full h-[46%] top-auto bottom-0 bg-[linear-gradient(0deg,var(--sw-bg)_45%,color-mix(in_srgb,var(--sw-bg)_80%,transparent)_70%,transparent_100%)] md:hidden" />
         
         {config.sections.map((s, i) => (
@@ -985,8 +985,8 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
             className={cn(
               "sw-copy absolute left-[clamp(18px,5vw,64px)] opacity-0 will-change-[opacity,transform] md:block flex flex-col items-start max-md:right-[clamp(18px,5vw,64px)] max-md:top-auto max-md:bottom-[calc(clamp(32px,8dvh,70px)+env(safe-area-inset-bottom))] max-md:w-auto max-md:max-w-[560px]",
               s.id === 'home'
-                ? "top-[clamp(65px,8.5vh,92px)] w-[min(48vw,520px)] max-lg:w-[min(54vw,500px)]"
-                : "top-[max(112px,calc(56%-170px))] w-[min(42vw,460px)]"
+                ? "top-[max(104px,calc(50%-210px))] w-[min(48vw,520px)] max-lg:w-[min(54vw,500px)]"
+                : "top-[max(112px,calc(50%-230px))] w-[min(42vw,460px)]"
             )}
             style={{ '--sw-accent': s.accent || '', '--sw-accent-ink': accentInk(s.accent) } as React.CSSProperties}
           >
@@ -1136,6 +1136,14 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
         .sw-scene.is-framed .sw-scene__still {
           opacity: 0;
           transition: opacity 180ms linear;
+        }
+        /* Headlines: tight leading, and balanced lines so a last word never sits alone. */
+        .sw-copy__title { line-height: 1.06; text-wrap: balance; }
+        .sw-copy__body { text-wrap: pretty; }
+        /* Short laptop screens: the copy started low and its tags ran off the bottom. */
+        @media (min-width: 768px) and (max-height: 780px) {
+          .sw-copy { top: max(100px, calc(50% - 220px)) !important; }
+          .sw-copy:not(#home) .sw-copy__title { font-size: min(3.5rem, 4.4vw, 6.8vh) !important; }
         }
         .sw-copy__eyebrow,
         .sw-copy__title,
