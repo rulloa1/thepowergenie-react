@@ -25,9 +25,3 @@ for s in $SCENES; do
     -g 4 -keyint_min 4 -sc_threshold 0 -movflags +faststart "$VID/mobile/$s-loop.mp4"
 done
 
-# Phones get lighter encodes of the remaining clips too (they were byte-identical copies).
-for f in 06-cta-dive c01-sun-roof c02-roof-battery c03-battery-home c04-home-community c05-community-cta; do
-  ffmpeg -v error -y -i "$VID/encoded/$f.mp4" -vf "scale=720:-2" \
-    -an -c:v libx264 -preset slow -crf 23 -pix_fmt yuv420p \
-    -g 4 -keyint_min 4 -sc_threshold 0 -movflags +faststart "$VID/mobile/$f.mp4"
-done
