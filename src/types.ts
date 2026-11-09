@@ -54,6 +54,8 @@ export interface Segment {
   accent: string | undefined;
   w: number;
   linger: number;
+  /** Motion curve from src/data/motion-profile.json; paces scroll by on-screen movement. */
+  motion?: number[] | null;
   start?: number;
   end?: number;
   el?: HTMLDivElement;

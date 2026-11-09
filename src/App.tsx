@@ -19,7 +19,7 @@ const config: Config = {
   brand: { name: 'The Power Genie', href: '#top', logo: 'assets/brand/power-genie-lockup.webp' },
   mobileClipsUseDesktopFraming: true,
   diveScroll: 1.5,
-  connScroll: 1.1,
+  connScroll: 1.4,
   hint: 'scroll to explore',
   nav: true,
   atmosphere: true,
@@ -123,8 +123,22 @@ const config: Config = {
       }
     }
   ],
-  connectors: [],
-  connectorsMobile: []
+  // Frame-matched flights: each starts on a scene's last frame and lands on the next scene's first.
+  // Community -> CTA already lines up, so that seam stays a short dissolve.
+  connectors: [
+    'assets-v2/vid/encoded/c01-sun-roof-v2.mp4',
+    'assets-v2/vid/encoded/c02-roof-battery-v2.mp4',
+    'assets-v2/vid/encoded/c03-battery-home-v2.mp4',
+    'assets-v2/vid/encoded/c04-home-community-v2.mp4',
+    null,
+  ],
+  connectorsMobile: [
+    'assets-v2/vid/mobile/c01-sun-roof-v2.mp4',
+    'assets-v2/vid/mobile/c02-roof-battery-v2.mp4',
+    'assets-v2/vid/mobile/c03-battery-home-v2.mp4',
+    'assets-v2/vid/mobile/c04-home-community-v2.mp4',
+    null,
+  ]
 };
 
 // Main application component
@@ -289,7 +303,7 @@ export default function App() {
       <section ref={quoteRef} className="quote-panel relative z-45 min-h-screen bg-[#F6F7FB] text-[#1A1A2E] p-[calc(clamp(84px,10vw,112px)+env(safe-area-inset-top))_clamp(16px,5vw,64px)_calc(40px+env(safe-area-inset-bottom))]" id="quote" aria-labelledby="quote-title" tabIndex={-1}>
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#FF6B00]/10 border border-[#FF6B00]/20 mb-3">
           <span className="w-1.5 h-1.5 rounded-full bg-[#FF6B00] animate-pulse" aria-hidden="true" />
-          <p className="quote-panel__eyebrow m-0 text-[0.72rem] font-bold tracking-[0.14em] uppercase text-[#FF6B00]">Your free quote</p>
+          <p className="quote-panel__eyebrow m-0 text-[0.72rem] font-bold tracking-[0.14em] uppercase text-[#A84300]">Your free quote</p>
         </div>
         <h2 id="quote-title" className="m-0 mb-4 text-[#1A1A2E] font-bold text-[clamp(1.85rem,3.8vw,2.8rem)] tracking-tight leading-[1.08]">Let's power your home.</h2>
         <div className="mb-7">
@@ -297,7 +311,7 @@ export default function App() {
             type="button"
             data-testid="book-consult"
             onClick={() => { window.location.href = '/book'; }}
-            className="inline-flex items-center justify-center gap-2 min-h-[48px] px-6 rounded-full bg-[#FF6B00] text-white font-bold shadow-[0_8px_20px_rgba(255,107,0,0.28)] hover:bg-[#FF8A2B] hover:shadow-[0_12px_28px_rgba(255,107,0,0.38)] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] transition-all duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00] focus-visible:ring-offset-2 focus-visible:ring-offset-[#F6F7FB]"
+            className="inline-flex items-center justify-center gap-2 min-h-[48px] px-6 rounded-full bg-[#C24E00] text-white font-bold shadow-[0_8px_20px_rgba(255,107,0,0.28)] hover:bg-[#B34700] hover:shadow-[0_12px_28px_rgba(255,107,0,0.38)] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] transition-all duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00] focus-visible:ring-offset-2 focus-visible:ring-offset-[#F6F7FB]"
           >
             <Calendar className="w-4 h-4 text-white" aria-hidden="true" />
             <span>Book a free consultation</span>
@@ -345,10 +359,9 @@ export default function App() {
               ></iframe>
             ) : (
               <div className="quote-panel__frame flex flex-col w-full min-h-[260px] p-6 text-center items-center justify-center gap-3 bg-white text-[0.95rem] text-[#4A5568]">
-                <h3 className="text-xl font-bold text-[#1A1A2E]">Choose your next step</h3>
-                <p>Book a free consultation with Horace. Your electric bill is optional when booking.</p>
-                <a href="/book" className="rounded-full bg-[#1A1A2E] px-6 py-3 font-semibold text-white">Choose a consultation time</a>
-                <button type="button" onClick={() => setFormReady(true)} className="min-h-11 font-semibold text-[#0066CC] underline">Or load the Sunrun quote form</button>
+                <h3 className="text-xl font-bold text-[#1A1A2E]">Rather fill in a form?</h3>
+                <p className="max-w-[46ch]">Send your details through Sunrun’s quote form and Horace will reach out. Your electric bill is optional.</p>
+                <button type="button" onClick={() => setFormReady(true)} className="min-h-11 rounded-full bg-[#1A1A2E] px-6 py-3 font-semibold text-white hover:bg-[#262642] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066CC] focus-visible:ring-offset-2">Open the quote form</button>
               </div>
             )}
             <p className="quote-panel__alt m-0 p-[14px_20px] text-[0.88rem] text-[#4A5568] bg-[#FAFAFC] border-t border-[rgba(26,26,46,0.06)] flex items-center justify-between flex-wrap gap-2">

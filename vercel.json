@@ -24,20 +24,16 @@
   ],
   "rewrites": [
     {
-      "source": "/((?!api(?:/|$)|assets(?:/|$)|assets-v2(?:/|$)|brand-lockups(?:/|$)|privacy(?:/|$|\\.html$)|terms(?:/|$|\\.html$)|paused\\.html$).*)",
-      "destination": "/paused.html"
-    },
-    {
       "source": "/api/(chat|uploads|bill|lead|slots|visit|invite)",
       "destination": "/api/assistant?route=$1"
     },
     {
       "source": "/proposal/:token/interested",
-      "destination": "/paused.html"
+      "destination": "/api/assistant?route=proposal&t=:token&action=interested"
     },
     {
       "source": "/proposal/:token",
-      "destination": "/paused.html"
+      "destination": "/api/assistant?route=proposal&t=:token"
     },
     {
       "source": "/privacy",
@@ -57,27 +53,43 @@
     },
     {
       "source": "/launch/gas-genie",
-      "destination": "/paused.html"
+      "destination": "/gas-genie.html"
     },
     {
       "source": "/launch/celebrity-solar",
-      "destination": "/paused.html"
+      "destination": "/celebrity-solar.html"
     },
     {
       "source": "/launch/hip-hop-solar",
-      "destination": "/paused.html"
+      "destination": "/hip-hop-solar.html"
     },
     {
       "source": "/launch/sport-and-solar",
-      "destination": "/paused.html"
+      "destination": "/sport-and-solar.html"
     },
     {
       "source": "/sport-and-solar",
-      "destination": "/paused.html"
+      "destination": "/sport-and-solar.html"
     },
     {
-      "source": "/((?!api/|brand-lockups(?:/|$)).*)",
-      "destination": "/paused.html"
+      "source": "/assets/bills",
+      "destination": "/api/not-found"
+    },
+    {
+      "source": "/assets/bills/:path*",
+      "destination": "/api/not-found"
+    },
+    {
+      "source": "/assets/plans",
+      "destination": "/api/not-found"
+    },
+    {
+      "source": "/assets/plans/:path*",
+      "destination": "/api/not-found"
+    },
+    {
+      "source": "/((?!api/|brand-lockups(?:/|$)|assets/bills(?:/|$)|assets/plans(?:/|$)).*)",
+      "destination": "/index.html"
     }
   ],
   "headers": [

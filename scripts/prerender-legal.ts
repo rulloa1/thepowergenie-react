@@ -4,7 +4,7 @@
  * policy text without running JavaScript. The same app bundle still mounts
  * and renders the page. This is not a serverless function.
  */
-import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
+import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
@@ -156,24 +156,3 @@ if (existsSync(assetsDir)) {
   cpSync(assetsDir, distAssets, { recursive: true, force: false });
 }
 console.log('copied launch pages and static assets to dist');
-
-// Remove public/paused.html and this pause rewrite to reinstate the original site.
-// Overwrite every generated HTML entry so filesystem routes cannot bypass the pause.
-const pauseFile = join(process.cwd(), 'public', 'paused.html')
-if (existsSync(pauseFile)) {
-  const paused = readFileSync(pauseFile, 'utf8')
-  const coverEntries = (directory: string) => {
-    for (const entry of readdirSync(directory, { withFileTypes: true })) {
-      const target = join(directory, entry.name)
-      if (entry.isDirectory()) coverEntries(target)
-      else if (entry.name.endsWith('.html')) {
-        if (target === join(dist, 'privacy.html') || target === join(dist, 'terms.html')) {
-          // Keep legal documents readable without mounting the marketing application.
-          writeFileSync(target, readFileSync(target, 'utf8').replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, ''))
-        } else writeFileSync(target, paused)
-      }
-    }
-  }
-  coverEntries(dist)
-  console.log('Public HTML entries paused; legal documents retained without app scripts')
-}

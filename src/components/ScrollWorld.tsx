@@ -4,6 +4,7 @@ import { openAssistant } from '../lib/openAssistant';
 import { lockPageScroll } from '../lib/scrollLock';
 import { preservedScrollTop } from '../lib/scrollPosition';
 import { shouldHandleClientNavigation } from '../lib/siteRoutes';
+import { motionCurve, timeForMotion } from '../lib/motionPacing';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -16,6 +17,10 @@ function syncFrame(s: Segment) {
   const video = s.video;
   if (!video) return;
   if ((video.readyState >= 2 && video.videoWidth > 0) || s.sawFrame) {
+    // Keep the still up until the video shows the frame this scroll position
+    // wants; otherwise the first painted frame (time 0) flashes, then jumps.
+    if (!s.frameVisible && s.visible && video.duration > 0
+      && Math.abs(video.currentTime - Math.min(0.999, Math.max(0, s.cur || 0)) * video.duration) > 0.1) return;
     s.sawFrame = true;
     s.frameVisible = true;
     s.el?.classList.add('is-framed');
@@ -217,11 +222,13 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
 
   const primeVideo = useCallback((v: HTMLVideoElement | null | undefined) => {
     if (!isMobile || !v) return;
+    const t = v.currentTime;
     try {
       const p = v.play();
       if (p && p.then) {
         p.then(() => {
-          try { v.pause(); wake(); } catch (e) {}
+          // Playing to unlock iOS decoding moves the clip; put it back.
+          try { v.pause(); v.currentTime = t; wake(); } catch (e) {}
         }).catch(wake);
       }
     } catch (e) {}
@@ -239,7 +246,8 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
     if (document.hidden) return;
     
     let moving = false;
-    const eps = isMobile ? 0.02 : 0.008;
+    // Half a frame: never re-seek to the frame already on screen.
+    const eps = isMobile ? 1 / 48 : 1 / 60;
     
     segmentsRef.current.forEach((s, i) => {
       if (s.video) syncFrame(s);
@@ -301,6 +309,7 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
 
     v.addEventListener('loadedmetadata', () => {
       s.ready = Number.isFinite(v.duration) && v.duration > 0;
+      s.cur = s.target;   // start where the scroll already is, not at frame 0
       requestRead();
     });
 
@@ -374,6 +383,9 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
       segs.forEach((seg, index) => {
         if (seg.video || seg.loading || seg.failed || !seg.el || !clipUrl(seg, isMobile)) return;
         const distance = index - loader.current;
+        // Only fetch clips near the reader. Fetching all of them up front cost
+        // a phone about 18 MB before anyone scrolled.
+        if (distance > (isMobile ? 2 : 3) || distance < -1) return;
         const score = distance >= 0 ? distance : 0.5 - distance * 1.5;
         if (score < bestScore) {
           bestScore = score;
@@ -429,10 +441,13 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
     segmentsRef.current.forEach((s, i) => {
       const span = Math.max(1, (s.end || 0) - (s.start || 0));
       const local = clamp((y - (s.start || 0)) / span, 0, 1);
-      s.target = s.linger ? lingerEase(local, s.linger) : local;
+      const eased = s.linger ? lingerEase(local, s.linger) : local;
+      s.target = s.motion ? timeForMotion(s.motion, eased) : eased;
 
       const op = stageOpacity(y, i, spansForFade, imageFade);
       const inRange = op > 0.001;
+      // A scene coming back into view starts on its frame instead of rewinding to it.
+      if (inRange && !s.visible) s.cur = s.target;
 
       if (s.el) {
         s.el.style.opacity = inRange ? String(op) : '0';
@@ -662,6 +677,7 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
         accent: s.accent,
         w: s.scroll || (config.diveScroll ?? 1.3),
         linger: s.linger || 0,
+        motion: motionCurve(s.clip),
         cur: 0,
         target: 0
       };
@@ -683,6 +699,7 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
           stillM: s.stillMobile || null,
           accent: next.accent,
           w: clip || clipM ? (config.connScroll ?? 1.1) : DISSOLVE_SCROLL,
+          motion: motionCurve(clip),
           cur: 0,
           target: 0,
           linger: 0
@@ -829,7 +846,7 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
         {config.brand && (
           <button onClick={() => jumpTo(0)} className="sw-brand shrink-0 flex items-center gap-[10px] no-underline text-[var(--sw-ink)] bg-transparent border-0 p-0 cursor-pointer group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-accent)] rounded-xl" aria-label={`${config.brand.name} home`}>
             {config.brand.logo ? (
-              <img src={config.brand.logo} alt="" className="sw-brand__logo block h-11 w-auto max-w-[150px] max-sm:h-10 max-sm:max-w-[130px] shrink-0 object-contain rounded-xl bg-[#071b27] px-2.5 py-1 shadow-[0_4px_12px_rgba(7,27,39,0.18)]" />
+              <img src={config.brand.logo} alt="" width={647} height={180} className="sw-brand__logo block h-11 w-auto max-w-[150px] max-sm:h-10 max-sm:max-w-[130px] shrink-0 object-contain rounded-xl bg-[#071b27] px-2.5 py-1 shadow-[0_4px_12px_rgba(7,27,39,0.18)]" />
             ) : (
               <span className="sw-brand__mark w-6 h-7 rounded-[7px_7px_10px_10px] bg-[linear-gradient(160deg,var(--sw-accent),color-mix(in_srgb,var(--sw-accent)_60%,#000))] shadow-[0_6px_14px_color-mix(in_srgb,var(--sw-accent)_40%,transparent)]" />
             )}
@@ -946,6 +963,7 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
               alt=""
               decoding="async"
               loading="eager"
+              {...{ fetchpriority: i === 0 ? 'high' : 'low' }}
               className="sw-scene__still absolute inset-0 z-[2] w-full h-full object-cover object-[center_42%] will-change-transform"
             />
             {s.kind === 'dive' && s.si === 0 && (
@@ -960,8 +978,8 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
 
       {/* Copy Layer */}
       <div ref={copylayerRef} className="sw-copylayer fixed inset-0 z-20 pointer-events-none">
-        <div className="absolute inset-0 w-[min(64vw,840px)] bg-[linear-gradient(90deg,var(--sw-bg)_0%,color-mix(in_srgb,var(--sw-bg)_92%,transparent)_38%,color-mix(in_srgb,var(--sw-bg)_70%,transparent)_68%,transparent_100%)] md:block hidden" />
-        <div className="absolute inset-0 w-full h-3/5 top-auto bottom-0 bg-[linear-gradient(0deg,var(--sw-bg)_22%,color-mix(in_srgb,var(--sw-bg)_82%,transparent)_50%,transparent_100%)] md:hidden" />
+        <div className="absolute inset-0 w-[min(58vw,800px)] bg-[linear-gradient(90deg,color-mix(in_srgb,var(--sw-bg)_94%,transparent)_0%,color-mix(in_srgb,var(--sw-bg)_86%,transparent)_40%,color-mix(in_srgb,var(--sw-bg)_50%,transparent)_72%,transparent_100%)] md:block hidden" />
+        <div className="absolute inset-0 w-full h-[46%] top-auto bottom-0 bg-[linear-gradient(0deg,var(--sw-bg)_45%,color-mix(in_srgb,var(--sw-bg)_80%,transparent)_70%,transparent_100%)] md:hidden" />
         
         {config.sections.map((s, i) => (
           <article
@@ -971,8 +989,8 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
             className={cn(
               "sw-copy absolute left-[clamp(18px,5vw,64px)] opacity-0 will-change-[opacity,transform] md:block flex flex-col items-start max-md:right-[clamp(18px,5vw,64px)] max-md:top-auto max-md:bottom-[calc(clamp(32px,8dvh,70px)+env(safe-area-inset-bottom))] max-md:w-auto max-md:max-w-[560px]",
               s.id === 'home'
-                ? "top-[clamp(65px,8.5vh,92px)] w-[min(48vw,520px)] max-lg:w-[min(54vw,500px)]"
-                : "top-[max(112px,calc(56%-170px))] w-[min(42vw,460px)]"
+                ? "top-[max(104px,calc(50%-210px))] w-[min(48vw,520px)] max-lg:w-[min(54vw,500px)]"
+                : "top-[max(112px,calc(50%-230px))] w-[min(42vw,460px)]"
             )}
             style={{ '--sw-accent': s.accent || '', '--sw-accent-ink': accentInk(s.accent) } as React.CSSProperties}
           >
@@ -1115,9 +1133,21 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
           to { transform: rotate(360deg); }
         }
         .sw-scene__still { opacity: 1; }
+        /* Phones: a live blur over a scrubbing video repaints every frame and can flicker on iOS. */
+        @media (hover: none) and (pointer: coarse), (max-width: 860px) {
+          .sw-topbar { -webkit-backdrop-filter: none; backdrop-filter: none; background: rgba(245, 250, 249, 0.96); }
+        }
         .sw-scene.is-framed .sw-scene__still {
           opacity: 0;
           transition: opacity 180ms linear;
+        }
+        /* Headlines: tight leading, and balanced lines so a last word never sits alone. */
+        .sw-copy__title { line-height: 1.06; text-wrap: balance; }
+        .sw-copy__body { text-wrap: pretty; }
+        /* Short laptop screens: the copy started low and its tags ran off the bottom. */
+        @media (min-width: 768px) and (max-height: 780px) {
+          .sw-copy { top: max(100px, calc(50% - 220px)) !important; }
+          .sw-copy:not(#home) .sw-copy__title { font-size: min(3.5rem, 4.4vw, 6.8vh) !important; }
         }
         .sw-copy__eyebrow,
         .sw-copy__title,
@@ -1126,24 +1156,24 @@ export default function ScrollWorld({ config, onQuoteClick, onNavigateBrands }: 
           text-shadow: 0 1px 0 rgba(255,255,255,0.72), 0 8px 18px rgba(232,244,253,0.92);
         }
 
-        /* Phones: the scenes are wide (16:9) shots. Filling a tall phone
-           screen cropped them to about a quarter of their width. Show them in
-           a band under the bar instead (two-thirds of the width or more),
-           fading into the page above the headline. */
+        /* Phones: the scenes are wide (16:9) shots. Filling the whole tall
+           screen would crop them to about a quarter of their width, and a thin
+           band left most of the screen empty. Fill everything between the top
+           bar and the copy (two-thirds of the width or more stays visible),
+           fading into the page behind the headline. The copy sits at the
+           bottom, above the sticky booking button. */
         @media (max-width: 767px) {
           .sw-stage {
             top: calc(64px + env(safe-area-inset-top));
             bottom: auto;
-            height: min(84vw, 42vh);
-            /* Ends just above the headline: the text block needs ~460px. */
-            height: clamp(100px, 22svh, 180px);
-            -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 80%, transparent 100%);
-            mask-image: linear-gradient(180deg, #000 0%, #000 80%, transparent 100%);
+            height: max(200px, calc(100svh - 64px - env(safe-area-inset-top) - 250px));
+            -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 72%, transparent 100%);
+            mask-image: linear-gradient(180deg, #000 0%, #000 72%, transparent 100%);
           }
         }
 
         @media (max-width: 767px) {
-          .sw-copy { top: calc(86px + 22svh) !important; bottom: auto !important; }
+          .sw-copy { top: auto !important; bottom: calc(92px + env(safe-area-inset-bottom)) !important; }
           .sw-copy__title { font-size: clamp(1.6rem, 5.5vw, 2.3rem); line-height: 1.08; }
           .sw-copy__body { margin-top: 12px; font-size: .95rem; line-height: 1.45; }
           .sw-copy__cta { margin-top: 16px; gap: 8px; }
