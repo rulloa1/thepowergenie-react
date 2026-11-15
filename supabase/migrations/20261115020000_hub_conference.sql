@@ -21,6 +21,7 @@ create table if not exists public.hub_conference_guests (
   room_id uuid not null references public.hub_conference_rooms (id) on delete cascade,
   display_name text not null,
   status text not null default 'waiting' check (status in ('waiting', 'admitted', 'denied')),
+  wants_camera boolean not null default true,
   created_at timestamptz not null default now()
 );
 

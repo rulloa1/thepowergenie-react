@@ -72,7 +72,7 @@ export function ConferenceCall({
             connect
             audio
             video={startWithCamera}
-            onError={(error) => setConnectionNote(error.message)}
+            onError={(error) => setConnectionNote(plainConnectionNote(error.message))}
             onDisconnected={() => setConnectionNote('The video connection closed. Use Leave when you are finished.')}
             style={{ height: '100%' }}
           >
@@ -114,6 +114,12 @@ export function ConferenceCall({
       </div>
     </div>
   );
+}
+
+function plainConnectionNote(message: string): string {
+  if (/authorization|token|401/i.test(message)) return 'The room could not verify this join. Ask Horace or Rory to let you in again.'
+  if (/signal|websocket|network|fetch/i.test(message)) return 'Could not reach the video service. Check your connection, then try again.'
+  return message
 }
 
 function SideTab({ current, id, onSelect, children }: { current: string; id: 'call' | 'proposal' | 'chat'; onSelect: (id: 'call' | 'proposal' | 'chat') => void; children: React.ReactNode }) {
@@ -163,7 +169,10 @@ function WaitingList({ customerId }: { customerId: string }) {
       <ul className="m-0 mt-2 grid list-none gap-2 p-0">
         {guests.map((guest) => (
           <li key={guest.id} className="flex items-center justify-between gap-2">
-            <span className="truncate text-[0.9rem] font-semibold">{guest.name}</span>
+            <span className="min-w-0">
+              <span className="block truncate text-[0.9rem] font-semibold">{guest.name}</span>
+              <span className="block text-[0.75rem] text-hub-soft">{guest.camera === false ? 'No video' : 'Camera on'}</span>
+            </span>
             <span className="flex gap-1">
               <Button type="button" variant="accent" className="min-h-11 px-3 text-[0.8rem]" onClick={() => void conferenceApi.admit(customerId, guest.id).then(load)}>Let in</Button>
               <Button type="button" variant="ghost" className="min-h-11 px-3 text-[0.8rem]" onClick={() => void conferenceApi.decline(customerId, guest.id).then(load)}>Not now</Button>
@@ -189,6 +198,7 @@ export function ConferenceSheet({
   const [configured, setConfigured] = useState<boolean | null>(sample ? false : null);
   const [invitePath, setInvitePath] = useState<string | null>(null);
   const [join, setJoin] = useState<JoinInfo | null>(null);
+  const [hostCamera, setHostCamera] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -227,7 +237,7 @@ export function ConferenceSheet({
     }
   };
 
-  if (join) return <ConferenceCall join={join} isHost customerId={customerId} onLeave={onClose} />;
+  if (join) return <ConferenceCall join={join} isHost customerId={customerId} startWithCamera={hostCamera} onLeave={onClose} />;
 
   return (
     <div className="fixed inset-0 z-[85] flex items-end justify-center bg-hub-scrim sm:items-center" onClick={onClose}>
@@ -259,6 +269,10 @@ export function ConferenceSheet({
             ) : (
               <>
                 <p className="m-0 break-all rounded-xl bg-hub-muted px-3 py-2 text-[0.84rem]">{inviteHref(invitePath)}</p>
+                <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border border-hub-line bg-hub-muted px-3">
+                  <input type="checkbox" checked={hostCamera} onChange={(event) => setHostCamera(event.target.checked)} className="h-4 w-4 accent-[#ffcf75]" />
+                  <span className="text-[0.9rem] font-semibold">Start with my camera on</span>
+                </label>
                 <div className="flex flex-wrap gap-2">
                   <Button type="button" variant="ghost" onClick={() => void navigator.clipboard.writeText(inviteHref(invitePath)).then(() => { setCopied(true); window.setTimeout(() => setCopied(false), 2000); })}>
                     <Copy className="h-4 w-4" /> {copied ? 'Copied' : 'Copy invite link'}

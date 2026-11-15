@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
 import { AccessToken } from 'livekit-server-sdk'
 import {
+  cameraChoice,
   cleanGuestName,
   invitePath,
   livekitEnv,
@@ -49,6 +50,13 @@ test('a signed token does not contain the API secret', async () => {
   assert.equal(payload.video?.roomJoin, true)
   assert.equal(payload.video?.canPublish, true)
   assert.notEqual(payload.video?.roomAdmin, true)
+})
+
+test('camera choice is only a real yes or no', () => {
+  assert.equal(cameraChoice(true), true)
+  assert.equal(cameraChoice(false), false)
+  assert.throws(() => cameraChoice('off'), (error: unknown) => error instanceof HttpError && error.status === 400)
+  assert.throws(() => cameraChoice(undefined), (error: unknown) => error instanceof HttpError && error.status === 400)
 })
 
 test('guest names are trimmed and empty names are refused', () => {
