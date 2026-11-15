@@ -227,7 +227,7 @@ export default function ScheduleTab({ profile }: { profile: Profile }) {
   if (sample) {
     return (
       <section aria-label="Upcoming appointments" className="rounded-3xl bg-hub-surface p-4 sm:p-6">
-        <h2 className="m-0 text-lg font-bold text-hub-ink">Schedule</h2>
+        <h2 className="m-0 text-2xl font-bold tracking-tight text-hub-ink">Appointments</h2>
         <p className="m-0 mt-2 max-w-prose text-[0.95rem] leading-relaxed text-hub-soft">
           Bookings from the public page and appointments added here show up for both Horace and Rory. The sample desk does not load the live calendar. Sign in to see it.
         </p>

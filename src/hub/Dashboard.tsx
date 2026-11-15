@@ -1,12 +1,14 @@
 import React, { lazy, Suspense, useEffect, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
-import { CalendarDays, FolderOpen, Inbox, LogOut, MessageCircle } from 'lucide-react';
+import { CalendarDays, FolderOpen, Inbox, LogOut, MessageCircle, Video } from 'lucide-react';
 import { useLeadFeed } from './useLeadFeed';
+import { hubNavFor } from './hubNav';
 import { hubTabFromLocation, type HubTab } from '../lib/siteRoutes';
 import { arrivalAuthType, supabase } from '../lib/supabase';
 import { BrandMark, Button, Notice, NotConfigured, Spinner, cn } from './ui';
 
 const ChatTab = lazy(() => import('./ChatTab'));
+const ConferenceDesk = lazy(() => import('./ConferenceDesk'));
 const FilesTab = lazy(() => import('./FilesTab'));
 const LeadsTab = lazy(() => import('./LeadsTab'));
 const ScheduleTab = lazy(() => import('./ScheduleTab'));
@@ -26,12 +28,13 @@ const DEMO_PROFILE: Profile = {
 };
 
 type Tab = HubTab;
-const TABS: { id: Tab; label: string; icon: typeof MessageCircle }[] = [
-  { id: 'leads', label: 'Leads', icon: Inbox },
-  { id: 'chat', label: 'Chat', icon: MessageCircle },
-  { id: 'files', label: 'Files', icon: FolderOpen },
-  { id: 'schedule', label: 'Schedule', icon: CalendarDays },
-];
+const TAB_ICONS = {
+  leads: Inbox,
+  chat: MessageCircle,
+  schedule: CalendarDays,
+  files: FolderOpen,
+  conference: Video,
+} as const;
 
 function roleLabel(role: Profile['role']): string {
   return role === 'owner' ? 'Sunrun rep' : 'Referral marketer';
@@ -400,6 +403,7 @@ function HubApp({
   const [tab, setTab] = useState<Tab>(initialTab);
   const leads = useLeadFeed(profile.id);
   const focus = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-hub-focus focus-visible:ring-offset-2 focus-visible:ring-offset-hub-topbar';
+  const tabs = hubNavFor(profile.role).map((item) => ({ ...item, icon: TAB_ICONS[item.id] }));
 
   useEffect(() => {
     const sync = () => setTab(initialTab());
@@ -436,20 +440,9 @@ function HubApp({
             <a href="/" className={cn('rounded-xl', focus)} title="The Power Genie home">
               <BrandMark className="h-9 shadow-sm" />
             </a>
-            <div className="flex min-w-0 items-center gap-2">
-              <span className="hidden text-[0.8rem] font-bold uppercase tracking-[0.14em] text-hub-accent-ink sm:inline">Referral Hub</span>
-              <span className="hidden items-center rounded-full border border-hub-accent-line bg-hub-accent-soft px-2.5 py-0.5 text-[0.7rem] font-bold text-hub-accent-ink md:inline-flex">
-                Shared desk
-              </span>
-            </div>
+            <span className="hidden text-base font-bold text-hub-ink sm:inline">Referral Hub</span>
           </div>
           <div className="flex items-center gap-2.5">
-            <a
-              href="/"
-              className={cn('hidden min-h-11 items-center rounded-lg border border-hub-line bg-hub-surface px-2.5 text-[0.78rem] font-semibold text-hub-link no-underline hover:text-hub-link-hover lg:inline-flex', focus)}
-            >
-              Public site
-            </a>
             <div className="flex items-center gap-2">
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-hub-primary text-[0.78rem] font-bold text-hub-on-primary" aria-hidden="true">
                 {(profile.full_name || profile.email).slice(0, 2).toUpperCase()}
@@ -480,8 +473,8 @@ function HubApp({
             )}
           </div>
         </div>
-        <nav className="mx-auto flex max-w-5xl gap-1 overflow-x-auto px-2 py-2 sm:gap-2 sm:px-5" aria-label="Dashboard sections">
-          {TABS.map(({ id, label, icon: Icon }) => {
+        <nav className="mx-auto flex max-w-5xl flex-wrap gap-1 px-2 py-2 sm:gap-2 sm:px-5" aria-label="Dashboard sections">
+          {tabs.map(({ id, label, icon: Icon }) => {
             const active = tab === id;
             return (
               <button
@@ -490,7 +483,7 @@ function HubApp({
                 onClick={() => go(id)}
                 aria-current={active ? 'page' : undefined}
                 className={cn(
-                  'inline-flex min-h-11 shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-xl px-2.5 py-2 text-[0.8rem] font-bold transition sm:px-4 sm:text-sm',
+                  'inline-flex min-h-12 shrink-0 cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-xl px-3 py-2 text-base font-bold transition sm:px-4',
                   focus,
                   active
                     ? 'bg-hub-primary text-hub-on-primary'
@@ -520,6 +513,7 @@ function HubApp({
           {tab === 'chat' && <ChatTab profile={profile} />}
           {tab === 'files' && <FilesTab sample={isDemo} />}
           {tab === 'schedule' && <ScheduleTab profile={profile} />}
+          {tab === 'conference' && <ConferenceDesk leads={leads.leads} sample={isDemo} />}
         </Suspense>
       </main>
     </div>

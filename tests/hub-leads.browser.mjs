@@ -46,7 +46,7 @@ try {
   await page.locator('#s-email').fill('horace.lawrence@sunrun.com')
   await page.locator('#s-pass').fill('hub-test-pass')
   await page.getByRole('button', { name: 'Sign in' }).click()
-  await page.getByRole('button', { name: 'Add lead' }).waitFor({ timeout: 15000 })
+  await page.getByRole('button', { name: 'Add customer' }).waitFor({ timeout: 15000 })
   await page.getByText('Inbox Neighbor').waitFor()
   await page.getByText('Booking Guest').waitFor()
   await page.getByText('Gmail message 18abcdef123').waitFor()
@@ -56,7 +56,7 @@ try {
   }
   await beat()
   await shot('leads-active-desktop')
-  await page.getByRole('button', { name: 'Add lead' }).click()
+  await page.getByRole('button', { name: 'Add customer' }).click()
   await page.getByRole('dialog', { name: 'Add a lead' }).waitFor()
   await shot('leads-add-form-desktop')
   await page.getByRole('button', { name: 'Cancel' }).click()
@@ -64,7 +64,7 @@ try {
 
   await resize(390, 844)
   await shot('leads-active-phone')
-  await page.getByRole('button', { name: 'Add lead' }).click()
+  await page.getByRole('button', { name: 'Add customer' }).click()
   await page.getByRole('dialog', { name: 'Add a lead' }).waitFor()
   await beat()
   await shot('leads-add-form-phone')
@@ -83,6 +83,7 @@ try {
   await page.getByText('Lead added.').waitFor({ timeout: 15000 })
   const casey = page.locator('li').filter({ hasText: 'Casey Nguyen' }).first()
   await casey.waitFor()
+  await casey.getByRole('button', { name: /Casey Nguyen/ }).click()
   await casey.getByText('1,100 kWh').waitFor()
   await beat()
   await shot('leads-added-phone')
@@ -108,6 +109,7 @@ try {
 
   await page.getByRole('tab', { name: /Archived/ }).click()
   await page.getByText('Casey Nguyen').waitFor()
+  await casey.getByRole('button', { name: /Casey Nguyen/ }).click()
   await beat()
   await shot('leads-archived-desktop')
   await page.setViewportSize({ width: 390, height: 844 })
@@ -120,6 +122,7 @@ try {
   await casey.getByText('Signed').waitFor()
 
   const inbox = page.locator('li').filter({ hasText: 'Inbox Neighbor' }).first()
+  await inbox.getByRole('button', { name: /Inbox Neighbor/ }).click()
   await inbox.getByRole('button', { name: 'Edit' }).click()
   const notesValue = await page.locator('#lead-notes').inputValue()
   if (!notesValue.includes('Gmail message 18abcdef123')) {
@@ -129,11 +132,12 @@ try {
   await page.getByRole('button', { name: 'Save changes' }).click()
   await page.getByText('Lead updated.').waitFor()
   await inbox.getByText('Gmail message 18abcdef123').waitFor()
-  await inbox.getByText('Savings calc').waitFor()
+  await inbox.getByText('Savings estimate').waitFor()
   await beat()
   await shot('leads-gmail-kept')
 
   const downloadPromise = page.waitForEvent('download')
+  await page.getByText('More', { exact: true }).click()
   await page.getByRole('button', { name: 'Export CSV' }).click()
   const download = await downloadPromise
   const csvPath = `${outDir}/powergenie-all-leads.csv`

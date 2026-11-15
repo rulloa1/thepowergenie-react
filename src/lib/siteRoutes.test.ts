@@ -44,6 +44,8 @@ describe('public routes', () => {
     expect(hubTabFromLocation('/hub/files', '')).toBe('files');
     expect(hubTabFromLocation('/dashboard', '?tab=schedule')).toBe('schedule');
     expect(hubTabFromLocation('/dashboard', '?tab=chat')).toBe('chat');
+    expect(hubTabFromLocation('/dashboard', '?tab=conference')).toBe('conference');
+    expect(hubTabFromLocation('/dashboard/conference', '')).toBe('conference');
     expect(hubTabFromLocation('/dashboard', '')).toBe('leads');
     expect(showMarketingAssistant(sitePage('/dashboard/chat'))).toBe(false);
     expect(showMarketingAssistant(sitePage('/hub'))).toBe(false);

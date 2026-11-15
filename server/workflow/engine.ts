@@ -817,6 +817,19 @@ export async function leadDetail(leadId: string) {
   }
 }
 
+/** Monthly savings already stored on each customer. Read-only, for the customer list. */
+export async function savingsGlance() {
+  const rows = await selectRows<{ lead_id: string; savings: { ready?: boolean; savingsMonthly?: number } | null }>(
+    'hub_lead_workflow',
+    {},
+    { select: 'lead_id,savings', limit: 200 },
+  )
+  return rows.map((row) => ({
+    leadId: row.lead_id,
+    monthly: row.savings?.ready && typeof row.savings.savingsMonthly === 'number' ? row.savings.savingsMonthly : null,
+  }))
+}
+
 export async function openTasks() {
   const tasks = await selectRows<TaskRow>('hub_tasks', { done_at: 'is.null', cancelled_at: 'is.null' }, { order: 'due_at.asc', limit: 60 })
   const ids = [...new Set(tasks.map(task => task.lead_id))]

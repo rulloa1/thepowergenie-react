@@ -55,18 +55,18 @@ export default function TasksStrip({ onOpenLead, onOpenPricing, sample = false }
         </Notice>
       )}
       {error && <Notice tone="error">{error}</Notice>}
-      <div className="rounded-2xl border border-hub-line bg-hub-surface p-3.5">
-        <div className="flex items-center justify-between gap-2">
-          <p className="m-0 flex items-center gap-2 text-[0.95rem] font-bold text-hub-ink">
+      <details className="rounded-2xl border border-hub-line bg-hub-surface p-3.5">
+        <summary className="cursor-pointer list-none text-base font-bold text-hub-ink">
+          <span className="inline-flex items-center gap-2">
             <ClipboardList className="h-4 w-4 text-hub-accent-ink" aria-hidden="true" /> Tasks
-            <span className="rounded-full bg-hub-muted px-2 py-0.5 text-[0.72rem] font-semibold text-hub-soft">{list.length}</span>
-          </p>
-          {list.length > SHOWN && (
-            <button type="button" className="text-[0.82rem] font-semibold text-hub-link hover:underline" onClick={() => setAll(!all)}>
-              {all ? 'Show fewer' : `Show all ${list.length}`}
-            </button>
-          )}
-        </div>
+            <span className="text-sm font-semibold text-hub-soft">{list.length}</span>
+          </span>
+        </summary>
+        {list.length > SHOWN && (
+          <button type="button" className="mt-2 text-[0.82rem] font-semibold text-hub-link hover:underline" onClick={() => setAll(!all)}>
+            {all ? 'Show fewer' : `Show all ${list.length}`}
+          </button>
+        )}
         {list.length === 0 ? (
           <p className="m-0 mt-2 text-[0.88rem] text-hub-soft">Nothing due. New tasks appear here as leads move through the sale.</p>
         ) : (
@@ -96,7 +96,7 @@ export default function TasksStrip({ onOpenLead, onOpenPricing, sample = false }
             })}
           </ul>
         )}
-      </div>
+      </details>
     </div>
   );
 }

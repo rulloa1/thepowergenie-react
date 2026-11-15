@@ -23,7 +23,6 @@ import {
   Settings2,
   Share2,
   ShieldCheck,
-  Video,
   X,
   Zap,
 } from 'lucide-react';
@@ -47,7 +46,9 @@ import PricingDialog from './PricingDialog';
 import TasksStrip from './TasksStrip';
 import WorkflowPanel from './WorkflowPanel';
 import { PipelineBar, PipelineSummary } from './PipelineStage';
-import { WORKFLOW_CHANGED, announceWorkflowChange, workflowApi } from './workflowApi';
+import { ConferenceRoomButton } from './ConferenceRoomButton';
+import { dueText, nextPipelineStep, savingsText } from './customerGlance';
+import { WORKFLOW_CHANGED, announceWorkflowChange, workflowApi, type WorkflowTask } from './workflowApi';
 import { archiveCustomerLead, createManualLead, restoreCustomerLead, updateManualLead } from './leadActions';
 import { stageLabel, type LeadActor, type LeadDraft } from './leadRecord';
 import { Button, Notice, Spinner, cn } from './ui';
@@ -63,6 +64,28 @@ import {
 } from './leadExports';
 
 const ConferenceSheet = lazy(() => import('./ConferenceRoom').then((mod) => ({ default: mod.ConferenceSheet })));
+
+function useCustomerGlance(sample: boolean) {
+  const [tasks, setTasks] = useState<WorkflowTask[]>([]);
+  const [savings, setSavings] = useState<Map<string, number | null>>(() => new Map());
+  useEffect(() => {
+    if (sample) return;
+    let alive = true;
+    const load = () => {
+      workflowApi.tasks().then((result) => { if (alive) setTasks(result.tasks); }).catch(() => {});
+      workflowApi.glance().then((result) => {
+        if (alive) setSavings(new Map(result.savings.map((row) => [row.leadId, row.monthly])));
+      }).catch(() => {});
+    };
+    load();
+    window.addEventListener(WORKFLOW_CHANGED, load);
+    return () => {
+      alive = false;
+      window.removeEventListener(WORKFLOW_CHANGED, load);
+    };
+  }, [sample]);
+  return { tasks, savings };
+}
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -229,7 +252,7 @@ function TwoStepOutreachBar({ lead }: { lead: Lead }) {
 
 function SunrunOptionBWorkflow({ lead }: { lead: Lead }) {
   const workflow = useOptionBWorkflow(lead);
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   const [previewPath, setPreviewPath] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
@@ -608,6 +631,7 @@ export default function LeadsTab({
   const marked = useRef(new Set<string>());
   const scrolled = useRef<string | null>(null);
   const actor: LeadActor = { id: profile.id, fullName: profile.full_name, email: profile.email };
+  const glance = useCustomerGlance(feed.sample);
   const inView = leadsForView(feed.leads, view);
   const customersInView = inView.filter((lead) => lead.source === 'customer');
   const shown = stageFilter
@@ -657,6 +681,17 @@ export default function LeadsTab({
     setOpenId(lead.id);
     marked.current.add(`${lead.source}:${lead.id}`);
     void feed.markSeen(lead);
+  };
+
+  const toggle = (lead: Lead) => {
+    if (openId === lead.id) {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('id');
+      window.history.replaceState({}, '', url);
+      setOpenId(null);
+      return;
+    }
+    select(lead);
   };
 
   const openLeadById = (leadId: string) => {
@@ -736,48 +771,51 @@ export default function LeadsTab({
   const missing = !feed.loading && !!openId && feed.leads.every((lead) => lead.id !== openId);
 
   return (
-    <section aria-label="Leads" className="rounded-3xl bg-hub-surface p-4 shadow-[0_10px_30px_rgba(10,20,40,0.06)] sm:p-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <section aria-label="Customers" className="rounded-3xl bg-hub-surface p-4 sm:p-6">
+      <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h2 className="m-0 text-lg font-bold text-hub-ink">Leads</h2>
-          <p className="m-0 text-[0.86rem] text-hub-soft">Website assistant, booking page, and leads you add, newest first</p>
+          <h2 className="m-0 text-2xl font-bold tracking-tight text-hub-ink">Customers</h2>
+          <p className="m-0 mt-1 max-w-prose text-base leading-relaxed text-hub-soft">Name, address, stage, and what is due next. Open a name for the bill, meter, and notes.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {feed.writesEnabled && (
-            <Button type="button" variant="accent" className="min-h-[40px] w-full px-3 sm:w-auto" onClick={() => { setFormError(null); setEditor({ mode: 'create', lead: null }); }}>
-              <Plus className="h-4 w-4" /> Add lead
+            <Button type="button" variant="accent" className="min-h-12 w-full px-4 text-base sm:w-auto" onClick={() => { setFormError(null); setEditor({ mode: 'create', lead: null }); }}>
+              <Plus className="h-4 w-4" /> Add customer
             </Button>
           )}
-          <Button type="button" variant="ghost" className="min-h-[40px] px-3 text-[0.84rem]" onClick={() => setPricingOpen(true)}>
-            <Settings2 className="h-4 w-4" /> Pricing
-          </Button>
-          {shown.length > 0 && (
-            <>
+          <details className="relative">
+            <summary className="flex min-h-12 cursor-pointer list-none items-center rounded-xl border border-hub-line bg-hub-surface px-4 text-base font-bold text-hub-ink">More</summary>
+            <div className="absolute right-0 z-20 mt-2 grid min-w-44 gap-1 rounded-xl border border-hub-line bg-hub-surface p-2 shadow-xl">
+              <Button type="button" variant="ghost" className="min-h-11 justify-start px-3 text-base" onClick={() => setPricingOpen(true)}>
+                <Settings2 className="h-4 w-4" /> Pricing
+              </Button>
+              {shown.length > 0 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => downloadFile('powergenie-all-leads.csv', leadsToCsvString(shown), 'text/csv;charset=utf-8;')}
+                    className="inline-flex min-h-11 items-center gap-2 rounded-xl px-3 text-left text-base font-semibold text-hub-ink hover:bg-hub-muted"
+                  >
+                    <FileSpreadsheet className="h-4 w-4" /> Export CSV
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => downloadFile('powergenie-all-leads.json', leadsToJsonString(shown), 'application/json')}
+                    className="inline-flex min-h-11 items-center gap-2 rounded-xl px-3 text-left text-base font-semibold text-hub-ink hover:bg-hub-muted"
+                  >
+                    <Download className="h-4 w-4" /> Export JSON
+                  </button>
+                </>
+              )}
               <button
                 type="button"
-                onClick={() => downloadFile('powergenie-all-leads.csv', leadsToCsvString(shown), 'text/csv;charset=utf-8;')}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-hub-line bg-hub-surface px-3 py-1.5 text-[0.78rem] font-semibold text-hub-ink shadow-sm hover:border-hub-line-strong hover:bg-hub-muted"
-                title="Download all leads in CSV format"
+                onClick={feed.refresh}
+                className="inline-flex min-h-11 items-center gap-2 rounded-xl px-3 text-left text-base font-semibold text-hub-ink hover:bg-hub-muted"
               >
-                <FileSpreadsheet className="h-3.5 w-3.5 text-hub-success-ink" /> Export CSV
+                <RefreshCw className={cn('h-4 w-4', feed.loading && 'animate-spin')} /> Refresh
               </button>
-              <button
-                type="button"
-                onClick={() => downloadFile('powergenie-all-leads.json', leadsToJsonString(shown), 'application/json')}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-hub-line bg-hub-surface px-3 py-1.5 text-[0.78rem] font-semibold text-hub-ink shadow-sm hover:border-hub-line-strong hover:bg-hub-muted"
-                title="Download all leads in JSON format"
-              >
-                <Download className="h-3.5 w-3.5 text-hub-accent-ink" /> Export JSON
-              </button>
-            </>
-          )}
-          <button
-            onClick={feed.refresh}
-            className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border border-hub-line text-hub-ink hover:border-hub-ink hover:bg-hub-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-hub-focus"
-            aria-label="Refresh leads"
-          >
-            <RefreshCw className={cn('h-4 w-4', feed.loading && 'animate-spin')} />
-          </button>
+            </div>
+          </details>
         </div>
       </div>
 
@@ -820,13 +858,6 @@ export default function LeadsTab({
       )}
 
       {feed.error && <div className="mt-4"><Notice tone="error">{feed.error}</Notice></div>}
-      {feed.sample && (
-        <div className="mt-4">
-          <Notice tone="info" title="Sample desk">
-            These Houston customers are examples. Sign in to log a real customer, attach a light bill, and share the same files and chat with Horace.
-          </Notice>
-        </div>
-      )}
       {!feed.sample && !feed.loading && !feed.error && !feed.writesEnabled && (
         <div className="mt-4">
           <Notice tone="warn">Adding, editing, and archiving leads needs the latest database migration. You can still review the list.</Notice>
@@ -865,23 +896,53 @@ export default function LeadsTab({
                   selected && 'ring-2 ring-hub-focus',
                 )}
               >
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <button type="button" onClick={() => select(lead)} className="min-w-0 flex-1 text-left">
-                    <span className="flex flex-wrap items-center gap-2">
-                      {lead.unseen && (
-                        <span className="rounded-full border border-hub-on-accent bg-hub-accent-fill px-2 py-0.5 text-[0.68rem] font-bold uppercase tracking-wide text-hub-on-accent">New</span>
-                      )}
-                      <span className="rounded-full bg-hub-accent-soft px-2 py-0.5 text-[0.72rem] font-semibold text-hub-accent-ink">{lead.sourceLabel}</span>
-                      {lead.archived && <span className="rounded-full bg-hub-muted px-2 py-0.5 text-[0.72rem] font-semibold text-hub-soft">Archived</span>}
-                      {lead.cancelled && <span className="rounded-full bg-hub-muted px-2 py-0.5 text-[0.72rem] font-semibold text-hub-soft">Cancelled</span>}
-                    </span>
-                    <span className={cn('mt-1 block text-[1.05rem] font-bold text-hub-ink', lead.cancelled && 'line-through')}>{lead.name}</span>
-                  </button>
-                  <span className="text-[0.78rem] text-hub-soft">{formatWhen(lead.createdAt)}</span>
-                </div>
-                {lead.source === 'customer' && !lead.cancelled && <PipelineBar stage={lead.stage} />}
+                {(() => {
+                  const task = glance.tasks.find((item) => item.lead_id === lead.id);
+                  const due = dueText(task?.due_at, lead.appointment);
+                  const next = task?.title || nextPipelineStep(lead.stage);
+                  const savings = savingsText(glance.savings.get(lead.id));
+                  return (
+                    <div>
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <button type="button" onClick={() => toggle(lead)} aria-expanded={selected} className="min-w-0 flex-1 text-left">
+                          <span className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                            <span className={cn('text-xl font-bold leading-tight text-hub-ink', lead.cancelled && 'line-through')}>{lead.name}</span>
+                            {lead.unseen && <span className="text-sm font-bold text-hub-accent-ink">New</span>}
+                          </span>
+                          <span className="mt-1 block text-base leading-snug text-hub-soft">{lead.address || 'No address yet'}</span>
+                        </button>
+                        {lead.source === 'customer' && (
+                          <ConferenceRoomButton className="w-full shrink-0 sm:w-auto" onClick={() => setConferenceLead(lead)} />
+                        )}
+                      </div>
+                      <button type="button" onClick={() => toggle(lead)} className="mt-4 w-full text-left">
+                        <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
+                          <div>
+                            <dt className="text-sm font-semibold text-hub-soft">Stage</dt>
+                            <dd className="m-0 text-lg font-bold text-hub-ink">{stageLabel(lead.stage || (lead.source === 'customer' ? 'bill_received' : null))}</dd>
+                          </div>
+                          <div>
+                            <dt className="text-sm font-semibold text-hub-soft">Next step</dt>
+                            <dd className="m-0 text-lg font-bold text-hub-ink">{next}</dd>
+                          </div>
+                          <div>
+                            <dt className="text-sm font-semibold text-hub-soft">Due</dt>
+                            <dd className={cn('m-0 text-lg font-bold', due.overdue ? 'text-hub-danger' : 'text-hub-ink')}>{due.text}</dd>
+                          </div>
+                          <div>
+                            <dt className="text-sm font-semibold text-hub-soft">Savings estimate</dt>
+                            <dd className="m-0 text-lg font-bold text-hub-ink">{savings}</dd>
+                          </div>
+                        </dl>
+                        <span className="mt-3 block text-base font-semibold text-hub-link">{selected ? 'Hide details' : 'Show bill, meter, and notes'}</span>
+                      </button>
+                    </div>
+                  );
+                })()}
 
-                <div className="mt-3 flex flex-wrap gap-2 text-sm font-semibold">
+                {selected && <div className="mt-5 border-t border-hub-line pt-5">
+                {lead.source === 'customer' && !lead.cancelled && <PipelineBar stage={lead.stage} />}
+                <div className="mt-3 flex flex-wrap gap-2 text-base font-semibold">
                   {lead.phone && (
                     <a
                       href={`tel:${lead.phone}`}
@@ -956,7 +1017,7 @@ export default function LeadsTab({
                   <WorkflowPanel
                     leadId={lead.id}
                     leadName={lead.name}
-                    autoOpen={selected}
+                    autoOpen={false}
                     onOpenPricing={() => setPricingOpen(true)}
                   />
                 )}
@@ -964,14 +1025,6 @@ export default function LeadsTab({
                 {/* Sunrun Option B Workflow Integration for Option B Leads */}
                 {(lead.source === 'customer' || lead.workflowOption === 'option_b_ownership') && (
                   <SunrunOptionBWorkflow lead={lead} />
-                )}
-
-                {lead.source === 'customer' && !lead.archived && (
-                  <div className="mt-3">
-                    <Button type="button" variant="accent" className="min-h-11 px-3 text-[0.84rem]" onClick={() => setConferenceLead(lead)}>
-                      <Video className="h-4 w-4" /> Conference room
-                    </Button>
-                  </div>
                 )}
 
                 {lead.source === 'customer' && feed.writesEnabled && (
@@ -1039,6 +1092,7 @@ export default function LeadsTab({
                     <span className="text-[0.8rem] text-hub-soft">No bill attached.</span>
                   )}
                 </div>
+                </div>}
               </li>
             );
           })}

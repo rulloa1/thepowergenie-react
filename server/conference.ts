@@ -3,7 +3,7 @@ import { AccessToken, RoomServiceClient } from 'livekit-server-sdk'
 import { assertSameOrigin, clientIp, HttpError, isRecord, json, readWebJson } from './http.js'
 import { requireHubMember } from './hub-member.js'
 import { enforceRateLimit } from './rate-limit.js'
-import { insertReturning, patchRows, selectOne, selectRows } from './workflow/db.js'
+import { inList, insertReturning, patchRows, selectOne, selectRows } from './workflow/db.js'
 
 const TEN_MINUTES = 10 * 60 * 1000
 const ROOM_SECONDS = 8 * 60 * 60
@@ -111,7 +111,16 @@ async function mintToken(roomName: string, identity: string, name: string, isHos
     ttl: isHost ? '8h' : '2h',
   })
   token.addGrant(participantGrant(roomName, isHost))
-  return token.toJwt()
+  try {
+    const jwt = await token.toJwt()
+    if (typeof jwt !== 'string' || !jwt.includes('.')) throw new Error('LiveKit did not return a token string')
+    return jwt
+  } catch (error) {
+    if (error instanceof HttpError) throw error
+    const message = error instanceof Error ? error.message : 'token failed'
+    console.error('livekit_token_failed', error instanceof Error ? error.name : 'unknown', message.slice(0, 180))
+    throw new HttpError(502, 'LiveKit could not sign the join token. Check the API key and secret, then redeploy.')
+  }
 }
 
 async function ensureRoom(roomName: string): Promise<void> {
@@ -203,6 +212,27 @@ async function guestInRoom(room: RoomRow, guestId: string): Promise<GuestRow> {
   return row
 }
 
+/** Rooms that are still open. Both hub roles can see this list. */
+export async function listActiveRooms() {
+  const now = new Date().toISOString()
+  const rooms = await selectRows<RoomRow>(
+    'hub_conference_rooms',
+    { ended_at: 'is.null', expires_at: `gt.${now}` },
+    { select: 'id,customer_id,invite_token,livekit_room,expires_at,ended_at', order: 'created_at.desc', limit: 40 },
+  )
+  const ids = [...new Set(rooms.map((room) => room.customer_id))]
+  const customers = ids.length
+    ? await selectRows<CustomerRow>('powergenie_customers', { id: inList(ids) }, { select: 'id,customer_name' })
+    : []
+  const names = new Map(customers.map((customer) => [customer.id, customer.customer_name]))
+  return rooms.map((room) => ({
+    customerId: room.customer_id,
+    customerName: names.get(room.customer_id) || 'Customer',
+    expiresAt: room.expires_at,
+    invitePath: invitePath(room.invite_token),
+  }))
+}
+
 function publicRoom(room: RoomRow, customerName: string, proposal: string | null) {
   return {
     customerName,
@@ -217,8 +247,22 @@ export async function handleConference(request: Request, url: URL): Promise<Resp
   const action = url.searchParams.get('action') || ''
 
   if (action === 'status' && request.method === 'GET') {
-    await requireHubMember(request)
-    return json({ configured: livekitEnv() !== null })
+    try {
+      await requireHubMember(request)
+    } catch (error) {
+      if (error instanceof HttpError && error.status === 503 && /not configured/i.test(error.message)) {
+        return json({
+          configured: false,
+          problem: 'database_key',
+          error: 'The dashboard database key is missing or still a placeholder. On Vercel, set SUPABASE_SERVICE_ROLE_KEY to the real Supabase service role key, then redeploy. This is not a LiveKit key.',
+        })
+      }
+      throw error
+    }
+    if (!livekitEnv()) {
+      return json({ configured: false, problem: 'livekit', error: livekitSetupError() })
+    }
+    return json({ configured: true, problem: null })
   }
 
   if (action === 'lobby' && request.method === 'GET') {
@@ -295,6 +339,16 @@ export async function handleConference(request: Request, url: URL): Promise<Resp
   }
 
   const member = await requireHubMember(request)
+
+  if (action === 'rooms' && request.method === 'GET') {
+    try {
+      return json({ rooms: await listActiveRooms() })
+    } catch (error) {
+      if (missingTable(error)) return json({ rooms: [] })
+      throw error
+    }
+  }
+
   if (!livekitEnv()) notConfigured()
 
   if (action === 'queue' && request.method === 'GET') {

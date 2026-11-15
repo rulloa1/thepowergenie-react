@@ -11,6 +11,7 @@ import {
   loadSettings,
   markProposalShared,
   openTasks,
+  savingsGlance,
   recordInterest,
   recordView,
   reopenTask,
@@ -113,6 +114,7 @@ export async function handleWorkflow(request: Request, url: URL): Promise<Respon
   if (request.method === 'GET') {
     if (action === 'lead') return json(await leadDetail(idFrom(url.searchParams.get('id'), 'lead')))
     if (action === 'tasks') return json(await openTasks())
+    if (action === 'glance') return json({ savings: await savingsGlance() })
     if (action === 'settings') return json({ pricing: await loadSettings(), googleReady: Boolean(googleKey()) })
     if (action === 'preview') {
       const proposal = await selectOne<ProposalRow>('hub_proposals', { id: `eq.${idFrom(url.searchParams.get('proposal'), 'proposal')}` })

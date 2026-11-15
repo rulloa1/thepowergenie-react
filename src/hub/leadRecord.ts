@@ -4,7 +4,7 @@ import { centralDateKey } from './time';
 /** Stored stage values allowed by powergenie_customers.stage. */
 export const LEAD_STAGES = [
   ['bill_received', 'Bill received'],
-  ['savings_calc', 'Savings calc'],
+  ['savings_calc', 'Savings estimate'],
   ['panel_design', 'Panel design'],
   ['proposal_ready', 'Proposal ready'],
   ['presented', 'Presented'],

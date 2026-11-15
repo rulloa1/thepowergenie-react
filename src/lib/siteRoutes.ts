@@ -103,9 +103,9 @@ export function isHubPath(path: string): boolean {
   return !!root && HUB_ROOTS.has(root);
 }
 
-export type HubTab = 'leads' | 'chat' | 'files' | 'schedule';
+export type HubTab = 'leads' | 'chat' | 'files' | 'schedule' | 'conference';
 
-const HUB_TABS = new Set<HubTab>(['leads', 'chat', 'files', 'schedule']);
+const HUB_TABS = new Set<HubTab>(['leads', 'chat', 'files', 'schedule', 'conference']);
 
 function asHubTab(value: string | null | undefined): HubTab | null {
   return value && HUB_TABS.has(value as HubTab) ? value as HubTab : null;
