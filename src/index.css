@@ -161,6 +161,37 @@ html[data-pg-brand="brands"] {
   color: var(--hub-ink);
 }
 
+/* Signed-in desk. The page behind the cards uses the public site sky, sun still, and solar glow. Cards stay on the hub surfaces so the text contrast does not change. */
+.hub-desk {
+  position: relative;
+  isolation: isolate;
+  background-color: var(--sw-bg);
+  color: var(--sw-ink);
+}
+.hub-desk::before,
+.hub-desk::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+.hub-desk::before {
+  background:
+    linear-gradient(180deg, transparent 0%, color-mix(in srgb, var(--sw-bg) 35%, transparent) 22%, color-mix(in srgb, var(--sw-bg) 88%, transparent) 58%, var(--sw-bg) 100%),
+    radial-gradient(ellipse at 72% 0%, rgba(255, 180, 50, 0.45) 0%, rgba(255, 107, 0, 0.12) 36%, transparent 68%),
+    radial-gradient(60% 42% at 78% 8%, color-mix(in srgb, var(--sw-accent) 16%, transparent), transparent 70%),
+    url("/assets-v2/stills/01-sun.webp") center 18% / cover no-repeat;
+}
+.hub-desk::after {
+  background:
+    linear-gradient(180deg, transparent 0%, transparent 55%, color-mix(in srgb, var(--pg-navy) 8%, transparent) 100%);
+}
+.hub-desk > main > section,
+.hub-desk > main > div {
+  box-shadow: 0 18px 48px rgba(11, 34, 51, 0.14);
+}
+
 /* The public booking page keeps its own light chrome. Shared buttons, fields,
    and notices read these overrides so their text stays AA on that white page. */
 .book-page {
