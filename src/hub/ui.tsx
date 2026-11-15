@@ -48,7 +48,7 @@ export function Notice({
 }
 
 /** Shown whenever the site hasn't been given its Supabase/Google keys yet. */
-export function NotConfigured({ what }: { what: string }) {
+export function NotConfigured({ what, onExploreDemo }: { what: string; onExploreDemo?: () => void }) {
   return (
     <div className="hub-canvas flex min-h-screen items-center justify-center px-5 py-16">
       <div className="mx-auto max-w-md text-center">
@@ -57,6 +57,13 @@ export function NotConfigured({ what }: { what: string }) {
         <p className="mt-3 text-hub-soft">
           Everything is built — it just needs its keys. Once they're added, this page will come to life.
         </p>
+        {onExploreDemo && (
+          <div className="mt-6">
+            <Button type="button" variant="primary" className="w-full rounded-full" onClick={onExploreDemo}>
+              Explore demo desk
+            </Button>
+          </div>
+        )}
         <p className="mt-6 text-sm text-hub-soft">
           Want a free solar quote now? Call <a className="font-semibold text-hub-link" href="tel:+15102417007">510-241-7007</a>.
         </p>

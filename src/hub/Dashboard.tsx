@@ -143,7 +143,7 @@ export default function Dashboard() {
   if (isDemo) {
     return <HubApp profile={DEMO_PROFILE} isDemo onExitDemo={closeSample} />;
   }
-  if (!supabase) return <NotConfigured what="The Referral Hub" />;
+  if (!supabase) return <NotConfigured what="The Referral Hub" onExploreDemo={openSample} />;
   if (!ready) return <FullPageSpinner />;
   if (sessionError) return <AuthProblem title="Couldn't open the hub" message={sessionError} />;
   if (!session) return <SignIn onExploreDemo={openSample} />;
