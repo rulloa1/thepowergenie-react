@@ -56,6 +56,7 @@ export type LeadFeed = {
   /** True for the invitation-page sample desk. Nothing is saved. */
   sample: boolean;
   updateLead?: (id: string, updates: Partial<Lead>) => void;
+  deleteLead?: (id: string) => void;
 };
 
 type CustomerRow = {
@@ -404,6 +405,10 @@ export function useLeadFeed(userId: string): LeadFeed {
     );
   }, []);
 
+  const deleteLead = useCallback((id: string) => {
+    setLeads((prev) => prev.filter((lead) => lead.id !== id));
+  }, []);
+
   return {
     leads,
     loading,
@@ -412,6 +417,7 @@ export function useLeadFeed(userId: string): LeadFeed {
     writesEnabled,
     sample,
     updateLead,
+    deleteLead,
     refresh: () => {
       void load(false);
     },

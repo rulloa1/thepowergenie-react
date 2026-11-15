@@ -152,6 +152,37 @@ export async function archiveCustomerLead(leadId: string, actor: LeadActor, now 
   return { ok: true };
 }
 
+export async function deleteCustomerLead(leadId: string, actor: LeadActor, now = new Date()): Promise<LeadWriteResult> {
+  const db = client();
+  if (!db) return { ok: false, error: 'The hub is not connected.' };
+
+  try {
+    const deleted = await db.from('powergenie_customers').delete().eq('id', leadId).select('id').maybeSingle();
+    if (!deleted.error && deleted.data) {
+      return { ok: true };
+    }
+  } catch {
+    // Fallback to archive
+  }
+
+  // Fallback for appointments / bookings
+  try {
+    const appt = await db
+      .from('hub_appointments')
+      .update({ status: 'cancelled', cancelled_at: now.toISOString() })
+      .eq('id', leadId)
+      .select('id')
+      .maybeSingle();
+    if (!appt.error && appt.data) {
+      return { ok: true };
+    }
+  } catch {
+    // Continue to archive
+  }
+
+  return archiveCustomerLead(leadId, actor, now);
+}
+
 export async function restoreCustomerLead(leadId: string, actor: LeadActor, now = new Date()): Promise<LeadWriteResult> {
   const db = client();
   if (!db) return { ok: false, error: 'The hub is not connected.' };

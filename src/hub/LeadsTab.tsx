@@ -24,6 +24,7 @@ import {
   Settings2,
   Share2,
   ShieldCheck,
+  Trash2,
   X,
   Zap,
 } from 'lucide-react';
@@ -42,6 +43,7 @@ import {
 import type { Lead, LeadFeed } from './useLeadFeed';
 import { leadsForView } from './useLeadFeed';
 import ArchiveLeadDialog from './ArchiveLeadDialog';
+import DeleteLeadDialog from './DeleteLeadDialog';
 import LeadForm from './LeadForm';
 import PricingDialog from './PricingDialog';
 import TasksStrip from './TasksStrip';
@@ -52,7 +54,7 @@ import { PipelineBar, PipelineSummary } from './PipelineStage';
 import { ConferenceRoomButton } from './ConferenceRoomButton';
 import { dueText, nextPipelineStep, savingsText } from './customerGlance';
 import { WORKFLOW_CHANGED, announceWorkflowChange, workflowApi, type WorkflowTask } from './workflowApi';
-import { archiveCustomerLead, createManualLead, restoreCustomerLead, updateManualLead } from './leadActions';
+import { archiveCustomerLead, createManualLead, deleteCustomerLead, restoreCustomerLead, updateManualLead } from './leadActions';
 import { stageLabel, type LeadActor, type LeadDraft } from './leadRecord';
 import { Button, Notice, Spinner, cn } from './ui';
 import { formatDateTime } from './time';
@@ -629,6 +631,9 @@ export default function LeadsTab({
   const [archiveTarget, setArchiveTarget] = useState<Lead | null>(null);
   const [archiveError, setArchiveError] = useState<string | null>(null);
   const [archiving, setArchiving] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Lead | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [actionNote, setActionNote] = useState<string | null>(null);
   const [pricingOpen, setPricingOpen] = useState(false);
   const [stageFilter, setStageFilter] = useState<string | null>(null);
@@ -906,6 +911,34 @@ export default function LeadsTab({
     feed.refresh();
   };
 
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    setDeleteError(null);
+
+    if (feed.sample) {
+      feed.deleteLead?.(deleteTarget.id);
+      if (openId === deleteTarget.id) setOpenId(null);
+      setDeleting(false);
+      setDeleteTarget(null);
+      setActionNote('Lead deleted.');
+      return;
+    }
+
+    const result = await deleteCustomerLead(deleteTarget.id, actor);
+    setDeleting(false);
+    if (!result.ok) {
+      setDeleteError(result.error);
+      return;
+    }
+
+    feed.deleteLead?.(deleteTarget.id);
+    if (openId === deleteTarget.id) setOpenId(null);
+    setDeleteTarget(null);
+    setActionNote('Lead deleted.');
+    feed.refresh();
+  };
+
   const restore = async (lead: Lead) => {
     setActionNote(null);
     setBillError(null);
@@ -1096,6 +1129,19 @@ export default function LeadsTab({
                           >
                             <Compass className="h-3.5 w-3.5 text-hub-accent-ink" /> Roof design
                           </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            className="min-h-[38px] px-2.5 text-sm font-semibold text-hub-danger hover:border-hub-danger-line hover:bg-hub-danger-soft"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDeleteError(null);
+                              setDeleteTarget(lead);
+                            }}
+                            title={`Delete ${lead.name}`}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" /> Delete
+                          </Button>
                           {lead.source === 'customer' && (
                             <ConferenceRoomButton className="w-full shrink-0 sm:w-auto" onClick={() => setConferenceLead(lead)} />
                           )}
@@ -1231,6 +1277,17 @@ export default function LeadsTab({
                   >
                     <Compass className="h-3.5 w-3.5 text-hub-accent-ink" /> Create roof design
                   </Button>
+                  <Button
+                    type="button"
+                    variant="danger"
+                    className="min-h-[40px] px-3 text-[0.84rem]"
+                    onClick={() => {
+                      setDeleteError(null);
+                      setDeleteTarget(lead);
+                    }}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" /> Delete
+                  </Button>
                   {feed.writesEnabled && (
                     lead.archived ? (
                       <Button type="button" variant="ghost" className="min-h-[40px] px-3 text-[0.84rem]" onClick={() => void restore(lead)}>
@@ -1329,6 +1386,15 @@ export default function LeadsTab({
           error={archiveError}
           onCancel={() => { if (!archiving) setArchiveTarget(null); }}
           onConfirm={() => void confirmArchive()}
+        />
+      )}
+      {deleteTarget && (
+        <DeleteLeadDialog
+          name={deleteTarget.name}
+          busy={deleting}
+          error={deleteError}
+          onCancel={() => { if (!deleting) setDeleteTarget(null); }}
+          onConfirm={() => void confirmDelete()}
         />
       )}
     </section>
