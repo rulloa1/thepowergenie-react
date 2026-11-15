@@ -6,6 +6,7 @@ import {
   CheckCircle2,
   ChevronDown,
   ChevronUp,
+  Compass,
   Copy,
   Download,
   ExternalLink,
@@ -45,6 +46,8 @@ import LeadForm from './LeadForm';
 import PricingDialog from './PricingDialog';
 import TasksStrip from './TasksStrip';
 import WorkflowPanel from './WorkflowPanel';
+import RoofDesignDialog from './RoofDesignDialog';
+import type { RoofDesignSpec } from './roofDesign';
 import { PipelineBar, PipelineSummary } from './PipelineStage';
 import { ConferenceRoomButton } from './ConferenceRoomButton';
 import { dueText, nextPipelineStep, savingsText } from './customerGlance';
@@ -630,6 +633,7 @@ export default function LeadsTab({
   const [pricingOpen, setPricingOpen] = useState(false);
   const [stageFilter, setStageFilter] = useState<string | null>(null);
   const [conferenceLead, setConferenceLead] = useState<Lead | null>(null);
+  const [roofDesigner, setRoofDesigner] = useState<{ open: boolean; lead: Lead | null } | null>(null);
   const marked = useRef(new Set<string>());
   const scrolled = useRef<string | null>(null);
   const actor: LeadActor = { id: profile.id, fullName: profile.full_name, email: profile.email };
@@ -724,6 +728,78 @@ export default function LeadsTab({
     if (!editor) return;
     setSaving(true);
     setFormError(null);
+
+    if (feed.sample) {
+      const total = draft.totalDue ? Number(draft.totalDue) : null;
+      const current = draft.currentCharges ? Number(draft.currentCharges) : null;
+      if (editor.mode === 'create' || !editor.lead) {
+        const newLead: Lead = {
+          id: `demo-lead-${Date.now()}`,
+          source: 'customer',
+          sourceLabel: 'Manual entry',
+          createdAt: new Date().toISOString(),
+          name: draft.name.trim() || 'Unnamed lead',
+          phone: draft.phone.trim() || null,
+          email: draft.email.trim() || null,
+          address: draft.address.trim() || null,
+          utility: draft.utility.trim() || null,
+          accountNumber: draft.accountNumber.trim() || null,
+          esiid: draft.esiid.trim() || null,
+          meterNumber: draft.meterNumber.trim() || null,
+          tdu: draft.tdu.trim() || null,
+          repPuctCertificate: draft.repPuctCertificate.trim() || null,
+          kwh: draft.kwh ? Number(draft.kwh) : null,
+          days: draft.days ? Number(draft.days) : null,
+          kwhSameMonthLastYear: draft.kwhSameMonthLastYear ? Number(draft.kwhSameMonthLastYear) : null,
+          avgMonthlyKwh: draft.avgMonthlyKwh ? Number(draft.avgMonthlyKwh) : null,
+          totalDue: total,
+          currentCharges: current,
+          amount: total != null ? total : current,
+          pastDue: draft.pastDue ? Number(draft.pastDue) : null,
+          stage: draft.stage || 'bill_received',
+          notes: draft.notes.trim() || null,
+          usageHistory: draft.usageHistory || null,
+          bill: null,
+          appointment: null,
+          createdBy: 'demo-horace-7721',
+          archived: false,
+          avgKwhPerDay: null,
+          billDate: null,
+          ratePlan: null,
+          cancelled: false,
+          unseen: false,
+        };
+        feed.leads.unshift(newLead);
+      } else if (feed.updateLead) {
+        feed.updateLead(editor.lead.id, {
+          name: draft.name.trim() || editor.lead.name,
+          phone: draft.phone.trim() || null,
+          email: draft.email.trim() || null,
+          address: draft.address.trim() || null,
+          utility: draft.utility.trim() || null,
+          accountNumber: draft.accountNumber.trim() || null,
+          esiid: draft.esiid.trim() || null,
+          meterNumber: draft.meterNumber.trim() || null,
+          tdu: draft.tdu.trim() || null,
+          repPuctCertificate: draft.repPuctCertificate.trim() || null,
+          kwh: draft.kwh ? Number(draft.kwh) : null,
+          days: draft.days ? Number(draft.days) : null,
+          kwhSameMonthLastYear: draft.kwhSameMonthLastYear ? Number(draft.kwhSameMonthLastYear) : null,
+          avgMonthlyKwh: draft.avgMonthlyKwh ? Number(draft.avgMonthlyKwh) : null,
+          totalDue: total,
+          currentCharges: current,
+          amount: total != null ? total : current,
+          pastDue: draft.pastDue ? Number(draft.pastDue) : null,
+          stage: draft.stage || editor.lead.stage,
+          notes: draft.notes.trim() || null,
+        });
+      }
+      setSaving(false);
+      setEditor(null);
+      setActionNote(editor.mode === 'create' ? 'Lead added.' : 'Lead updated.');
+      return;
+    }
+
     const result = editor.mode === 'create' || !editor.lead
       ? await createManualLead(draft, actor, file)
       : await updateManualLead(editor.lead.id, draft, actor, file);
@@ -741,6 +817,78 @@ export default function LeadsTab({
       // Build the savings and proposal right away instead of waiting for the next automatic run.
       void workflowApi.run(savedId).then(() => announceWorkflowChange(savedId)).catch(() => undefined);
     }
+  };
+
+  const handleApplyRoofDesign = async (spec: RoofDesignSpec, leadId?: string) => {
+    if (!leadId) return;
+    const target = feed.leads.find((l) => l.id === leadId);
+    const designSummary = `[Roof Design: ${spec.systemKw} kW DC, ${spec.panelCount} panels, ${spec.annualProductionKwh.toLocaleString()} kWh/yr, ${spec.batteryName}]`;
+    const updatedNotes = target?.notes ? `${target.notes}\n${designSummary}` : designSummary;
+
+    if (feed.updateLead) {
+      feed.updateLead(leadId, {
+        stage: 'panel_design',
+        notes: updatedNotes,
+      });
+    }
+
+    if (!feed.sample && target?.source === 'customer') {
+      try {
+        await workflowApi.overrides(leadId, {
+          panelCount: spec.panelCount,
+          targetOffsetPct: spec.offsetPct,
+          includeBattery: spec.battery !== 'none',
+        });
+        announceWorkflowChange(leadId);
+      } catch {
+        // Fallback gracefully
+      }
+    }
+    setActionNote(`Roof design applied to ${target?.name || 'lead'}: ${spec.systemKw} kW (${spec.panelCount} panels).`);
+  };
+
+  const handleCreateLeadFromDesign = async (spec: RoofDesignSpec) => {
+    setRoofDesigner(null);
+    setFormError(null);
+    setEditor({
+      mode: 'create',
+      lead: {
+        id: `draft-${Date.now()}`,
+        source: 'customer',
+        sourceLabel: 'Roof Design Studio',
+        createdAt: new Date().toISOString(),
+        name: spec.leadName || '',
+        phone: null,
+        email: null,
+        address: spec.address,
+        kwh: Math.round(spec.annualConsumptionKwh / 10),
+        amount: null,
+        appointment: null,
+        esiid: null,
+        meterNumber: null,
+        tdu: null,
+        repPuctCertificate: null,
+        avgMonthlyKwh: Math.round(spec.annualConsumptionKwh / 12),
+        usageHistory: null,
+        bill: null,
+        accountNumber: null,
+        pastDue: null,
+        currentCharges: null,
+        totalDue: null,
+        notes: `Roof Design: ${spec.systemKw} kW DC (${spec.panelCount} panels), ${spec.batteryName}, ${spec.offsetPct}% offset.`,
+        utility: null,
+        stage: 'panel_design',
+        createdBy: null,
+        archived: false,
+        days: null,
+        avgKwhPerDay: null,
+        kwhSameMonthLastYear: null,
+        billDate: null,
+        ratePlan: null,
+        cancelled: false,
+        unseen: false,
+      },
+    });
   };
 
   const confirmArchive = async () => {
@@ -781,6 +929,14 @@ export default function LeadsTab({
           <p className="m-0 mt-1 max-w-prose text-base leading-relaxed text-hub-soft">Name, address, stage, and what is due next. Open a name for the bill, meter, and notes.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            variant="ghost"
+            className="min-h-12 w-full px-4 text-base sm:w-auto"
+            onClick={() => setRoofDesigner({ open: true, lead: null })}
+          >
+            <Compass className="h-4 w-4 text-hub-accent-ink" /> Create roof design
+          </Button>
           {feed.writesEnabled && (
             <Button type="button" variant="accent" className="min-h-12 w-full px-4 text-base sm:w-auto" onClick={() => { setFormError(null); setEditor({ mode: 'create', lead: null }); }}>
               <Plus className="h-4 w-4" /> Add customer
@@ -914,9 +1070,36 @@ export default function LeadsTab({
                           </span>
                           <span className="mt-1 block text-base leading-snug text-hub-soft">{lead.address || 'No address yet'}</span>
                         </button>
-                        {lead.source === 'customer' && (
-                          <ConferenceRoomButton className="w-full shrink-0 sm:w-auto" onClick={() => setConferenceLead(lead)} />
-                        )}
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            className="min-h-[38px] px-3 text-sm font-semibold"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setFormError(null);
+                              setEditor({ mode: 'edit', lead });
+                            }}
+                            title={`Edit ${lead.name}`}
+                          >
+                            <Pencil className="h-3.5 w-3.5" /> Edit
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            className="min-h-[38px] px-3 text-sm font-semibold"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setRoofDesigner({ open: true, lead });
+                            }}
+                            title={`Create or edit roof design for ${lead.name}`}
+                          >
+                            <Compass className="h-3.5 w-3.5 text-hub-accent-ink" /> Roof design
+                          </Button>
+                          {lead.source === 'customer' && (
+                            <ConferenceRoomButton className="w-full shrink-0 sm:w-auto" onClick={() => setConferenceLead(lead)} />
+                          )}
+                        </div>
                       </div>
                       <button type="button" onClick={() => toggle(lead)} className="mt-4 w-full text-left">
                         <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
@@ -1022,6 +1205,7 @@ export default function LeadsTab({
                     leadName={lead.name}
                     autoOpen={false}
                     onOpenPricing={() => setPricingOpen(true)}
+                    onOpenRoofDesign={() => setRoofDesigner({ open: true, lead })}
                   />
                 )}
 
@@ -1030,17 +1214,25 @@ export default function LeadsTab({
                   <SunrunOptionBWorkflow lead={lead} />
                 )}
 
-                {lead.source === 'customer' && feed.writesEnabled && (
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      className="min-h-[40px] px-3 text-[0.84rem]"
-                      onClick={() => { setFormError(null); setEditor({ mode: 'edit', lead }); }}
-                    >
-                      <Pencil className="h-3.5 w-3.5" /> Edit
-                    </Button>
-                    {lead.archived ? (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="min-h-[40px] px-3 text-[0.84rem]"
+                    onClick={() => { setFormError(null); setEditor({ mode: 'edit', lead }); }}
+                  >
+                    <Pencil className="h-3.5 w-3.5" /> Edit lead
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="min-h-[40px] px-3 text-[0.84rem]"
+                    onClick={() => setRoofDesigner({ open: true, lead })}
+                  >
+                    <Compass className="h-3.5 w-3.5 text-hub-accent-ink" /> Create roof design
+                  </Button>
+                  {feed.writesEnabled && (
+                    lead.archived ? (
                       <Button type="button" variant="ghost" className="min-h-[40px] px-3 text-[0.84rem]" onClick={() => void restore(lead)}>
                         <RotateCcw className="h-3.5 w-3.5" /> Restore
                       </Button>
@@ -1053,9 +1245,9 @@ export default function LeadsTab({
                       >
                         Archive
                       </Button>
-                    )}
-                  </div>
-                )}
+                    )
+                  )}
+                </div>
 
                 <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-hub-line pt-3">
                   <div className="flex flex-wrap items-center gap-1.5">
@@ -1112,6 +1304,14 @@ export default function LeadsTab({
         />
       )}
       {pricingOpen && <PricingDialog onClose={() => setPricingOpen(false)} />}
+      {roofDesigner?.open && (
+        <RoofDesignDialog
+          lead={roofDesigner.lead}
+          onClose={() => setRoofDesigner(null)}
+          onApplyToLead={handleApplyRoofDesign}
+          onSaveAsLead={handleCreateLeadFromDesign}
+        />
+      )}
       {conferenceLead && (
         <Suspense fallback={null}>
           <ConferenceSheet

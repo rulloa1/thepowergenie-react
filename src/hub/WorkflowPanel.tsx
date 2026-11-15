@@ -5,6 +5,7 @@ import {
   CheckCircle2,
   ChevronDown,
   ChevronUp,
+  Compass,
   Copy,
   Eye,
   Mail,
@@ -173,11 +174,18 @@ function AdjustForm({ data, busy, onSave, onCancel }: {
   );
 }
 
-export default function WorkflowPanel({ leadId, leadName, autoOpen, onOpenPricing }: {
+export default function WorkflowPanel({
+  leadId,
+  leadName,
+  autoOpen,
+  onOpenPricing,
+  onOpenRoofDesign,
+}: {
   leadId: string;
   leadName: string;
   autoOpen: boolean;
   onOpenPricing: () => void;
+  onOpenRoofDesign?: () => void;
 }) {
   const [open, setOpen] = useState(autoOpen);
   const [data, setData] = useState<LeadWorkflow | null>(null);
@@ -289,10 +297,24 @@ export default function WorkflowPanel({ leadId, leadName, autoOpen, onOpenPricin
   if (sample) {
     return (
       <div className="mt-3 rounded-2xl border border-hub-line bg-hub-muted p-3.5">
-        <p className="m-0 text-[0.95rem] font-bold text-hub-ink">Numbers and panel layout</p>
-        <p className="m-0 mt-1 text-[0.88rem] leading-relaxed text-hub-soft">
-          On the signed-in desk, Horace rebuilds the savings and the roof layout from the bill Rory logged. This sample does not call that service.
-        </p>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="m-0 text-[0.95rem] font-bold text-hub-ink">Numbers and panel layout</p>
+            <p className="m-0 mt-1 text-[0.88rem] leading-relaxed text-hub-soft">
+              24 panels · 9.6 kW DC (104% offset · Laid out on real roof).
+            </p>
+          </div>
+          {onOpenRoofDesign && (
+            <Button
+              type="button"
+              variant="ghost"
+              className="min-h-[36px] shrink-0 px-3 text-xs font-semibold"
+              onClick={onOpenRoofDesign}
+            >
+              <Compass className="h-3.5 w-3.5 text-hub-accent-ink" /> Open roof designer
+            </Button>
+          )}
+        </div>
       </div>
     );
   }
@@ -356,6 +378,15 @@ export default function WorkflowPanel({ leadId, leadName, autoOpen, onOpenPricin
                   <dt className="text-[0.72rem] font-semibold uppercase tracking-wide text-hub-soft">System</dt>
                   <dd className="m-0 mt-1 text-[1.05rem] font-bold text-hub-ink">{wf?.system ? `${wf.system.panels} panels · ${wf.system.kw} kW` : '—'}</dd>
                   {wf?.system && <dd className="m-0 text-[0.76rem] text-hub-soft">Covers {wf.system.offsetPct}% · {DESIGN_TEXT[wf.designStatus] || ''}</dd>}
+                  {onOpenRoofDesign && (
+                    <button
+                      type="button"
+                      onClick={onOpenRoofDesign}
+                      className="mt-2 inline-flex items-center gap-1 rounded-lg border border-hub-line bg-hub-surface px-2 py-1 text-[0.75rem] font-semibold text-hub-ink hover:bg-hub-muted"
+                    >
+                      <Compass className="h-3 w-3 text-hub-accent-ink" /> Design roof
+                    </button>
+                  )}
                 </div>
                 <div className="rounded-xl border border-hub-line p-3">
                   <dt className="text-[0.72rem] font-semibold uppercase tracking-wide text-hub-soft">Savings, year 1</dt>

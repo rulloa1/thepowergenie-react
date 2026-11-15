@@ -55,6 +55,7 @@ export type LeadFeed = {
   writesEnabled: boolean;
   /** True for the invitation-page sample desk. Nothing is saved. */
   sample: boolean;
+  updateLead?: (id: string, updates: Partial<Lead>) => void;
 };
 
 type CustomerRow = {
@@ -298,7 +299,7 @@ export function useLeadFeed(userId: string): LeadFeed {
 
   const load = useCallback(async (silent = false) => {
     if (userId.startsWith('demo-')) {
-      setWritesEnabled(false);
+      setWritesEnabled(true);
       setError(null);
       setLeads(DEMO_LEADS);
       setLoading(false);
@@ -394,6 +395,15 @@ export function useLeadFeed(userId: string): LeadFeed {
 
   const unseen = useMemo(() => unseenActiveCount(leads), [leads]);
 
+  const updateLead = useCallback((id: string, updates: Partial<Lead>) => {
+    setLeads((prev) =>
+      prev.map((lead) => {
+        if (lead.id !== id) return lead;
+        return { ...lead, ...updates };
+      })
+    );
+  }, []);
+
   return {
     leads,
     loading,
@@ -401,6 +411,7 @@ export function useLeadFeed(userId: string): LeadFeed {
     unseen,
     writesEnabled,
     sample,
+    updateLead,
     refresh: () => {
       void load(false);
     },

@@ -102,7 +102,23 @@ export async function updateManualLead(leadId: string, draft: LeadDraft, actor: 
   }
   const updated = await db.from('powergenie_customers').update(patch).eq('id', leadId).select('id').maybeSingle();
   if (updated.error || !updated.data) {
-    return { ok: false, error: updated.error ? explainLeadWriteError(updated.error) : 'That lead is not editable.' };
+    // Fallback: If this was a booking/appointment lead, update hub_appointments
+    const apptUpdate = await db
+      .from('hub_appointments')
+      .update({
+        customer_name: draft.name,
+        phone: draft.phone || null,
+        email: draft.email || null,
+        address: draft.address || null,
+        note: draft.notes || null,
+      })
+      .eq('id', leadId)
+      .select('id')
+      .maybeSingle();
+
+    if (apptUpdate.error || !apptUpdate.data) {
+      return { ok: false, error: updated.error ? explainLeadWriteError(updated.error) : 'That lead is not editable.' };
+    }
   }
   let warning: string | undefined;
   if (file) {
