@@ -1,5 +1,6 @@
 import type { BillFields } from '../../shared/types';
-import { supabase } from '../lib/supabase';
+import { callFunction, supabase } from '../lib/supabase';
+import { workflowApi } from './workflowApi';
 import {
   buildArchivePatch,
   buildCustomerUpdate,
@@ -152,34 +153,38 @@ export async function archiveCustomerLead(leadId: string, actor: LeadActor, now 
   return { ok: true };
 }
 
-export async function deleteCustomerLead(leadId: string, actor: LeadActor, now = new Date()): Promise<LeadWriteResult> {
+export async function deleteCustomerLead(
+  leadId: string,
+  actor: LeadActor,
+  source?: 'customer' | 'booking',
+  now = new Date(),
+): Promise<LeadWriteResult> {
   const db = client();
   if (!db) return { ok: false, error: 'The hub is not connected.' };
 
+  // 1. Try server endpoint with service role (handles both powergenie_customers and hub_appointments)
   try {
-    const deleted = await db.from('powergenie_customers').delete().eq('id', leadId).select('id').maybeSingle();
-    if (!deleted.error && deleted.data) {
-      return { ok: true };
-    }
+    const res = await workflowApi.deleteLead(leadId);
+    if (res?.ok) return { ok: true };
   } catch {
-    // Fallback to archive
+    // Continue to client-side fallbacks
   }
 
-  // Fallback for appointments / bookings
-  try {
-    const appt = await db
-      .from('hub_appointments')
-      .update({ status: 'cancelled', cancelled_at: now.toISOString() })
-      .eq('id', leadId)
-      .select('id')
-      .maybeSingle();
-    if (!appt.error && appt.data) {
-      return { ok: true };
+  // 2. If it is an appointment booking or fallback, cancel via schedule Edge Function
+  if (source === 'booking' || !source) {
+    try {
+      const { data, error } = await callFunction<{ ok?: boolean; warning?: string | null }>('schedule', {
+        body: { action: 'cancel', id: leadId },
+      });
+      if (!error && (data?.ok || data?.warning !== undefined)) {
+        return { ok: true };
+      }
+    } catch {
+      // Continue to archive fallback
     }
-  } catch {
-    // Continue to archive
   }
 
+  // 3. Fallback: archive customer lead row in powergenie_customers
   return archiveCustomerLead(leadId, actor, now);
 }
 

@@ -116,6 +116,7 @@ export const workflowApi = {
   shared: (proposalId: string) => call<{ ok: true }>('shared', { method: 'POST', body: { proposalId } }),
   task: (taskId: string, done: boolean) => call<{ ok: true }>('task', { method: 'POST', body: { taskId, done } }),
   cancelFollowup: (followupId: string) => call<{ ok: true }>('cancel-followup', { method: 'POST', body: { followupId } }),
+  deleteLead: (leadId: string) => call<{ ok: true }>('delete-lead', { method: 'POST', body: { leadId } }),
   preview: (proposalId: string) => call<{ html: string }>('preview', { query: { proposal: proposalId } }),
   tasks: () => call<{ rateReady: boolean; googleReady: boolean; tasks: WorkflowTask[] }>('tasks'),
   glance: (leadIds: string[]) => call<{ savings: Array<{ leadId: string; monthly: number | null }> }>('glance', { query: { ids: leadIds.join(',') } }),

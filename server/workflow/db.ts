@@ -70,6 +70,16 @@ export async function patchRows(table: string, filters: Filters, patch: Record<s
   return rows.length
 }
 
+export async function deleteRows(table: string, filters: Filters): Promise<number> {
+  const response = await supabaseFetch(`/rest/v1/${table}${query(filters)}`, {
+    method: 'DELETE',
+    headers: { prefer: 'return=representation' },
+  })
+  if (!response.ok) await fail(table, response, 'delete')
+  const rows = (await response.json().catch(() => [])) as unknown[]
+  return rows.length
+}
+
 /** PostgREST `in.(...)` filter value for text ids. */
 export function inList(values: string[]): string {
   return `in.(${values.map(value => `"${value.replace(/"/g, '')}"`).join(',')})`

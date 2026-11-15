@@ -179,11 +179,11 @@ function customerSource(notes: string | null, createdBy: string | null): string 
 }
 
 export function leadsForView(leads: Lead[], view: 'active' | 'archived'): Lead[] {
-  return leads.filter((lead) => (view === 'archived' ? lead.archived : !lead.archived));
+  return leads.filter((lead) => (view === 'archived' ? (lead.archived || lead.cancelled) : (!lead.archived && !lead.cancelled)));
 }
 
 export function unseenActiveCount(leads: Lead[]): number {
-  return leads.filter((lead) => lead.unseen && !lead.archived).length;
+  return leads.filter((lead) => lead.unseen && !lead.archived && !lead.cancelled).length;
 }
 
 function text(value: string | null | undefined): string | null {
@@ -273,7 +273,7 @@ export function toLeads(customers: CustomerRow[], files: FileRow[], appointments
       utility: null,
       stage: null,
       createdBy: null,
-      archived: false,
+      archived: row.status === 'cancelled',
       days: null,
       avgKwhPerDay: null,
       kwhSameMonthLastYear: null,

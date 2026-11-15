@@ -928,7 +928,7 @@ export default function LeadsTab({
       return;
     }
 
-    const result = await deleteCustomerLead(deleteTarget.id, actor);
+    const result = await deleteCustomerLead(deleteTarget.id, actor, deleteTarget.source);
     setDeleting(false);
     if (!result.ok) {
       setDeleteError(result.error);

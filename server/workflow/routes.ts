@@ -2,7 +2,7 @@ import { createHash, timingSafeEqual } from 'node:crypto'
 import { assertSameOrigin, clientIp, HttpError, isRecord, json, readWebJson } from '../http.js'
 import { requireHubMember, type HubMember } from '../hub-member.js'
 import { enforceRateLimit } from '../rate-limit.js'
-import { selectOne } from './db.js'
+import { deleteRows, patchRows, selectOne } from './db.js'
 import {
   approveProposal,
   cancelFollowup,
@@ -169,6 +169,22 @@ export async function handleWorkflow(request: Request, url: URL): Promise<Respon
     case 'cancel-followup':
       await cancelFollowup(idFrom(body.followupId, 'message'))
       return json({ ok: true })
+    case 'delete-lead': {
+      const leadId = idFrom(body.leadId, 'lead')
+      const now = new Date().toISOString()
+      // Try to cancel from hub_appointments
+      await patchRows('hub_appointments', { id: `eq.${leadId}` }, { status: 'cancelled', cancelled_at: now }).catch(() => 0)
+      // Try hard delete or archive from powergenie_customers
+      const deletedCount = await deleteRows('powergenie_customers', { id: `eq.${leadId}` }).catch(() => 0)
+      if (!deletedCount) {
+        await patchRows('powergenie_customers', { id: `eq.${leadId}` }, {
+          archived_at: now,
+          archived_by: actor.id,
+          updated_at: now,
+        }).catch(() => 0)
+      }
+      return json({ ok: true })
+    }
     default:
       throw new HttpError(404, 'Not found.')
   }
