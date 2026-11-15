@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
   AlertTriangle,
@@ -23,6 +23,7 @@ import {
   Settings2,
   Share2,
   ShieldCheck,
+  Video,
   X,
   Zap,
 } from 'lucide-react';
@@ -60,6 +61,8 @@ import {
   leadsToCsvString,
   leadsToJsonString,
 } from './leadExports';
+
+const ConferenceSheet = lazy(() => import('./ConferenceRoom').then((mod) => ({ default: mod.ConferenceSheet })));
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -601,6 +604,7 @@ export default function LeadsTab({
   const [actionNote, setActionNote] = useState<string | null>(null);
   const [pricingOpen, setPricingOpen] = useState(false);
   const [stageFilter, setStageFilter] = useState<string | null>(null);
+  const [conferenceLead, setConferenceLead] = useState<Lead | null>(null);
   const marked = useRef(new Set<string>());
   const scrolled = useRef<string | null>(null);
   const actor: LeadActor = { id: profile.id, fullName: profile.full_name, email: profile.email };
@@ -962,6 +966,14 @@ export default function LeadsTab({
                   <SunrunOptionBWorkflow lead={lead} />
                 )}
 
+                {lead.source === 'customer' && !lead.archived && (
+                  <div className="mt-3">
+                    <Button type="button" variant="accent" className="min-h-11 px-3 text-[0.84rem]" onClick={() => setConferenceLead(lead)}>
+                      <Video className="h-4 w-4" /> Conference room
+                    </Button>
+                  </div>
+                )}
+
                 {lead.source === 'customer' && feed.writesEnabled && (
                   <div className="mt-3 flex flex-wrap gap-2">
                     <Button
@@ -1043,6 +1055,16 @@ export default function LeadsTab({
         />
       )}
       {pricingOpen && <PricingDialog onClose={() => setPricingOpen(false)} />}
+      {conferenceLead && (
+        <Suspense fallback={null}>
+          <ConferenceSheet
+            customerId={conferenceLead.id}
+            customerName={conferenceLead.name}
+            sample={feed.sample}
+            onClose={() => setConferenceLead(null)}
+          />
+        </Suspense>
+      )}
       {archiveTarget && (
         <ArchiveLeadDialog
           name={archiveTarget.name}

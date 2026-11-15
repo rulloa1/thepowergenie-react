@@ -56,6 +56,8 @@ test('the Vercel SPA rewrite serves /privacy and /terms', () => {
   assert.equal(pattern.test('/pipeline'), true)
   assert.equal(pattern.test('/hub'), true)
   assert.equal(pattern.test('/hub/leads'), true)
+  assert.equal(pattern.test('/room'), true)
+  assert.equal(pattern.test('/room/abcdefghijklmnopqrstuvwxyz012345'), true)
   assert.equal(pattern.test('/brands'), true)
   assert.equal(pattern.test('/brands/'), true)
   assert.equal(pattern.test('/celebrity-solar'), true)

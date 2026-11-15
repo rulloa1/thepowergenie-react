@@ -16,6 +16,7 @@ import { requireHubMember } from './hub-member.js'
 import { notifyPageVisit } from './notify.js'
 import { inviteDashboardMember } from './admin-invite.js'
 import { handleProposalPage, handleWorkflow } from './workflow/routes.js'
+import { handleConference } from './conference.js'
 import { handleTeslaLive, handleTeslaHistory } from './tesla.js'
 import { handleSequenceStatus, handleSequenceStart, handleSequencePause, handleSequenceResume, handleUnsubscribe } from './sequence.js'
 
@@ -225,7 +226,7 @@ export async function handleInvite(request: Request): Promise<Response> {
   return json(result)
 }
 
-const ASSISTANT_ROUTES = new Set(['chat', 'uploads', 'bill', 'lead', 'slots', 'extract', 'hub-bill', 'visit', 'invite', 'workflow', 'proposal'])
+const ASSISTANT_ROUTES = new Set(['chat', 'uploads', 'bill', 'lead', 'slots', 'extract', 'hub-bill', 'visit', 'invite', 'workflow', 'proposal', 'conference'])
 
 /** One function serves every assistant route. The widget calls /api/assistant?route=. */
 function assistantRoute(url: URL): string {
@@ -256,6 +257,7 @@ export async function handleApi(request: Request): Promise<Response> {
     if (pathname === '/api/visit' && request.method === 'POST') return await handleVisit(request)
     if (pathname === '/api/invite' && request.method === 'POST') return await handleInvite(request)
     if (pathname === '/api/workflow') return await handleWorkflow(request, url)
+    if (pathname === '/api/conference') return await handleConference(request, url)
     if (pathname === '/api/proposal' && (request.method === 'GET' || request.method === 'POST')) return await handleProposalPage(request, url)
     if (pathname === '/api/tesla/live' && request.method === 'GET') return handleTeslaLive(request)
     if (pathname === '/api/tesla/history' && request.method === 'GET') return handleTeslaHistory()

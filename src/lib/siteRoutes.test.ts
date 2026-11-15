@@ -55,6 +55,10 @@ describe('public routes', () => {
     expect(showMarketingAssistant(sitePage('/portal'))).toBe(true);
     expect(showMarketingAssistant(sitePage('/dashboard'))).toBe(false);
     expect(showMarketingAssistant(sitePage('/pipeline'))).toBe(false);
+    expect(sitePage('/room')).toBe('room');
+    expect(sitePage('/room/abcdefghijklmnopqrstuvwxyz012345')).toBe('room');
+    expect(showMarketingAssistant(sitePage('/room'))).toBe(false);
+    expect(showRouterLegalFooter('/room/abcdefghijklmnopqrstuvwxyz012345')).toBe(false);
     expect(showRouterLegalFooter('/homeowner')).toBe(true);
     expect(legacyNodeRedirect(normalizePath('/node/book'))).toBe('/book');
     expect(legacyNodeRedirect(normalizePath('/node/dashboard'))).toBe('/dashboard');

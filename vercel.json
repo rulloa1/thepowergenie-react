@@ -103,6 +103,24 @@
       ]
     },
     {
+      "source": "/room",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    },
+    {
+      "source": "/room/:path*",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    },
+    {
       "source": "/:hub(dashboard|pipeline|hub)/:path*",
       "headers": [
         {
