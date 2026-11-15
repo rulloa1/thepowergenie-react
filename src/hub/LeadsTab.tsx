@@ -49,6 +49,8 @@ import PricingDialog from './PricingDialog';
 import TasksStrip from './TasksStrip';
 import WorkflowPanel from './WorkflowPanel';
 import RoofDesignDialog from './RoofDesignDialog';
+import CreateProposalDialog from './CreateProposalDialog';
+import type { BuiltProposal } from './proposalBuilder';
 import type { RoofDesignSpec } from './roofDesign';
 import { PipelineBar, PipelineSummary } from './PipelineStage';
 import { ConferenceRoomButton } from './ConferenceRoomButton';
@@ -639,6 +641,7 @@ export default function LeadsTab({
   const [stageFilter, setStageFilter] = useState<string | null>(null);
   const [conferenceLead, setConferenceLead] = useState<Lead | null>(null);
   const [roofDesigner, setRoofDesigner] = useState<{ open: boolean; lead: Lead | null } | null>(null);
+  const [proposalCreator, setProposalCreator] = useState<{ open: boolean; lead: Lead | null } | null>(null);
   const marked = useRef(new Set<string>());
   const scrolled = useRef<string | null>(null);
   const actor: LeadActor = { id: profile.id, fullName: profile.full_name, email: profile.email };
@@ -970,6 +973,14 @@ export default function LeadsTab({
           >
             <Compass className="h-4 w-4 text-hub-accent-ink" /> Create roof design
           </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            className="min-h-12 w-full px-4 text-base sm:w-auto"
+            onClick={() => setProposalCreator({ open: true, lead: null })}
+          >
+            <FileText className="h-4 w-4 text-hub-primary" /> Create proposal
+          </Button>
           {feed.writesEnabled && (
             <Button type="button" variant="accent" className="min-h-12 w-full px-4 text-base sm:w-auto" onClick={() => { setFormError(null); setEditor({ mode: 'create', lead: null }); }}>
               <Plus className="h-4 w-4" /> Add customer
@@ -1132,6 +1143,18 @@ export default function LeadsTab({
                           <Button
                             type="button"
                             variant="ghost"
+                            className="min-h-[38px] px-3 text-sm font-semibold"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setProposalCreator({ open: true, lead });
+                            }}
+                            title={`Create proposal for ${lead.name}`}
+                          >
+                            <FileText className="h-3.5 w-3.5 text-hub-primary" /> Create proposal
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
                             className="min-h-[38px] px-2.5 text-sm font-semibold text-hub-danger hover:border-hub-danger-line hover:bg-hub-danger-soft"
                             onClick={(e) => {
                               e.stopPropagation();
@@ -1279,6 +1302,14 @@ export default function LeadsTab({
                   </Button>
                   <Button
                     type="button"
+                    variant="ghost"
+                    className="min-h-[40px] px-3 text-[0.84rem]"
+                    onClick={() => setProposalCreator({ open: true, lead })}
+                  >
+                    <FileText className="h-3.5 w-3.5 text-hub-primary" /> Create proposal
+                  </Button>
+                  <Button
+                    type="button"
                     variant="danger"
                     className="min-h-[40px] px-3 text-[0.84rem]"
                     onClick={() => {
@@ -1367,6 +1398,27 @@ export default function LeadsTab({
           onClose={() => setRoofDesigner(null)}
           onApplyToLead={handleApplyRoofDesign}
           onSaveAsLead={handleCreateLeadFromDesign}
+        />
+      )}
+      {proposalCreator?.open && (
+        <CreateProposalDialog
+          lead={proposalCreator.lead}
+          allLeads={shown}
+          onClose={() => setProposalCreator(null)}
+          onSave={(leadId, builtProposal) => {
+            feed.updateLead?.(leadId, {
+              stage: 'proposal_ready',
+              notes: `Proposal created: ${builtProposal.system.kw} kW DC (${builtProposal.system.panels} panels), $${builtProposal.monthlySavings}/mo estimated savings.`,
+            });
+            setActionNote('Proposal saved to customer record.');
+          }}
+          onApproveAndSend={(leadId, builtProposal) => {
+            feed.updateLead?.(leadId, {
+              stage: 'presented',
+              notes: `Proposal approved and sent: ${builtProposal.system.kw} kW DC, $${builtProposal.monthlySavings}/mo savings.`,
+            });
+            setActionNote('Proposal approved and sent to customer.');
+          }}
         />
       )}
       {conferenceLead && (
