@@ -111,7 +111,18 @@ async function mintToken(roomName: string, identity: string, name: string, isHos
     ttl: isHost ? '8h' : '2h',
   })
   token.addGrant(participantGrant(roomName, isHost))
-  return token.toJwt()
+  try {
+    const jwt = await token.toJwt()
+    if (typeof jwt !== 'string' || !jwt.includes('.')) {
+      throw new Error('LiveKit did not return a token string')
+    }
+    return jwt
+  } catch (error) {
+    if (error instanceof HttpError) throw error
+    const message = error instanceof Error ? error.message : 'token failed'
+    console.error('livekit_token_failed', error instanceof Error ? error.name : 'unknown', message.slice(0, 180))
+    throw new HttpError(502, 'LiveKit could not sign the join token. Check the API key and secret, then redeploy.')
+  }
 }
 
 async function ensureRoom(roomName: string): Promise<void> {

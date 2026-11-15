@@ -1,5 +1,5 @@
 import { HttpError } from './http.js'
-import { supabaseConfig, supabaseFetch } from './supabase.js'
+import { supabaseConfig, supabaseFetch, supabaseRequest } from './supabase.js'
 
 export type HubMember = {
   id: string
@@ -21,7 +21,7 @@ export async function requireHubMember(request: Request): Promise<HubMember> {
   const token = bearer(request)
   if (!token) throw new HttpError(401, 'Please sign in to the dashboard.')
   const { url, key } = supabaseConfig()
-  const userResponse = await fetch(`${url}/auth/v1/user`, {
+  const userResponse = await supabaseRequest(`${url}/auth/v1/user`, {
     headers: {
       apikey: key,
       authorization: `Bearer ${token}`,

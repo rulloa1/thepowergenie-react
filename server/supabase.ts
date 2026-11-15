@@ -24,17 +24,46 @@ function isServiceRoleJwt(key: string): boolean {
   }
 }
 
+/**
+ * Project URL only. A placeholder, a quoted value, or a path pasted after the
+ * host used to reach fetch() and throw TypeError: Failed to parse URL.
+ */
+export function supabaseProjectUrl(value: string): string {
+  const trimmed = value.trim().replace(/^['"]+|['"]+$/g, '').replace(/\/+$/, '')
+  let parsed: URL
+  try {
+    parsed = new URL(trimmed)
+  } catch {
+    throw new HttpError(503, 'The dashboard database address is not a valid https URL. Set it to https://<project>.supabase.co and redeploy.')
+  }
+  if (parsed.protocol !== 'https:' || !parsed.hostname.includes('.')) {
+    throw new HttpError(503, 'The dashboard database address is not a valid https URL. Set it to https://<project>.supabase.co and redeploy.')
+  }
+  return parsed.origin
+}
+
 export function supabaseConfig(): { url: string; key: string } {
-  const url = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '').trim().replace(/\/$/, '')
+  const rawUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || ''
   const key = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim()
   const accepted =
     key.startsWith('sb_secret_') ||
     process.env.ASSISTANT_ALLOW_LEGACY_KEY === '1' ||
     isServiceRoleJwt(key)
-  if (!url || !key || !accepted) {
+  if (!rawUrl.trim() || !key || !accepted) {
     throw new HttpError(503, 'Scheduling is not configured yet. Please call Horace and we will set this up.')
   }
-  return { url, key }
+  return { url: supabaseProjectUrl(rawUrl), key }
+}
+
+/** Node fetch throws TypeError for a bad URL and for "fetch failed". Neither is an HttpError, so the route logged only "TypeError". */
+export async function supabaseRequest(url: string, init?: RequestInit): Promise<Response> {
+  try {
+    return await fetch(url, init)
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : 'fetch failed'
+    console.error('supabase_fetch_failed', error instanceof Error ? error.name : 'unknown', detail.slice(0, 180).replace(/https?:\/\/\S+/g, '[url]'))
+    throw new HttpError(503, 'The dashboard could not reach Supabase. Check that the project URL is https://<project>.supabase.co and redeploy.')
+  }
 }
 
 export async function supabaseFetch(path: string, init: RequestInit = {}): Promise<Response> {
@@ -49,7 +78,7 @@ export async function supabaseFetch(path: string, init: RequestInit = {}): Promi
       headers.set(name, value)
     })
   }
-  return fetch(`${url}${path}`, { ...init, headers })
+  return supabaseRequest(`${url}${path}`, { ...init, headers })
 }
 
 export function encodeObjectPath(path: string): string {
