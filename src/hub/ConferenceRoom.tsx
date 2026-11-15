@@ -258,7 +258,13 @@ export function ConferenceSheet({
           <div className="mt-4"><Notice tone="info" title="Sample desk">Sign in to start a real room from this customer. Nothing here places a call.</Notice></div>
         )}
         {!sample && configured === null && <div className="mt-4"><Spinner /></div>}
-        {!sample && configured === false && <div className="mt-4"><Notice tone="warn" title="LiveKit is not ready">{error || SETUP}</Notice></div>}
+        {!sample && configured === false && (
+          <div className="mt-4">
+            <Notice tone="warn" title={/database|Supabase|Scheduling is not configured/i.test(error || '') ? 'Database is not ready' : 'LiveKit is not ready'}>
+              {error || SETUP}
+            </Notice>
+          </div>
+        )}
         {!sample && configured && (
           <div className="mt-4 grid gap-3">
             {error && <Notice tone="error">{error}</Notice>}
