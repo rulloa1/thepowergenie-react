@@ -3,9 +3,9 @@ import { focusRing } from './legalChrome';
 const linkClass = `font-semibold text-[#0066CC] no-underline hover:underline ${focusRing}`;
 
 /**
- * Standalone launch pages. They are served from their own Vercel projects through
- * project routing rules, so they are full-page links, not SPA routes. The app's own
- * /celebrity-solar, /hip-hop-solar and /gas-genie brand pages are separate and unchanged.
+ * Existing program pages already in this repo (gas-genie.html, celebrity-solar.html,
+ * hip-hop-solar.html, sport-and-solar.html). Vercel rewrites these paths onto those
+ * files. The SPA brand routes (/gas-genie, /celebrity-solar, /hip-hop-solar) stay separate.
  */
 export const LAUNCH_PAGES = [
   { href: '/launch/gas-genie', label: 'Gas Genie' },

@@ -5,6 +5,10 @@ export const CONTACT_PHONE_TEL = '+12813230450';
 export const SITE_URL = 'https://thepowergenie.theroyeffect.com';
 export const EFFECTIVE_DATE = 'October 25, 2026';
 
+/** Shown on Privacy and Terms so Rory can tell this copy is a draft for counsel, not a finished opinion. */
+export const LEGAL_REVIEW_NOTE =
+  'Template for Rory to review. This is a working draft for The Power Genie’s Houston solar referral business, not a finished legal opinion.';
+
 export const OPERATOR_SENTENCE =
   'The Power Genie is operated by Rory Ulloa in Houston, Texas, and provides solar referrals in partnership with Sunrun.';
 

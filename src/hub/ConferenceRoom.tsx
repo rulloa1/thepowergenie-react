@@ -6,11 +6,10 @@ import { Copy, Phone, Video, X } from 'lucide-react';
 import { lockPageScroll } from '../lib/scrollLock';
 import type { Profile } from './Dashboard';
 import { conferenceApi, ConferenceError, type JoinInfo, type WaitingGuest } from './conferenceApi';
+import { classifyConferenceProblem, conferenceProblemCopy, type ConferenceProblem } from './conferenceSetup';
 import { Button, Notice, Spinner } from './ui';
 
 const ChatTab = lazy(() => import('./ChatTab'));
-
-const SETUP = 'Set LIVEKIT_API_KEY and LIVEKIT_API_SECRET on Vercel (Production), then redeploy. LIVEKIT_URL is already wss://thepowergenie-conference-room-m4nzqnpy.livekit.cloud. Do not put the secret in a VITE_ variable.';
 
 function inviteHref(path: string): string {
   return `${window.location.origin}${path}`;
@@ -196,6 +195,7 @@ export function ConferenceSheet({
   onClose: () => void;
 }) {
   const [configured, setConfigured] = useState<boolean | null>(sample ? false : null);
+  const [problem, setProblem] = useState<ConferenceProblem | null>(null);
   const [invitePath, setInvitePath] = useState<string | null>(null);
   const [join, setJoin] = useState<JoinInfo | null>(null);
   const [hostCamera, setHostCamera] = useState(true);
@@ -206,8 +206,13 @@ export function ConferenceSheet({
 
   useEffect(() => {
     if (sample) return;
-    conferenceApi.status().then((result) => setConfigured(result.configured)).catch((reason: Error) => {
+    conferenceApi.status().then((result) => {
+      setConfigured(result.configured);
+      setProblem(classifyConferenceProblem(result));
+      setError(result.error || null);
+    }).catch((reason: Error) => {
       setConfigured(false);
+      setProblem(classifyConferenceProblem({ configured: false, error: reason.message }));
       setError(reason.message);
     });
   }, [sample]);
@@ -258,11 +263,9 @@ export function ConferenceSheet({
           <div className="mt-4"><Notice tone="info" title="Sample desk">Sign in to start a real room from this customer. Nothing here places a call.</Notice></div>
         )}
         {!sample && configured === null && <div className="mt-4"><Spinner /></div>}
-        {!sample && configured === false && (
+        {!sample && configured === false && problem && (
           <div className="mt-4">
-            <Notice tone="warn" title={/database|Supabase|Scheduling is not configured/i.test(error || '') ? 'Database is not ready' : 'LiveKit is not ready'}>
-              {error || SETUP}
-            </Notice>
+            <Notice tone="warn" title={conferenceProblemCopy(problem, error).title}>{conferenceProblemCopy(problem, error).body}</Notice>
           </div>
         )}
         {!sample && configured && (

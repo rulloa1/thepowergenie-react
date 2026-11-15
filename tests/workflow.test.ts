@@ -187,6 +187,12 @@ test('the proposal page escapes customer text and has no scripts', () => {
   assert.equal(/Have Horace call me/.test(preview), false)
 })
 
+test('savings glance asks only for the customers on screen', async () => {
+  const { glanceLeadIds } = await import('../server/workflow/engine')
+  assert.deepEqual(glanceLeadIds(' demo-lead-1, demo-lead-1, bad id, cust_2 '), ['demo-lead-1', 'cust_2'])
+  assert.equal(glanceLeadIds(Array.from({ length: 400 }, (_, index) => `lead-${index}`).join(',')).length, 300)
+})
+
 test('the sign-in email has the dashboard link and the member email', async () => {
   const { signInEmail } = await import('../server/workflow/memberEmail')
   const message = signInEmail({ email: 'horace.lawrence@sunrun.com', fullName: 'Horace Lawrence' }, 'https://thepowergenie.theroyeffect.com/dashboard')

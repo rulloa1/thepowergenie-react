@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { focusRing, usePageTitle } from '../components/legalChrome';
-import { CONTACT_EMAIL, CONTACT_PHONE_DISPLAY, CONTACT_PHONE_TEL, EFFECTIVE_DATE, SITE_URL } from '../lib/legal';
+import { CONTACT_EMAIL, CONTACT_PHONE_DISPLAY, CONTACT_PHONE_TEL, EFFECTIVE_DATE, LEGAL_REVIEW_NOTE, SITE_URL } from '../lib/legal';
 
 const linkClass = `font-semibold text-[#0066CC] no-underline hover:underline ${focusRing}`;
 
@@ -26,6 +26,9 @@ export default function LegalDocument({ title, children }: { title: string; chil
           Effective {EFFECTIVE_DATE}
           {' · '}
           <a className={linkClass} href={SITE_URL}>{SITE_URL.replace('https://', '')}</a>
+        </p>
+        <p className="m-0 mt-6 rounded-xl border border-[#E8C56B] bg-[#FFF8E8] px-4 py-3 text-sm leading-relaxed text-[#5C4308]" role="note">
+          {LEGAL_REVIEW_NOTE}
         </p>
         <div className="mt-8 grid gap-8 text-[1.02rem] leading-relaxed [overflow-wrap:anywhere]">{children}</div>
         <p className="m-0 mt-10 text-sm text-[#4A5568]">

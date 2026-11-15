@@ -817,6 +817,39 @@ export async function leadDetail(leadId: string) {
   }
 }
 
+const GLANCE_ID = /^[A-Za-z0-9_-]{1,80}$/
+
+/** Customer ids the list is actually showing. Capped at the same 300 the hub feed loads. */
+export function glanceLeadIds(value: string): string[] {
+  const ids: string[] = []
+  for (const part of value.split(',')) {
+    const id = part.trim()
+    if (!GLANCE_ID.test(id) || ids.includes(id)) continue
+    ids.push(id)
+    if (ids.length === 300) break
+  }
+  return ids
+}
+
+/** Monthly savings for the customers on screen. Asking by id avoids a 200-row cap hiding a saved estimate. */
+export async function savingsGlance(leadIds: string[]) {
+  const ids = glanceLeadIds(leadIds.join(','))
+  const rows: Array<{ lead_id: string; savings: { ready?: boolean; savingsMonthly?: number } | null }> = []
+  for (let index = 0; index < ids.length; index += 80) {
+    const chunk = ids.slice(index, index + 80)
+    const page = await selectRows<{ lead_id: string; savings: { ready?: boolean; savingsMonthly?: number } | null }>(
+      'hub_lead_workflow',
+      { lead_id: inList(chunk) },
+      { select: 'lead_id,savings', limit: chunk.length },
+    )
+    rows.push(...page)
+  }
+  return rows.map((row) => ({
+    leadId: row.lead_id,
+    monthly: row.savings?.ready && typeof row.savings.savingsMonthly === 'number' ? row.savings.savingsMonthly : null,
+  }))
+}
+
 export async function openTasks() {
   const tasks = await selectRows<TaskRow>('hub_tasks', { done_at: 'is.null', cancelled_at: 'is.null' }, { order: 'due_at.asc', limit: 60 })
   const ids = [...new Set(tasks.map(task => task.lead_id))]

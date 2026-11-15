@@ -66,30 +66,21 @@ export function PipelineSummary({
     counts.set(key, (counts.get(key) || 0) + 1);
   }
   const lost = counts.get('lost') || 0;
-  const chip = (id: string | null, label: string, count: number) => (
-    <button
-      key={id ?? 'all'}
-      type="button"
-      aria-pressed={selected === id}
-      onClick={() => onSelect(id)}
-      className={cn(
-        'flex min-h-[44px] shrink-0 flex-col items-start justify-center rounded-xl border px-3 py-1.5 text-left',
-        selected === id ? 'border-hub-on-primary bg-hub-primary text-hub-on-primary' : 'border-hub-line bg-hub-surface text-hub-ink hover:bg-hub-muted',
-        count === 0 && selected !== id && 'opacity-55',
-      )}
-    >
-      <span className="text-[1.05rem] font-bold leading-none tabular-nums">{count}</span>
-      <span className="mt-1 whitespace-nowrap text-[0.72rem] font-semibold">{label}</span>
-    </button>
-  );
   return (
-    <div className="mt-4" aria-label="Pipeline">
-      <p className="m-0 mb-1.5 text-[0.72rem] font-bold uppercase tracking-wide text-hub-soft">Pipeline · tap a step to filter</p>
-      <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
-        {chip(null, 'All', total)}
-        {PIPELINE_STEPS.map((step) => chip(step, stageLabel(step), counts.get(step) || 0))}
-        {lost > 0 && chip('lost', 'Lost', lost)}
-      </div>
+    <div className="mt-5 max-w-sm" aria-label="Pipeline">
+      <label htmlFor="customer-stage-filter" className="mb-1.5 block text-base font-semibold text-hub-ink">Show</label>
+      <select
+        id="customer-stage-filter"
+        value={selected ?? ''}
+        onChange={(event) => onSelect(event.target.value || null)}
+        className="min-h-12 w-full rounded-xl border border-hub-control bg-hub-surface px-3 text-base text-hub-ink"
+      >
+        <option value="">{`All customers (${total})`}</option>
+        {PIPELINE_STEPS.map((step) => (
+          <option key={step} value={step}>{`${stageLabel(step)} (${counts.get(step) || 0})`}</option>
+        ))}
+        {lost > 0 && <option value="lost">{`Lost (${lost})`}</option>}
+      </select>
     </div>
   );
 }

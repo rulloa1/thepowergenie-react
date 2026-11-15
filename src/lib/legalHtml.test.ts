@@ -36,6 +36,7 @@ describe('crawlable legal markup', () => {
     expect(privacy).toContain('Reply STOP to opt out of text messages');
     expect(privacy).toContain('roryulloa@gmail.com');
     expect(privacy).toContain('281-323-0450');
+    expect(privacy).toContain('Template for Rory to review');
     expect(privacy).toContain('href="/privacy">Privacy Policy');
     expect(privacy).toContain('href="/terms">Terms');
     expect(privacy).not.toMatch(new RegExp(['Fer' + 'rell', 'cust_' + 'patricia', 'Hanna' + ' Ward'].join('|')));
@@ -63,6 +64,7 @@ describe('crawlable legal markup', () => {
     expect(terms).toContain('roryulloa@gmail.com');
     expect(terms).toContain('281-323-0450');
     expect(terms).toContain('>Privacy Policy<');
+    expect(terms).toContain('Template for Rory to review');
     expect(terms).not.toMatch(new RegExp(['Fer' + 'rell', 'cust_' + 'patricia', 'Hanna' + ' Ward'].join('|')));
   });
 });

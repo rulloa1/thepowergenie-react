@@ -50,8 +50,16 @@ export type JoinInfo = RoomInfo & {
 
 export type WaitingGuest = { id: string; name: string; camera?: boolean };
 
+export type ActiveRoom = {
+  customerId: string;
+  customerName: string;
+  expiresAt: string;
+  invitePath: string;
+};
+
 export const conferenceApi = {
-  status: () => call<{ configured: boolean }>('status', { auth: true }),
+  status: () => call<{ configured: boolean; problem?: 'database_key' | 'livekit' | null; error?: string }>('status', { auth: true }),
+  rooms: () => call<{ rooms: ActiveRoom[] }>('rooms', { auth: true }),
   start: (customerId: string) => call<RoomInfo>('start', { method: 'POST', auth: true, body: { customerId } }),
   host: (customerId: string) => call<JoinInfo>('host', { method: 'POST', auth: true, body: { customerId } }),
   queue: (customerId: string) => call<{ invitePath: string | null; guests: WaitingGuest[] }>('queue', { auth: true, query: { customerId } }),
