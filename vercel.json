@@ -101,6 +101,15 @@
           "value": "noindex, nofollow"
         }
       ]
+    },
+    {
+      "source": "/:hub(dashboard|pipeline|hub)/:path*",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
     }
   ],
   "crons": [

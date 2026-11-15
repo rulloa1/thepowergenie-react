@@ -34,8 +34,10 @@ export default function ChatTab({ profile }: { profile: Profile }) {
   const [sending, setSending] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
+  const offline = !supabase || profile.id.startsWith('demo-');
 
   const sign = useCallback(async (list: Message[]) => {
+    if (!supabase) return;
     const paths = list.map((m) => m.attachment_path).filter((p): p is string => !!p);
     if (!paths.length) return;
     const { data } = await supabase!.storage.from(BUCKET).createSignedUrls(paths, LINK_SECONDS);
@@ -48,6 +50,10 @@ export default function ChatTab({ profile }: { profile: Profile }) {
   }, []);
 
   useEffect(() => {
+    if (!supabase || profile.id.startsWith('demo-')) {
+      setLoading(false);
+      return;
+    }
     let alive = true;
     (async () => {
       const [{ data: ppl }, { data: msgs, error: msgErr }] = await Promise.all([
@@ -80,15 +86,16 @@ export default function ChatTab({ profile }: { profile: Profile }) {
       alive = false;
       supabase!.removeChannel(channel);
     };
-  }, [sign]);
+  }, [sign, profile.id]);
 
   // Signed links expire after an hour; keep them fresh while the tab stays open.
   const messagesRef = useRef<Message[]>([]);
   messagesRef.current = messages;
   useEffect(() => {
+    if (!supabase || profile.id.startsWith('demo-')) return;
     const timer = window.setInterval(() => sign(messagesRef.current), RESIGN_EVERY_MS);
     return () => window.clearInterval(timer);
-  }, [sign]);
+  }, [sign, profile.id]);
 
   useLayoutEffect(() => {
     bottomRef.current?.scrollIntoView({ block: 'end' });
@@ -141,13 +148,24 @@ export default function ChatTab({ profile }: { profile: Profile }) {
     setMessages((prev) => prev.filter((p) => p.id !== m.id));
   };
 
+  if (offline) {
+    return (
+      <section className="rounded-3xl bg-hub-surface p-4 sm:p-6" aria-label="Team chat">
+        <h2 className="m-0 text-lg font-bold text-hub-ink">Chat</h2>
+        <p className="m-0 mt-2 max-w-prose text-[0.95rem] leading-relaxed text-hub-soft">
+          Rory and Horace share this chat, including photos of a bill. The sample desk does not send messages. Sign in to use it.
+        </p>
+      </section>
+    );
+  }
+
   return (
     <section className="flex min-h-[60vh] flex-1 flex-col rounded-3xl bg-hub-surface shadow-[0_10px_30px_rgba(10,20,40,0.06)]" aria-label="Team chat">
       <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6" style={{ maxHeight: 'calc(100dvh - 260px)' }}>
         {loading ? (
           <div className="py-10 text-center text-hub-soft"><Spinner /></div>
         ) : messages.length === 0 ? (
-          <p className="py-12 text-center text-hub-soft">No messages yet. Say hi to the team 👋</p>
+          <p className="py-12 text-center text-hub-soft">No messages yet. This chat is shared by Rory and Horace.</p>
         ) : (
           messages.map((m, i) => {
             const mine = m.sender_id === profile.id;
@@ -166,7 +184,7 @@ export default function ChatTab({ profile }: { profile: Profile }) {
                   <span className="mb-1 px-1 text-[0.74rem] text-hub-soft">
                     {mine ? 'You' : who?.full_name || who?.email || 'Teammate'} · {formatTime(m.created_at)}
                     {mine && (
-                      <button onClick={() => remove(m)} className="ml-2 text-hub-danger opacity-0 transition group-hover:opacity-100 focus:opacity-100">
+                      <button type="button" onClick={() => remove(m)} className="ml-2 min-h-11 rounded-md px-1 font-semibold text-hub-danger underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-hub-focus sm:min-h-0 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100">
                         Delete
                       </button>
                     )}
@@ -183,18 +201,28 @@ export default function ChatTab({ profile }: { profile: Profile }) {
                       </a>
                     )}
                     {m.attachment_path && (!isImage || !url) && (
-                      <a
-                        href={url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className={cn('flex items-center gap-2.5 px-3.5 py-2.5 no-underline', mine ? 'text-hub-on-primary' : 'text-hub-ink')}
-                      >
-                        <FileText className="h-5 w-5 shrink-0 opacity-80" />
-                        <span className="min-w-0">
-                          <span className="block truncate font-semibold">{m.attachment_name}</span>
-                          <span className="text-[0.76rem] opacity-70">{formatBytes(m.attachment_size)}</span>
+                      url ? (
+                        <a
+                          href={url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={cn('flex items-center gap-2.5 px-3.5 py-2.5 no-underline', mine ? 'text-hub-on-primary' : 'text-hub-ink')}
+                        >
+                          <FileText className="h-5 w-5 shrink-0 opacity-80" />
+                          <span className="min-w-0">
+                            <span className="block truncate font-semibold">{m.attachment_name}</span>
+                            <span className="text-[0.76rem] opacity-70">{formatBytes(m.attachment_size)}</span>
+                          </span>
+                        </a>
+                      ) : (
+                        <span className={cn('flex items-center gap-2.5 px-3.5 py-2.5', mine ? 'text-hub-on-primary' : 'text-hub-ink')}>
+                          <FileText className="h-5 w-5 shrink-0 opacity-80" />
+                          <span className="min-w-0">
+                            <span className="block truncate font-semibold">{m.attachment_name || 'Attachment'}</span>
+                            <span className="text-[0.76rem] opacity-70">Preparing link…</span>
+                          </span>
                         </span>
-                      </a>
+                      )
                     )}
                     {m.body && <p className="m-0 whitespace-pre-wrap break-words px-3.5 py-2.5">{m.body}</p>}
                   </div>
@@ -222,7 +250,7 @@ export default function ChatTab({ profile }: { profile: Profile }) {
           <button
             type="button"
             onClick={() => fileInput.current?.click()}
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-hub-control text-hub-ink hover:border-hub-ink"
+            className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border border-hub-control text-hub-ink hover:border-hub-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-hub-focus"
             aria-label="Attach a file or photo"
           >
             <Paperclip className="h-5 w-5" />
@@ -246,7 +274,7 @@ export default function ChatTab({ profile }: { profile: Profile }) {
           <button
             type="submit"
             disabled={sending || (!text.trim() && !file)}
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-hub-accent-fill text-hub-on-accent disabled:bg-hub-muted disabled:text-hub-soft"
+            className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full bg-hub-accent-fill text-hub-on-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-hub-focus disabled:cursor-not-allowed disabled:bg-hub-muted disabled:text-hub-soft"
             aria-label="Send"
           >
             {sending ? <Spinner className="h-4 w-4" /> : <SendHorizontal className="h-5 w-5" />}

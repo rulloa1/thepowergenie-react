@@ -115,7 +115,15 @@ export default function ScheduleTab({ profile }: { profile: Profile }) {
     }
   }, []);
 
+  const sample = !supabase || profile.id.startsWith('demo-');
+
   const load = useCallback(async () => {
+    if (!supabase || profile.id.startsWith('demo-')) {
+      setLoading(false);
+      setAppts([]);
+      setGoogle(null);
+      return;
+    }
     setLoading(true);
     setError(null);
     const since = new Date(Date.now() - 2 * 3600_000).toISOString();
@@ -150,7 +158,7 @@ export default function ScheduleTab({ profile }: { profile: Profile }) {
       setBusy(statusRes.data!.busy ?? []);
     }
     setLoading(false);
-  }, []);
+  }, [profile.id]);
 
   useEffect(() => {
     load();
@@ -215,6 +223,17 @@ export default function ScheduleTab({ profile }: { profile: Profile }) {
   const customerFailures = eventRows.filter((row) => row.customer_id && row.sync_error);
 
   const today = todayCentralKey();
+
+  if (sample) {
+    return (
+      <section aria-label="Upcoming appointments" className="rounded-3xl bg-hub-surface p-4 sm:p-6">
+        <h2 className="m-0 text-lg font-bold text-hub-ink">Schedule</h2>
+        <p className="m-0 mt-2 max-w-prose text-[0.95rem] leading-relaxed text-hub-soft">
+          Bookings from the public page and appointments added here show up for both Horace and Rory. The sample desk does not load the live calendar. Sign in to see it.
+        </p>
+      </section>
+    );
+  }
 
   return (
     <div className="grid gap-4">
@@ -509,7 +528,6 @@ function AppointmentCard({
             <MapPin className="h-4 w-4 shrink-0 text-hub-soft" />{a.address}
           </a>
         )}
-        {a.note && <p className="m-0 mt-1 whitespace-pre-wrap rounded-xl bg-[#F6F7FB] px-3 py-2 text-[0.88rem]">{a.note}</p>}
         {usage ? <UsageCard usage={usage} /> : null}
         {a.note && <p className="m-0 mt-1 whitespace-pre-wrap rounded-xl bg-hub-muted px-3 py-2 text-[0.88rem]">{a.note}</p>}
       </div>

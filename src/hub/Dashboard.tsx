@@ -1,7 +1,8 @@
 import React, { lazy, Suspense, useEffect, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
-import { CalendarDays, FolderOpen, Inbox, LogOut, MessageCircle, Sparkles } from 'lucide-react';
+import { CalendarDays, FolderOpen, Inbox, LogOut, MessageCircle } from 'lucide-react';
 import { useLeadFeed } from './useLeadFeed';
+import { hubTabFromLocation, type HubTab } from '../lib/siteRoutes';
 import { arrivalAuthType, supabase } from '../lib/supabase';
 import { BrandMark, Button, Notice, NotConfigured, Spinner, cn } from './ui';
 
@@ -24,7 +25,7 @@ const DEMO_PROFILE: Profile = {
   role: 'owner',
 };
 
-type Tab = 'chat' | 'files' | 'schedule' | 'leads';
+type Tab = HubTab;
 const TABS: { id: Tab; label: string; icon: typeof MessageCircle }[] = [
   { id: 'leads', label: 'Leads', icon: Inbox },
   { id: 'chat', label: 'Chat', icon: MessageCircle },
@@ -32,12 +33,20 @@ const TABS: { id: Tab; label: string; icon: typeof MessageCircle }[] = [
   { id: 'schedule', label: 'Schedule', icon: CalendarDays },
 ];
 
+function roleLabel(role: Profile['role']): string {
+  return role === 'owner' ? 'Sunrun rep' : 'Referral marketer';
+}
+
 function initialTab(): Tab {
-  if (typeof window !== 'undefined' && window.location.pathname.startsWith('/pipeline')) {
-    return 'leads';
-  }
-  const t = new URLSearchParams(window.location.search).get('tab');
-  return t === 'files' || t === 'schedule' || t === 'leads' ? t : 'leads';
+  if (typeof window === 'undefined') return 'leads';
+  return hubTabFromLocation(window.location.pathname, window.location.search);
+}
+
+function setDemoQuery(on: boolean) {
+  const url = new URL(window.location.href);
+  if (on) url.searchParams.set('demo', 'true');
+  else url.searchParams.delete('demo');
+  window.history.replaceState({}, '', url);
 }
 
 export default function Dashboard() {
@@ -45,6 +54,8 @@ export default function Dashboard() {
   const [ready, setReady] = useState(false);
   const [profile, setProfile] = useState<Profile | null | undefined>(undefined);
   const [needsPassword, setNeedsPassword] = useState(arrivalAuthType === 'invite' || arrivalAuthType === 'recovery');
+  const [profileError, setProfileError] = useState<string | null>(null);
+  const [sessionError, setSessionError] = useState<string | null>(null);
   const [isDemo, setIsDemo] = useState(() => {
     return typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('demo') === 'true';
   });
@@ -60,38 +71,89 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (!supabase) return;
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
+    let alive = true;
+    supabase.auth.getSession().then(({ data, error }) => {
+      if (!alive) return;
+      setSession(error ? null : data.session);
+      setSessionError(error ? "Couldn't check your sign-in. Refresh and try again." : null);
+      setReady(true);
+    }).catch(() => {
+      if (!alive) return;
+      setSession(null);
+      setSessionError("Couldn't check your sign-in. Refresh and try again.");
       setReady(true);
     });
     const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
       setSession(s);
+      setSessionError(null);
       setReady(true);
       if (event === 'PASSWORD_RECOVERY') setNeedsPassword(true);
     });
-    return () => sub.subscription.unsubscribe();
+    return () => {
+      alive = false;
+      sub.subscription.unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
     if (!supabase || !session) {
       setProfile(undefined);
+      setProfileError(null);
       return;
     }
-    supabase
-      .from('hub_profiles')
-      .select('id, email, full_name, role')
-      .eq('id', session.user.id)
-      .maybeSingle()
-      .then(({ data }) => setProfile((data as Profile) ?? null));
+    let alive = true;
+    void Promise.resolve(
+      supabase
+        .from('hub_profiles')
+        .select('id, email, full_name, role')
+        .eq('id', session.user.id)
+        .maybeSingle(),
+    ).then(({ data, error }) => {
+        if (!alive) return;
+        if (error) {
+          setProfile(null);
+          setProfileError("Couldn't load your access. Refresh and try again.");
+          return;
+        }
+        setProfileError(null);
+        setProfile((data as Profile) ?? null);
+      })
+      .catch(() => {
+        if (!alive) return;
+        setProfile(null);
+        setProfileError("Couldn't load your access. Refresh and try again.");
+      });
+    return () => {
+      alive = false;
+    };
   }, [session]);
 
+  const openSample = () => {
+    setDemoQuery(true);
+    setIsDemo(true);
+  };
+  const closeSample = () => {
+    setDemoQuery(false);
+    setIsDemo(false);
+  };
+
   if (isDemo) {
-    return <HubApp profile={DEMO_PROFILE} isDemo onExitDemo={() => setIsDemo(false)} />;
+    return <HubApp profile={DEMO_PROFILE} isDemo onExitDemo={closeSample} />;
   }
   if (!supabase) return <NotConfigured what="The Referral Hub" />;
   if (!ready) return <FullPageSpinner />;
-  if (!session) return <SignIn onExploreDemo={() => setIsDemo(true)} />;
+  if (sessionError) return <AuthProblem title="Couldn't open the hub" message={sessionError} />;
+  if (!session) return <SignIn onExploreDemo={openSample} />;
   if (needsPassword) return <SetPassword onDone={() => setNeedsPassword(false)} />;
+  if (profileError) {
+    return (
+      <AuthProblem
+        title="Couldn't check access"
+        message={profileError}
+        onSignOut={() => { void supabase?.auth.signOut(); }}
+      />
+    );
+  }
   if (profile === undefined) return <FullPageSpinner />;
   if (profile === null) return <NotInvited email={session.user.email ?? ''} />;
   return <HubApp profile={profile} />;
@@ -105,14 +167,26 @@ function FullPageSpinner() {
   );
 }
 
+function AuthProblem({ title, message, onSignOut }: { title: string; message: string; onSignOut?: () => void }) {
+  return (
+    <AuthCard title={title}>
+      <Notice tone="error">{message}</Notice>
+      {onSignOut ? (
+        <Button type="button" variant="ghost" className="mt-6 w-full rounded-full" onClick={onSignOut}>Sign out</Button>
+      ) : (
+        <Button type="button" className="mt-6 w-full rounded-full" onClick={() => window.location.reload()}>Try again</Button>
+      )}
+    </AuthCard>
+  );
+}
+
 /* Sign-in chrome uses the public site's palette: navy #0B2233, orange #FF6B00,
    ink #1A1A2E on a light field. The form side sits in the .book-page light scope
    so the shared Notice/Button tokens stay readable on white. */
 const authInputClass =
   'w-full rounded-xl border border-[#1A1A2E]/15 bg-white px-3.5 py-3 text-base text-[#1A1A2E] outline-none transition placeholder:text-[#64748b] hover:border-[#1A1A2E]/35 focus:border-[#FF6B00] focus:ring-4 focus:ring-[#FF6B00]/20';
 const authLabelClass = 'mb-1.5 block text-[0.84rem] font-semibold text-[#1A1A2E]';
-const authPrimaryClass =
-  'w-full rounded-full border-0 bg-[#FF6B00] text-white shadow-[0_10px_24px_rgba(255,107,0,0.35)] hover:bg-[#F25F00] hover:shadow-[0_12px_28px_rgba(255,107,0,0.42)] focus-visible:ring-[#FF6B00] focus-visible:ring-offset-white disabled:bg-[#FF6B00]/60 disabled:text-white';
+const authFocus = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9A3412] focus-visible:ring-offset-2';
 
 function AuthCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -127,7 +201,7 @@ function AuthCard({ title, children }: { title: string; children: React.ReactNod
         />
         <div aria-hidden="true" className="absolute inset-0 -z-10 hidden bg-gradient-to-t from-[#0B2233] via-[#0B2233]/80 to-[#0B2233]/55 lg:block" />
 
-        <a href="/" className="flex items-center gap-3 text-white no-underline" title="The Power Genie home">
+        <a href="/" className={cn('flex items-center gap-3 rounded-xl text-white no-underline', authFocus)} title="The Power Genie home">
           <img src="/assets/brand/power-genie-icon.png" alt="" className="h-10 w-10 rounded-xl bg-white/10 object-cover lg:h-12 lg:w-12" />
           <span className="leading-tight">
             <span className="block text-base font-bold lg:text-lg">The Power Genie</span>
@@ -135,11 +209,11 @@ function AuthCard({ title, children }: { title: string; children: React.ReactNod
           </span>
         </a>
 
-        <div className="mt-auto hidden max-w-lg pt-16 lg:block">
-          <h2 className="m-0 text-[clamp(2.25rem,3.6vw,3.4rem)] font-bold leading-[1.05] tracking-tight text-balance">
+        <div className="mt-5 max-w-md lg:mt-auto lg:max-w-lg lg:pt-16">
+          <h2 className="m-0 hidden text-[clamp(2.25rem,3.6vw,3.4rem)] font-bold leading-[1.05] tracking-tight text-balance lg:block">
             The bill, the savings, and the roof. <span className="text-[#FF8A2B]">One desk.</span>
           </h2>
-          <p className="mt-5 max-w-md text-[1.02rem] leading-relaxed text-[#D9E6F2]">
+          <p className="m-0 max-w-md text-[0.98rem] leading-relaxed text-[#D9E6F2] lg:mt-5 lg:text-[1.02rem]">
             Rory logs the light bill. Horace runs the numbers and the panel layout. Both see the same customer, the same files, and the same chat.
           </p>
         </div>
@@ -199,7 +273,10 @@ function SignIn({ onExploreDemo }: { onExploreDemo?: () => void }) {
     if (!email.trim()) return setError('Enter your email first, then tap “Forgot password”.');
     setError(null);
     setLinkSent(false);
-    await supabase!.auth.resetPasswordForEmail(email.trim(), { redirectTo: `${window.location.origin}/dashboard` });
+    setBusy(true);
+    const { error } = await supabase!.auth.resetPasswordForEmail(email.trim(), { redirectTo: `${window.location.origin}/dashboard` });
+    setBusy(false);
+    if (error) return setError(error.message);
     setResetSent(true);
   };
 
@@ -213,7 +290,7 @@ function SignIn({ onExploreDemo }: { onExploreDemo?: () => void }) {
         <div>
           <div className="mb-1.5 flex items-baseline justify-between gap-3">
             <label htmlFor="s-pass" className={cn(authLabelClass, 'mb-0')}>Password</label>
-            <button type="button" onClick={reset} className="text-[0.82rem] font-semibold text-[#0066CC] hover:underline">
+            <button type="button" onClick={reset} className={cn('rounded-sm text-[0.82rem] font-semibold text-[#0066CC] hover:underline', authFocus)}>
               Forgot password?
             </button>
           </div>
@@ -222,7 +299,7 @@ function SignIn({ onExploreDemo }: { onExploreDemo?: () => void }) {
         {error && <Notice tone="error">{error}</Notice>}
         {resetSent && <Notice tone="success">If that email has access, a reset link is on its way.</Notice>}
         {linkSent && <Notice tone="success">If that email has access, a sign-in link is on its way.</Notice>}
-        <Button type="submit" disabled={busy} className={cn(authPrimaryClass, 'mt-1 min-h-[52px] text-base')}>
+        <Button type="submit" disabled={busy} className="mt-1 min-h-[52px] w-full rounded-full text-base">
           {busy ? <Spinner className="h-4 w-4" /> : 'Sign in'}
         </Button>
 
@@ -235,7 +312,7 @@ function SignIn({ onExploreDemo }: { onExploreDemo?: () => void }) {
           type="button"
           onClick={emailLink}
           disabled={busy}
-          className="inline-flex min-h-[48px] w-full items-center justify-center rounded-full border border-[#1A1A2E]/15 bg-white px-5 text-[0.95rem] font-semibold text-[#1A1A2E] transition hover:border-[#1A1A2E]/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00] focus-visible:ring-offset-2 disabled:opacity-60"
+          className={cn('inline-flex min-h-[48px] w-full cursor-pointer items-center justify-center rounded-full border border-[#1A1A2E]/15 bg-white px-5 text-[0.95rem] font-semibold text-[#1A1A2E] transition hover:border-[#1A1A2E]/35 disabled:opacity-60', authFocus)}
         >
           Email me a sign-in link
         </button>
@@ -243,6 +320,15 @@ function SignIn({ onExploreDemo }: { onExploreDemo?: () => void }) {
         <p className="m-0 mt-2 text-center text-[0.8rem] text-[#4A5568]">
           Access is by invitation. Need in? Ask Horace or Rory.
         </p>
+        {onExploreDemo && (
+          <button
+            type="button"
+            onClick={onExploreDemo}
+            className={cn('justify-self-center text-[0.84rem] font-semibold text-[#0066CC] hover:underline', authFocus)}
+          >
+            Preview a sample desk
+          </button>
+        )}
       </form>
     </AuthCard>
   );
@@ -269,6 +355,9 @@ function SetPassword({ onDone }: { onDone: () => void }) {
   return (
     <AuthCard title="Set your password">
       <form onSubmit={save} className="grid gap-4">
+        <p className="m-0 text-[0.95rem] leading-relaxed text-[#4A5568]">
+          Choose a password for this invite. You will use it the next time you open the Referral Hub.
+        </p>
         <div>
           <label htmlFor="p1" className={authLabelClass}>New password</label>
           <input id="p1" type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} className={authInputClass} />
@@ -278,7 +367,7 @@ function SetPassword({ onDone }: { onDone: () => void }) {
           <input id="p2" type="password" autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} className={authInputClass} />
         </div>
         {error && <Notice tone="error">{error}</Notice>}
-        <Button type="submit" disabled={busy} className={cn(authPrimaryClass, 'min-h-[52px] text-base')}>
+        <Button type="submit" disabled={busy} className="min-h-[52px] w-full rounded-full text-base">
           {busy ? <Spinner className="h-4 w-4" /> : 'Save and continue'}
         </Button>
       </form>
@@ -310,71 +399,79 @@ function HubApp({
 }) {
   const [tab, setTab] = useState<Tab>(initialTab);
   const leads = useLeadFeed(profile.id);
+  const focus = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-hub-focus focus-visible:ring-offset-2 focus-visible:ring-offset-hub-topbar';
+
+  useEffect(() => {
+    const sync = () => setTab(initialTab());
+    window.addEventListener('popstate', sync);
+    return () => window.removeEventListener('popstate', sync);
+  }, []);
 
   const go = (t: Tab) => {
     setTab(t);
     const url = new URL(window.location.href);
+    url.pathname = '/dashboard';
     url.searchParams.set('tab', t);
     if (t !== 'leads') url.searchParams.delete('id');
-    window.history.replaceState({}, '', url);
+    if (`${url.pathname}${url.search}` !== `${window.location.pathname}${window.location.search}`) {
+      window.history.pushState({}, '', url);
+    }
   };
 
   return (
     <div className="hub-canvas flex min-h-[100dvh] flex-col">
       {isDemo && (
-        <div className="sticky top-0 z-40 bg-gradient-to-r from-[#FF6B00]/25 via-[#FF8A2B]/20 to-[#FF6B00]/25 border-b border-[#FF6B00]/40 px-4 py-2 text-center text-xs sm:text-sm text-white backdrop-blur-xl flex flex-wrap items-center justify-center gap-2 shadow-lg shadow-black/40">
-          <span className="inline-flex items-center gap-1.5 font-bold text-[#FF8A2B]">
-            <span className="h-2 w-2 rounded-full bg-[#FF6B00] animate-pulse" />
-            <Sparkles className="h-3.5 w-3.5" /> Demo Mode:
-          </span>
-          <span className="text-[#E0ECF6]">Viewing live preview of Horace Lawrence's Sunrun Partner Workspace. Interactive leads, AI advisor, files, and scheduling tools.</span>
-          <button onClick={onExitDemo} className="ml-2 rounded-lg bg-[#FF6B00]/20 border border-[#FF6B00]/40 px-2.5 py-0.5 text-xs font-bold text-[#FF8A2B] hover:bg-[#FF6B00]/30 hover:text-white transition cursor-pointer">
-            Exit to Sign In
-          </button>
+        <div className="border-b border-hub-warn-line bg-hub-warn px-4 py-2 text-center text-sm text-hub-warn-ink">
+          <p className="m-0 flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
+            <span>Sample desk. Nothing here is saved. Sign in to work the real customers.</span>
+            <button type="button" onClick={onExitDemo} className={cn('min-h-11 cursor-pointer rounded-lg px-2 font-bold underline underline-offset-2', focus)}>
+              Back to sign in
+            </button>
+          </p>
         </div>
       )}
-      <header className="sticky top-0 z-30 border-b border-[#1E2E42] bg-[#0A1828]/95 shadow-[0_8px_32px_rgba(0,0,0,0.5)] backdrop-blur-xl">
+      <header className="sticky top-0 z-30 border-b border-hub-line bg-hub-topbar/95 shadow-[0_8px_32px_rgba(0,0,0,0.35)] backdrop-blur-xl">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-2.5 sm:px-6">
           <div className="flex min-w-0 items-center gap-3">
-            <a href="/" className="transition-opacity hover:opacity-80" title="Return to The Power Genie Home">
+            <a href="/" className={cn('rounded-xl', focus)} title="The Power Genie home">
               <BrandMark className="h-9 shadow-sm" />
             </a>
-            <div className="flex items-center gap-2">
-              <span className="hidden text-[0.8rem] font-bold uppercase tracking-[0.14em] text-[#FF8A2B] sm:inline">Referral Hub</span>
-              <span className="hidden items-center gap-1.5 rounded-full border border-[#4ADE80]/30 bg-[#4ADE80]/15 px-2.5 py-0.5 text-[0.7rem] font-bold text-[#4ADE80] md:inline-flex">
-                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#4ADE80]" />
-                Live Advisor
+            <div className="flex min-w-0 items-center gap-2">
+              <span className="hidden text-[0.8rem] font-bold uppercase tracking-[0.14em] text-hub-accent-ink sm:inline">Referral Hub</span>
+              <span className="hidden items-center rounded-full border border-hub-accent-line bg-hub-accent-soft px-2.5 py-0.5 text-[0.7rem] font-bold text-hub-accent-ink md:inline-flex">
+                Shared desk
               </span>
             </div>
           </div>
           <div className="flex items-center gap-2.5">
             <a
               href="/"
-              className="hidden lg:inline-flex items-center gap-1 text-[0.78rem] font-semibold text-[#8EAEC7] hover:text-white transition-colors px-2.5 py-1 rounded-lg border border-[#28496B] bg-[#0C1E32] no-underline"
+              className={cn('hidden min-h-11 items-center rounded-lg border border-hub-line bg-hub-surface px-2.5 text-[0.78rem] font-semibold text-hub-link no-underline hover:text-hub-link-hover lg:inline-flex', focus)}
             >
-              ← Public Site
+              Public site
             </a>
             <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-[#FF6B00] to-[#E65100] text-[0.78rem] font-bold text-white shadow-sm">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-hub-primary text-[0.78rem] font-bold text-hub-on-primary" aria-hidden="true">
                 {(profile.full_name || profile.email).slice(0, 2).toUpperCase()}
               </div>
               <span className="hidden text-left text-[0.82rem] leading-tight sm:block">
-                <span className="block font-bold text-white">{profile.full_name || profile.email}</span>
-                <span className="text-[0.72rem] font-semibold text-[#8EAEC7]">{profile.role === 'owner' ? 'Sunrun Partner' : 'Admin'}</span>
+                <span className="block font-bold text-hub-ink">{profile.full_name || profile.email}</span>
+                <span className="text-[0.72rem] font-semibold text-hub-soft">{roleLabel(profile.role)}</span>
               </span>
             </div>
             {isDemo ? (
               <button
+                type="button"
                 onClick={onExitDemo}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-xl border border-[#FF6B00]/40 bg-[#FF6B00]/20 text-[0.78rem] font-bold text-[#FF8A2B] transition-all hover:bg-[#FF6B00]/30 hover:text-white cursor-pointer"
-                title="Exit Demo Mode"
+                className={cn('min-h-11 cursor-pointer rounded-xl border border-hub-line bg-hub-surface px-3 text-[0.78rem] font-bold text-hub-ink hover:border-hub-ink', focus)}
               >
-                Exit Demo
+                Exit sample
               </button>
             ) : (
               <button
-                onClick={() => supabase!.auth.signOut()}
-                className="flex h-9 w-9 items-center justify-center rounded-xl border border-[#28496B] bg-[#0C1E32] text-[#8EAEC7] transition-all hover:border-white/20 hover:bg-[#132B45] hover:text-white cursor-pointer"
+                type="button"
+                onClick={() => { void supabase!.auth.signOut(); }}
+                className={cn('flex h-11 w-11 cursor-pointer items-center justify-center rounded-xl border border-hub-line bg-hub-surface text-hub-soft hover:border-hub-ink hover:text-hub-ink', focus)}
                 aria-label="Sign out"
                 title="Sign out of Referral Hub"
               >
@@ -383,27 +480,29 @@ function HubApp({
             )}
           </div>
         </div>
-        <nav className="mx-auto flex max-w-5xl gap-2 px-3 py-2 sm:px-5 overflow-x-auto scrollbar-none" aria-label="Dashboard sections">
+        <nav className="mx-auto flex max-w-5xl gap-1 overflow-x-auto px-2 py-2 sm:gap-2 sm:px-5" aria-label="Dashboard sections">
           {TABS.map(({ id, label, icon: Icon }) => {
             const active = tab === id;
             return (
               <button
                 key={id}
+                type="button"
                 onClick={() => go(id)}
                 aria-current={active ? 'page' : undefined}
                 className={cn(
-                  'relative inline-flex min-h-[40px] items-center justify-center gap-2 rounded-xl px-4 py-2 text-xs sm:text-sm font-bold transition-all whitespace-nowrap cursor-pointer',
+                  'inline-flex min-h-11 shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-xl px-2.5 py-2 text-[0.8rem] font-bold transition sm:px-4 sm:text-sm',
+                  focus,
                   active
-                    ? 'bg-gradient-to-r from-[#FF6B00] to-[#E65100] text-white shadow-md shadow-[#FF6B00]/25'
-                    : 'border border-transparent text-[#8EAEC7] hover:border-white/10 hover:bg-white/5 hover:text-white',
+                    ? 'bg-hub-primary text-hub-on-primary'
+                    : 'text-hub-soft hover:bg-hub-muted hover:text-hub-ink',
                 )}
               >
-                <Icon className={cn('h-4 w-4 shrink-0 transition-transform', active && 'scale-110 text-white')} />
+                <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
                 <span>{label}</span>
                 {id === 'leads' && leads.unseen > 0 && (
                   <span className={cn(
-                    "inline-flex min-w-5 items-center justify-center rounded-full px-1.5 text-[0.68rem] font-black shadow-sm",
-                    active ? "bg-white text-[#FF6B00]" : "bg-[#FF6B00] text-white"
+                    'inline-flex min-w-5 items-center justify-center rounded-full px-1.5 text-[0.68rem] font-black',
+                    active ? 'bg-hub-on-primary text-hub-primary' : 'bg-hub-accent-fill text-hub-on-accent',
                   )}>
                     {leads.unseen > 99 ? '99+' : leads.unseen}
                     <span className="sr-only"> new leads</span>
@@ -419,7 +518,7 @@ function HubApp({
         <Suspense fallback={<div className="py-10 text-center"><Spinner /></div>}>
           {tab === 'leads' && <LeadsTab feed={leads} profile={profile} />}
           {tab === 'chat' && <ChatTab profile={profile} />}
-          {tab === 'files' && <FilesTab />}
+          {tab === 'files' && <FilesTab sample={isDemo} />}
           {tab === 'schedule' && <ScheduleTab profile={profile} />}
         </Suspense>
       </main>

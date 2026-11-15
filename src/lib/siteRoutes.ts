@@ -95,11 +95,42 @@ export function legacyNodeRedirect(path: string): '/book' | '/dashboard' | null 
   return null;
 }
 
+const HUB_ROOTS = new Set(['dashboard', 'pipeline', 'hub']);
+
+/** `/dashboard`, `/pipeline`, and `/hub`, including a tab segment such as `/dashboard/chat`. */
+export function isHubPath(path: string): boolean {
+  const [root] = normalizePath(path).split('/').filter(Boolean);
+  return !!root && HUB_ROOTS.has(root);
+}
+
+export type HubTab = 'leads' | 'chat' | 'files' | 'schedule';
+
+const HUB_TABS = new Set<HubTab>(['leads', 'chat', 'files', 'schedule']);
+
+function asHubTab(value: string | null | undefined): HubTab | null {
+  return value && HUB_TABS.has(value as HubTab) ? value as HubTab : null;
+}
+
+/**
+ * Tab for a Referral Hub URL. A path segment (`/dashboard/chat`) wins over `?tab=`,
+ * so a refresh or a direct visit stays on that section. `/pipeline` opens Leads.
+ */
+export function hubTabFromLocation(pathname: string, search: string): HubTab {
+  const parts = normalizePath(pathname).split('/').filter(Boolean);
+  const root = parts[0];
+  if (root && HUB_ROOTS.has(root)) {
+    if (root === 'pipeline' && !parts[1]) return 'leads';
+    const fromPath = asHubTab(parts[1]);
+    if (fromPath) return fromPath;
+  }
+  return asHubTab(new URLSearchParams(search).get('tab')) ?? 'leads';
+}
+
 export function sitePage(path: string): SitePage {
   if (path === '/privacy') return 'privacy';
   if (path === '/terms') return 'terms';
   if (path === '/book') return 'book';
-  if (path === '/dashboard' || path === '/pipeline' || path === '/hub') return 'dashboard';
+  if (isHubPath(path)) return 'dashboard';
   if (path === '/homeowner' || path === '/portal' || path === '/referrals') return 'homeowner';
   return 'marketing';
 }

@@ -5,6 +5,7 @@ import {
   legacyNodeRedirect,
   referralBrandFromLocation,
   marketingViewFromLocation,
+  hubTabFromLocation,
   marketingViewHref,
   normalizePath,
   assistantBrandFromView,
@@ -31,8 +32,21 @@ describe('public routes', () => {
   it('keeps Referral Hub routes and redirects the old /node booking URLs', () => {
     expect(sitePage('/book')).toBe('book');
     expect(sitePage('/dashboard')).toBe('dashboard');
+    expect(sitePage('/dashboard/')).toBe('dashboard');
+    expect(sitePage('/dashboard/chat')).toBe('dashboard');
+    expect(sitePage('/dashboard/files')).toBe('dashboard');
     expect(sitePage('/pipeline')).toBe('dashboard');
+    expect(sitePage('/pipeline/leads')).toBe('dashboard');
     expect(sitePage('/hub')).toBe('dashboard');
+    expect(sitePage('/hub/schedule')).toBe('dashboard');
+    expect(hubTabFromLocation('/pipeline', '')).toBe('leads');
+    expect(hubTabFromLocation('/dashboard/chat', '?tab=files')).toBe('chat');
+    expect(hubTabFromLocation('/hub/files', '')).toBe('files');
+    expect(hubTabFromLocation('/dashboard', '?tab=schedule')).toBe('schedule');
+    expect(hubTabFromLocation('/dashboard', '?tab=chat')).toBe('chat');
+    expect(hubTabFromLocation('/dashboard', '')).toBe('leads');
+    expect(showMarketingAssistant(sitePage('/dashboard/chat'))).toBe(false);
+    expect(showMarketingAssistant(sitePage('/hub'))).toBe(false);
     expect(sitePage('/homeowner')).toBe('homeowner');
     expect(sitePage('/portal')).toBe('homeowner');
     expect(sitePage('/referrals')).toBe('homeowner');
