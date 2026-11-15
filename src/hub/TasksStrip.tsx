@@ -5,7 +5,7 @@ import { WORKFLOW_CHANGED, announceWorkflowChange, dueLabel, workflowApi, type W
 
 const SHOWN = 6;
 
-export default function TasksStrip({ onOpenLead, onOpenPricing }: { onOpenLead: (leadId: string) => void; onOpenPricing: () => void }) {
+export default function TasksStrip({ onOpenLead, onOpenPricing, sample = false }: { onOpenLead: (leadId: string) => void; onOpenPricing: () => void; sample?: boolean }) {
   const [tasks, setTasks] = useState<WorkflowTask[] | null>(null);
   const [rateReady, setRateReady] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -19,12 +19,13 @@ export default function TasksStrip({ onOpenLead, onOpenPricing }: { onOpenLead: 
   }, []);
 
   useEffect(() => {
+    if (sample) return;
     load();
     const onChange = () => load();
     window.addEventListener(WORKFLOW_CHANGED, onChange);
     const timer = window.setInterval(load, 120_000);
     return () => { window.removeEventListener(WORKFLOW_CHANGED, onChange); window.clearInterval(timer); };
-  }, [load]);
+  }, [load, sample]);
 
   const finish = async (task: WorkflowTask) => {
     setBusy(task.id);
@@ -38,6 +39,7 @@ export default function TasksStrip({ onOpenLead, onOpenPricing }: { onOpenLead: 
     }
   };
 
+  if (sample) return null;
   if (tasks === null && !error) return null;
   const list = tasks || [];
   const shown = all ? list : list.slice(0, SHOWN);

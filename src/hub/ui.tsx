@@ -86,7 +86,7 @@ export function Button({
     <button
       {...props}
       className={cn(
-        'inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl px-5 text-[0.92rem] font-bold transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-hub-focus focus-visible:ring-offset-2 focus-visible:ring-offset-hub-bg disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100',
+        'inline-flex min-h-[44px] cursor-pointer items-center justify-center gap-2 rounded-xl px-5 text-[0.92rem] font-bold transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-hub-focus focus-visible:ring-offset-2 focus-visible:ring-offset-hub-bg disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100',
         variants[variant],
         variant === 'quiet' && 'min-h-0 rounded-none',
         className,

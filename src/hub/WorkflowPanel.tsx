@@ -192,6 +192,10 @@ export default function WorkflowPanel({ leadId, leadName, autoOpen, onOpenPricin
   useEffect(() => { if (autoOpen) setOpen(true); }, [autoOpen]);
 
   const load = useCallback(async () => {
+    if (leadId.startsWith('demo-')) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       setData(await workflowApi.lead(leadId));
@@ -204,7 +208,7 @@ export default function WorkflowPanel({ leadId, leadName, autoOpen, onOpenPricin
   }, [leadId]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || leadId.startsWith('demo-')) return;
     void load();
     const onChange = (event: Event) => {
       const changed = (event as CustomEvent<{ leadId?: string }>).detail?.leadId;
@@ -275,11 +279,23 @@ export default function WorkflowPanel({ leadId, leadName, autoOpen, onOpenPricin
     }
   };
 
+  const sample = leadId.startsWith('demo-');
   const wf = data?.workflow;
   const stageAt = PIPELINE.indexOf(data?.stage || 'bill_received');
   const active = data?.proposals.filter((proposal) => proposal.status !== 'superseded') || [];
   const openTasks = data?.tasks.filter((task) => !task.done_at && !task.cancelled_at) || [];
   const messages = data?.followups.filter((row) => row.status !== 'cancelled') || [];
+
+  if (sample) {
+    return (
+      <div className="mt-3 rounded-2xl border border-hub-line bg-hub-muted p-3.5">
+        <p className="m-0 text-[0.95rem] font-bold text-hub-ink">Numbers and panel layout</p>
+        <p className="m-0 mt-1 text-[0.88rem] leading-relaxed text-hub-soft">
+          On the signed-in desk, Horace rebuilds the savings and the roof layout from the bill Rory logged. This sample does not call that service.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="mt-3 rounded-2xl border border-hub-line bg-hub-surface">
@@ -287,7 +303,7 @@ export default function WorkflowPanel({ leadId, leadName, autoOpen, onOpenPricin
         type="button"
         onClick={() => setOpen(!open)}
         aria-expanded={open}
-        className="flex w-full items-center justify-between gap-2 px-3.5 py-3 text-left"
+        className="flex w-full items-center justify-between gap-2 rounded-2xl px-3.5 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-hub-focus"
       >
         <span className="flex items-center gap-2 text-[0.95rem] font-bold text-hub-ink">
           <Sparkles className="h-4 w-4 text-hub-accent-ink" aria-hidden="true" /> Sales workflow

@@ -53,6 +53,8 @@ export type LeadFeed = {
   markSeen: (lead: Lead) => Promise<boolean>;
   /** False until the archive columns from the latest migration are present. */
   writesEnabled: boolean;
+  /** True for the invitation-page sample desk. Nothing is saved. */
+  sample: boolean;
 };
 
 type CustomerRow = {
@@ -292,10 +294,11 @@ export function useLeadFeed(userId: string): LeadFeed {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [writesEnabled, setWritesEnabled] = useState(false);
+  const sample = userId.startsWith('demo-');
 
   const load = useCallback(async (silent = false) => {
     if (userId.startsWith('demo-')) {
-      setWritesEnabled(true);
+      setWritesEnabled(false);
       setError(null);
       setLeads(DEMO_LEADS);
       setLoading(false);
@@ -341,7 +344,7 @@ export function useLeadFeed(userId: string): LeadFeed {
   useEffect(() => {
     void load(false);
     const client = supabase;
-    if (!client) return;
+    if (!client || userId.startsWith('demo-')) return;
     let timer = 0;
     const schedule = () => {
       window.clearTimeout(timer);
@@ -364,7 +367,13 @@ export function useLeadFeed(userId: string): LeadFeed {
   }, [load, userId]);
 
   const markSeen = useCallback(async (lead: Lead) => {
-    if (!lead.unseen || !supabase) return true;
+    if (!lead.unseen) return true;
+    if (!supabase || userId.startsWith('demo-')) {
+      setLeads((current) => current.map((item) => (
+        item.source === lead.source && item.id === lead.id ? { ...item, unseen: false } : item
+      )));
+      return true;
+    }
     setLeads((current) => current.map((item) => (
       item.source === lead.source && item.id === lead.id ? { ...item, unseen: false } : item
     )));
@@ -391,6 +400,7 @@ export function useLeadFeed(userId: string): LeadFeed {
     error,
     unseen,
     writesEnabled,
+    sample,
     refresh: () => {
       void load(false);
     },

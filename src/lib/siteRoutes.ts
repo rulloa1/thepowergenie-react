@@ -1,6 +1,6 @@
 /** Client routes for the public site. Old /node booking URLs redirect to the Referral Hub. */
 
-export type SitePage = 'privacy' | 'terms' | 'book' | 'dashboard' | 'homeowner' | 'marketing';
+export type SitePage = 'privacy' | 'terms' | 'book' | 'dashboard' | 'homeowner' | 'room' | 'marketing';
 
 /** Brand family pages rendered by the marketing app. Gas Genie is reachable; its service stays marked coming soon. */
 export const BRAND_PAGES = ['brands', 'celebrity-solar', 'hip-hop-solar', 'gas-genie'] as const;
@@ -95,11 +95,55 @@ export function legacyNodeRedirect(path: string): '/book' | '/dashboard' | null 
   return null;
 }
 
+const HUB_ROOTS = new Set(['dashboard', 'pipeline', 'hub']);
+
+/** `/dashboard`, `/pipeline`, and `/hub`, including a tab segment such as `/dashboard/chat`. */
+export function isHubPath(path: string): boolean {
+  const [root] = normalizePath(path).split('/').filter(Boolean);
+  return !!root && HUB_ROOTS.has(root);
+}
+
+export type HubTab = 'leads' | 'chat' | 'files' | 'schedule';
+
+const HUB_TABS = new Set<HubTab>(['leads', 'chat', 'files', 'schedule']);
+
+function asHubTab(value: string | null | undefined): HubTab | null {
+  return value && HUB_TABS.has(value as HubTab) ? value as HubTab : null;
+}
+
+/**
+ * Tab for a Referral Hub URL. A path segment (`/dashboard/chat`) wins over `?tab=`,
+ * so a refresh or a direct visit stays on that section. `/pipeline` opens Leads.
+ */
+export function hubTabFromLocation(pathname: string, search: string): HubTab {
+  const parts = normalizePath(pathname).split('/').filter(Boolean);
+  const root = parts[0];
+  if (root && HUB_ROOTS.has(root)) {
+    if (root === 'pipeline' && !parts[1]) return 'leads';
+    const fromPath = asHubTab(parts[1]);
+    if (fromPath) return fromPath;
+  }
+  return asHubTab(new URLSearchParams(search).get('tab')) ?? 'leads';
+}
+
+/** `/room` and `/room/:invite` — the client join page. The token is not a LiveKit room name. */
+export function isRoomPath(path: string): boolean {
+  const parts = normalizePath(path).split('/').filter(Boolean);
+  return parts[0] === 'room' && parts.length <= 2;
+}
+
+export function roomInviteFromPath(pathname: string): string | null {
+  const parts = normalizePath(pathname).split('/').filter(Boolean);
+  if (parts[0] !== 'room' || parts.length !== 2) return null;
+  return /^[A-Za-z0-9_-]{32,80}$/.test(parts[1]) ? parts[1] : null;
+}
+
 export function sitePage(path: string): SitePage {
   if (path === '/privacy') return 'privacy';
   if (path === '/terms') return 'terms';
   if (path === '/book') return 'book';
-  if (path === '/dashboard' || path === '/pipeline' || path === '/hub') return 'dashboard';
+  if (isHubPath(path)) return 'dashboard';
+  if (isRoomPath(path)) return 'room';
   if (path === '/homeowner' || path === '/portal' || path === '/referrals') return 'homeowner';
   return 'marketing';
 }
@@ -109,7 +153,7 @@ export function sitePage(path: string): SitePage {
  * the bubble stays off /dashboard, including the signed-in dashboard and its sign-in screen.
  */
 export function showMarketingAssistant(page: SitePage): boolean {
-  return page !== 'dashboard';
+  return page !== 'dashboard' && page !== 'room';
 }
 
 /** Accent for the chat bubble. The journey, booking, legal, and portal pages use Power Genie orange. */
@@ -126,5 +170,6 @@ export function showRouterLegalFooter(path: string): boolean {
   const normalized = normalizePath(path);
   if (normalized === '/') return false;
   if (brandPageFromPath(normalized)) return false;
+  if (isRoomPath(normalized)) return false;
   return true;
 }

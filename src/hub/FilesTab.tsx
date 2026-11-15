@@ -15,7 +15,7 @@ interface StoredFile {
 
 const clean = (name: string) => name.replace(/[^\w.\- ()]+/g, '_').slice(-150) || 'file';
 
-export default function FilesTab() {
+export default function FilesTab({ sample = false }: { sample?: boolean }) {
   const [files, setFiles] = useState<StoredFile[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState<string | null>(null);
@@ -24,6 +24,11 @@ export default function FilesTab() {
   const input = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
+    if (sample || !supabase) {
+      setLoading(false);
+      setFiles([]);
+      return;
+    }
     setLoading(true);
     const { data, error } = await supabase!.storage
       .from(BUCKET)
@@ -31,7 +36,7 @@ export default function FilesTab() {
     setLoading(false);
     if (error) return setError(`Couldn't load files: ${error.message}`);
     setFiles(((data ?? []) as StoredFile[]).filter((f) => f.name !== '.emptyFolderPlaceholder' && f.metadata));
-  }, []);
+  }, [sample]);
 
   useEffect(() => {
     load();
@@ -78,6 +83,17 @@ export default function FilesTab() {
 
   const shown = files.filter((f) => f.name.toLowerCase().includes(query.trim().toLowerCase()));
 
+  if (sample || !supabase) {
+    return (
+      <section aria-label="Shared files" className="rounded-3xl bg-hub-surface p-4 sm:p-6">
+        <h2 className="m-0 text-lg font-bold text-hub-ink">Files</h2>
+        <p className="m-0 mt-2 max-w-prose text-[0.95rem] leading-relaxed text-hub-soft">
+          Horace and Rory share this folder. The sample desk does not upload. Sign in to add a light bill, a roof layout, or any other file.
+        </p>
+      </section>
+    );
+  }
+
   return (
     <section aria-label="Shared files" className="rounded-3xl bg-hub-surface p-4 shadow-[0_10px_30px_rgba(10,20,40,0.06)] sm:p-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -123,7 +139,7 @@ export default function FilesTab() {
                   <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-hub-muted">
                     <Icon className="h-5 w-5 text-hub-soft" />
                   </span>
-                  <button onClick={() => open(f.name, false)} className="min-w-0 flex-1 text-left">
+                  <button type="button" onClick={() => open(f.name, false)} className="min-w-0 flex-1 rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-hub-focus">
                     <span className="block truncate font-semibold">{f.name}</span>
                     <span className="text-[0.8rem] text-hub-soft">
                       {formatBytes(f.metadata?.size)} {f.created_at ? `· ${formatDateTime(f.created_at)}` : ''}
@@ -150,7 +166,7 @@ function IconButton({ label, onClick, danger, children }: { label: string; onCli
       onClick={onClick}
       aria-label={label}
       title={label.split(' ')[0]}
-      className={`flex h-10 w-10 items-center justify-center rounded-full hover:bg-hub-muted ${danger ? 'text-hub-danger' : 'text-hub-soft'}`}
+      className={`flex h-11 w-11 cursor-pointer items-center justify-center rounded-full hover:bg-hub-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-hub-focus focus-visible:ring-offset-2 focus-visible:ring-offset-hub-surface ${danger ? 'text-hub-danger' : 'text-hub-soft'}`}
     >
       {children}
     </button>

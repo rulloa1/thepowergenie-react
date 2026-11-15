@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom/client'
 import App from './App'
 import PowerGenieAssistant from './components/assistant/PowerGenieAssistant'
 import LegalFooter from './components/LegalFooter'
-import { legacyNodeRedirect, normalizePath, showMarketingAssistant, showRouterLegalFooter, sitePage } from './lib/siteRoutes'
+import { legacyNodeRedirect, normalizePath, roomInviteFromPath, showMarketingAssistant, showRouterLegalFooter, sitePage } from './lib/siteRoutes'
 import PrivacyPage from './pages/PrivacyPage'
 import TermsPage from './pages/TermsPage'
 import { Analytics } from '@vercel/analytics/react'
@@ -14,6 +14,7 @@ import './index.css'
 const HubBooking = lazy(() => import('./hub/BookingPage'))
 const HubDashboard = lazy(() => import('./hub/Dashboard'))
 const HomeownerPortal = lazy(() => import('./pages/HomeownerPortalPage'))
+const ConferenceJoin = lazy(() => import('./pages/ConferenceJoinPage'))
 
 const path = normalizePath(window.location.pathname)
 const legacyTarget = legacyNodeRedirect(path)
@@ -27,6 +28,7 @@ if (legacyTarget) {
     sitePage(path) === 'book' ? <HubBooking /> :
     sitePage(path) === 'dashboard' ? <HubDashboard /> :
     sitePage(path) === 'homeowner' ? <HomeownerPortal /> :
+    sitePage(path) === 'room' ? <ConferenceJoin token={roomInviteFromPath(path)} /> :
     <App />
 
   ReactDOM.createRoot(document.getElementById('root')!).render(

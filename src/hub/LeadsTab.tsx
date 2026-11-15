@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
   AlertTriangle,
@@ -23,6 +23,7 @@ import {
   Settings2,
   Share2,
   ShieldCheck,
+  Video,
   X,
   Zap,
 } from 'lucide-react';
@@ -61,6 +62,8 @@ import {
   leadsToJsonString,
 } from './leadExports';
 
+const ConferenceSheet = lazy(() => import('./ConferenceRoom').then((mod) => ({ default: mod.ConferenceSheet })));
+
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 function formatMoney(value: number | null): string {
@@ -87,23 +90,23 @@ function monthLabel(month: string, withYear: boolean): string {
 }
 
 function UsageHistory({ points }: { points: Lead['usageHistory'] }) {
-  if (!points?.length) return <p className="m-0 text-sm font-medium text-[#94A3B8]">No usage history on the bill.</p>;
+  if (!points?.length) return <p className="m-0 text-sm font-medium text-hub-soft">No usage history on the bill.</p>;
   const max = Math.max(...points.map((point) => point.kwh), 1);
   const years = new Set(points.map((point) => point.month.slice(0, 4)));
   const withYear = years.size > 1;
   const summary = points.map((point) => `${point.month} ${Math.round(point.kwh).toLocaleString('en-US')} kWh`).join(', ');
   return (
-    <div className="rounded-xl border border-[#224263] bg-[#0A2035] p-3 shadow-inner">
+    <div className="rounded-xl border border-hub-line bg-hub-muted p-3">
       <div className="overflow-x-auto" role="img" aria-label={`Monthly usage: ${summary}`}>
         <div className="flex h-28 items-end gap-2" style={{ minWidth: Math.max(points.length * 38, 160) }}>
           {points.map((point) => (
-            <div key={point.month} className="group flex min-w-8 flex-1 flex-col items-center justify-end gap-1.5" title={`${point.month}: ${point.kwh} kWh`}>
-              <span className="text-xs font-extrabold text-[#F1F5F9] transition-colors group-hover:text-[#38BDF8]">{Math.round(point.kwh)}</span>
+            <div key={point.month} className="flex min-w-8 flex-1 flex-col items-center justify-end gap-1.5" title={`${point.month}: ${point.kwh} kWh`}>
+              <span className="text-xs font-extrabold text-hub-ink">{Math.round(point.kwh)}</span>
               <div
-                className="w-full rounded-t-md bg-gradient-to-t from-[#0284C7] to-[#38BDF8] shadow-sm transition-all group-hover:brightness-110"
+                className="w-full rounded-t-md bg-gradient-to-t from-hub-chart to-hub-chart-top"
                 style={{ height: `${Math.max(10, (point.kwh / max) * 62)}px` }}
               />
-              <span className="text-xs font-bold text-[#94A3B8]">{monthLabel(point.month, withYear)}</span>
+              <span className="text-xs font-bold text-hub-soft">{monthLabel(point.month, withYear)}</span>
             </div>
           ))}
         </div>
@@ -114,12 +117,14 @@ function UsageHistory({ points }: { points: Lead['usageHistory'] }) {
 
 function Fact({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="min-w-0 rounded-xl border border-[#234567]/80 bg-[#0B2136] p-3 transition-colors hover:border-[#38BDF8]/60 shadow-sm">
-      <dt className="text-xs font-bold uppercase tracking-wider text-[#93C5FD]">{label}</dt>
-      <dd className="m-0 mt-1 break-words text-base font-extrabold text-[#F8FAFC]">{children}</dd>
+    <div className="min-w-0 rounded-xl border border-hub-line bg-hub-muted p-3">
+      <dt className="text-xs font-bold uppercase tracking-wider text-hub-soft">{label}</dt>
+      <dd className="m-0 mt-1 break-words text-base font-extrabold text-hub-ink">{children}</dd>
     </div>
   );
 }
+
+const chipClass = 'inline-flex items-center gap-1.5 rounded-lg border border-hub-line bg-hub-muted px-3 py-1.5 text-xs font-bold text-hub-link no-underline hover:bg-hub-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-hub-focus';
 
 const SIGNED_URL_SECONDS = 120;
 
@@ -599,6 +604,7 @@ export default function LeadsTab({
   const [actionNote, setActionNote] = useState<string | null>(null);
   const [pricingOpen, setPricingOpen] = useState(false);
   const [stageFilter, setStageFilter] = useState<string | null>(null);
+  const [conferenceLead, setConferenceLead] = useState<Lead | null>(null);
   const marked = useRef(new Set<string>());
   const scrolled = useRef<string | null>(null);
   const actor: LeadActor = { id: profile.id, fullName: profile.full_name, email: profile.email };
@@ -616,6 +622,12 @@ export default function LeadsTab({
     return () => window.removeEventListener(WORKFLOW_CHANGED, onChange);
   }, [refresh]);
   const archivedCount = feed.leads.filter((lead) => lead.archived).length;
+
+  useEffect(() => {
+    const sync = () => setOpenId(new URLSearchParams(window.location.search).get('id'));
+    window.addEventListener('popstate', sync);
+    return () => window.removeEventListener('popstate', sync);
+  }, []);
 
   useEffect(() => {
     if (!openId) return;
@@ -761,7 +773,7 @@ export default function LeadsTab({
           )}
           <button
             onClick={feed.refresh}
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-hub-line text-hub-ink hover:border-hub-ink hover:bg-hub-muted"
+            className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border border-hub-line text-hub-ink hover:border-hub-ink hover:bg-hub-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-hub-focus"
             aria-label="Refresh leads"
           >
             <RefreshCw className={cn('h-4 w-4', feed.loading && 'animate-spin')} />
@@ -769,7 +781,7 @@ export default function LeadsTab({
         </div>
       </div>
 
-      <TasksStrip onOpenLead={openLeadById} onOpenPricing={() => setPricingOpen(true)} />
+      <TasksStrip sample={feed.sample} onOpenLead={openLeadById} onOpenPricing={() => setPricingOpen(true)} />
 
       <div className="mt-4 flex gap-2" role="tablist" aria-label="Lead lists">
         <button
@@ -808,7 +820,14 @@ export default function LeadsTab({
       )}
 
       {feed.error && <div className="mt-4"><Notice tone="error">{feed.error}</Notice></div>}
-      {!feed.loading && !feed.error && !feed.writesEnabled && (
+      {feed.sample && (
+        <div className="mt-4">
+          <Notice tone="info" title="Sample desk">
+            These Houston customers are examples. Sign in to log a real customer, attach a light bill, and share the same files and chat with Horace.
+          </Notice>
+        </div>
+      )}
+      {!feed.sample && !feed.loading && !feed.error && !feed.writesEnabled && (
         <div className="mt-4">
           <Notice tone="warn">Adding, editing, and archiving leads needs the latest database migration. You can still review the list.</Notice>
         </div>
@@ -866,17 +885,17 @@ export default function LeadsTab({
                   {lead.phone && (
                     <a
                       href={`tel:${lead.phone}`}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-[#234567] bg-[#0E253B] px-3 py-1.5 text-xs font-bold text-[#38BDF8] hover:bg-[#163859] transition shadow-sm no-underline"
+                      className={chipClass}
                     >
-                      <Phone className="h-3.5 w-3.5 text-[#38BDF8]" />{lead.phone}
+                      <Phone className="h-3.5 w-3.5 text-hub-soft" />{lead.phone}
                     </a>
                   )}
                   {lead.email && (
                     <a
                       href={`mailto:${lead.email}`}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-[#234567] bg-[#0E253B] px-3 py-1.5 text-xs font-bold text-[#38BDF8] hover:bg-[#163859] transition shadow-sm no-underline"
+                      className={chipClass}
                     >
-                      <Mail className="h-3.5 w-3.5 text-[#38BDF8]" />{lead.email}
+                      <Mail className="h-3.5 w-3.5 text-hub-soft" />{lead.email}
                     </a>
                   )}
                   {lead.address && (
@@ -884,9 +903,9 @@ export default function LeadsTab({
                       href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(lead.address)}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-[#234567] bg-[#0E253B] px-3 py-1.5 text-xs font-bold text-[#93C5FD] hover:bg-[#163859] transition shadow-sm no-underline"
+                      className={chipClass}
                     >
-                      <MapPin className="h-3.5 w-3.5 text-[#FF8A2B]" />{lead.address}
+                      <MapPin className="h-3.5 w-3.5 text-hub-soft" />{lead.address}
                     </a>
                   )}
                 </div>
@@ -905,26 +924,26 @@ export default function LeadsTab({
                 {((lead.utility && lead.utility !== 'Not provided') || lead.tdu || lead.repPuctCertificate) && (
                   <div className="mt-3 flex flex-wrap items-center gap-2 text-xs font-bold">
                     {lead.utility && lead.utility !== 'Not provided' && (
-                      <span className="inline-flex items-center gap-1 rounded-md border border-[#234567] bg-[#0C2237] px-2.5 py-1 text-[#E2E8F0]">
-                        <Zap className="h-3 w-3 text-[#FFB300]" /> {lead.utility}
+                      <span className="inline-flex items-center gap-1 rounded-md border border-hub-line bg-hub-muted px-2.5 py-1 text-hub-ink">
+                        <Zap className="h-3 w-3 text-hub-accent-ink" /> {lead.utility}
                       </span>
                     )}
                     {lead.tdu && (
-                      <span className="rounded-md border border-[#234567] bg-[#0C2237] px-2.5 py-1 text-[#38BDF8]">
+                      <span className="rounded-md border border-hub-line bg-hub-muted px-2.5 py-1 text-hub-link">
                         TDU: {lead.tdu}
                       </span>
                     )}
                     {lead.repPuctCertificate && (
-                      <span className="rounded-md border border-[#234567] bg-[#0C2237] px-2.5 py-1 text-[#FACC15]">
+                      <span className="rounded-md border border-hub-line bg-hub-muted px-2.5 py-1 text-hub-accent-ink">
                         PUCT #{lead.repPuctCertificate}
                       </span>
                     )}
                   </div>
                 )}
                 {lead.notes && (
-                  <div className="mt-3 rounded-xl border border-[#234567] bg-[#091E30] p-3 shadow-inner">
-                    <p className="m-0 text-xs font-bold uppercase tracking-wider text-[#93C5FD]">Customer Notes & TCPA</p>
-                    <p className="m-0 mt-1 whitespace-pre-wrap text-sm font-medium leading-relaxed text-[#F1F5F9]">{lead.notes}</p>
+                  <div className="mt-3 rounded-xl border border-hub-line bg-hub-muted p-3">
+                    <p className="m-0 text-xs font-bold uppercase tracking-wider text-hub-soft">Notes</p>
+                    <p className="m-0 mt-1 whitespace-pre-wrap text-sm font-medium leading-relaxed text-hub-ink">{lead.notes}</p>
                   </div>
                 )}
 
@@ -945,6 +964,14 @@ export default function LeadsTab({
                 {/* Sunrun Option B Workflow Integration for Option B Leads */}
                 {(lead.source === 'customer' || lead.workflowOption === 'option_b_ownership') && (
                   <SunrunOptionBWorkflow lead={lead} />
+                )}
+
+                {lead.source === 'customer' && !lead.archived && (
+                  <div className="mt-3">
+                    <Button type="button" variant="accent" className="min-h-11 px-3 text-[0.84rem]" onClick={() => setConferenceLead(lead)}>
+                      <Video className="h-4 w-4" /> Conference room
+                    </Button>
+                  </div>
                 )}
 
                 {lead.source === 'customer' && feed.writesEnabled && (
@@ -1028,6 +1055,16 @@ export default function LeadsTab({
         />
       )}
       {pricingOpen && <PricingDialog onClose={() => setPricingOpen(false)} />}
+      {conferenceLead && (
+        <Suspense fallback={null}>
+          <ConferenceSheet
+            customerId={conferenceLead.id}
+            customerName={conferenceLead.name}
+            sample={feed.sample}
+            onClose={() => setConferenceLead(null)}
+          />
+        </Suspense>
+      )}
       {archiveTarget && (
         <ArchiveLeadDialog
           name={archiveTarget.name}

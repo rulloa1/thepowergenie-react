@@ -12,27 +12,28 @@ export function pipelineStep(stage: string | null | undefined): number {
 export function PipelineBar({ stage }: { stage: string | null }) {
   const lost = stage === 'lost';
   const at = pipelineStep(stage);
+  const known = at >= 0;
   const total = PIPELINE_STEPS.length;
   const label = lost ? 'Lost' : stageLabel(stage || 'bill_received');
-  const next = !lost && at >= 0 && at < total - 1 ? stageLabel(PIPELINE_STEPS[at + 1]) : null;
+  const next = !lost && known && at < total - 1 ? stageLabel(PIPELINE_STEPS[at + 1]) : null;
   return (
     <div className="mt-2.5" data-testid="pipeline-bar">
       <p className="m-0 flex flex-wrap items-baseline gap-x-2 text-[0.82rem]">
         <span className="font-bold uppercase tracking-wide text-hub-soft">Pipeline</span>
         <span className={cn('text-[0.95rem] font-bold', lost ? 'text-hub-soft' : 'text-hub-ink')}>
-          {lost ? 'Lost' : `Step ${at + 1} of ${total}: ${label}`}
+          {lost ? 'Lost' : known ? `Step ${at + 1} of ${total}: ${label}` : label}
         </span>
         {next && <span className="text-hub-soft">Next: {next}</span>}
       </p>
-      <ol className="m-0 mt-1.5 flex list-none gap-1 p-0" aria-label={lost ? 'Pipeline: lost' : `Pipeline: ${label}, step ${at + 1} of ${total}`}>
+      <ol className="m-0 mt-1.5 flex list-none gap-1 p-0" aria-label={lost ? 'Pipeline: lost' : known ? `Pipeline: ${label}, step ${at + 1} of ${total}` : `Pipeline: ${label}`}>
         {PIPELINE_STEPS.map((step, index) => (
           <li
             key={step}
             title={stageLabel(step)}
-            aria-current={!lost && index === at ? 'step' : undefined}
+            aria-current={!lost && known && index === at ? 'step' : undefined}
             className={cn(
               'h-2 flex-1 rounded-full',
-              lost ? 'bg-hub-muted'
+              lost || !known ? 'bg-hub-muted'
                 : index < at ? 'bg-hub-success-ink'
                   : index === at ? 'bg-hub-accent-fill'
                     : 'bg-hub-muted',
