@@ -311,3 +311,48 @@ html[data-pg-brand="brands"] {
     animation: none !important;
   }
 }
+
+/* LiveKit call chrome, mapped onto the Referral Hub navy, ice, and gold. */
+.pg-call[data-lk-theme='default'] {
+  color-scheme: dark;
+  --lk-font-family: var(--sw-font-body);
+  --lk-font-size: 1rem;
+  --lk-bg: var(--hub-bg);
+  --lk-bg2: var(--hub-surface);
+  --lk-bg3: var(--hub-muted);
+  --lk-bg4: var(--hub-topbar);
+  --lk-bg5: var(--hub-disabled);
+  --lk-fg: var(--hub-ink);
+  --lk-fg2: var(--hub-ink);
+  --lk-fg3: var(--hub-soft);
+  --lk-fg4: var(--hub-soft);
+  --lk-fg5: var(--hub-faint);
+  --lk-border-color: var(--hub-line);
+  --lk-accent-fg: var(--hub-on-accent);
+  --lk-accent-bg: var(--hub-accent-fill);
+  --lk-accent2: var(--hub-accent-fill-hover);
+  --lk-accent3: var(--hub-accent-ink);
+  --lk-accent4: var(--hub-primary);
+  --lk-danger: var(--hub-danger-fill);
+  --lk-danger-fg: #ffffff;
+  --lk-success: #34d399;
+  --lk-control-fg: var(--hub-ink);
+  --lk-control-bg: var(--hub-muted);
+  --lk-control-hover-bg: var(--hub-disabled);
+  --lk-control-active-bg: var(--hub-primary);
+  --lk-control-active-hover-bg: var(--hub-primary-hover);
+  --lk-border-radius: 0.75rem;
+  --lk-box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
+  background: var(--hub-bg);
+}
+.pg-call .lk-toast {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+}
+.pg-call .lk-disconnect-button {
+  background: var(--hub-danger-fill);
+  color: #ffffff;
+}

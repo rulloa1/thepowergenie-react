@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Video, VideoOff } from 'lucide-react';
 import { ConferenceCall } from '../hub/ConferenceRoom';
 import { conferenceApi, ConferenceError, type JoinInfo } from '../hub/conferenceApi';
-import { Button, Notice, Spinner, inputClass, labelClass } from '../hub/ui';
+import { BrandMark, Button, Notice, Spinner, inputClass, labelClass } from '../hub/ui';
 
 export default function ConferenceJoinPage({ token }: { token: string | null }) {
   const [customerName, setCustomerName] = useState<string | null>(null);
@@ -86,10 +86,32 @@ export default function ConferenceJoinPage({ token }: { token: string | null }) 
   }
 
   return (
-    <div className="hub-canvas flex min-h-[100dvh] items-center justify-center px-4 py-10">
-      <div className="w-full max-w-md rounded-3xl bg-hub-surface p-6 text-hub-ink shadow-[0_10px_30px_rgba(0,0,0,0.25)]">
-        <p className="m-0 text-[0.72rem] font-bold uppercase tracking-[0.14em] text-hub-accent-ink">The Power Genie</p>
-        <h1 className="m-0 mt-1 text-2xl font-bold">Join the call</h1>
+    <div className="flex min-h-[100dvh] flex-col bg-[#F4F6FA] font-[family:var(--sw-font-body)] lg:flex-row">
+      <aside className="relative isolate flex shrink-0 flex-col overflow-hidden bg-[#0B2233] px-6 py-5 text-white shadow-[inset_0_-3px_0_#FF6B00] sm:px-10 lg:w-[46%] lg:px-14 lg:py-12 lg:shadow-[inset_-3px_0_0_#FF6B00]">
+        <img src="/assets/stills/06-cta.webp" alt="" aria-hidden="true" className="absolute inset-0 -z-10 hidden h-full w-full object-cover opacity-40 lg:block" />
+        <div aria-hidden="true" className="absolute inset-0 -z-10 hidden bg-gradient-to-t from-[#0B2233] via-[#0B2233]/80 to-[#0B2233]/55 lg:block" />
+        <a href="/" className="flex items-center gap-3 rounded-xl text-white no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9A3412] focus-visible:ring-offset-2" title="The Power Genie home">
+          <img src="/assets/brand/power-genie-icon.png" alt="" className="h-10 w-10 rounded-xl bg-white/10 object-cover lg:h-12 lg:w-12" />
+          <span className="leading-tight">
+            <span className="block text-base font-bold lg:text-lg">The Power Genie</span>
+            <span className="block text-[0.7rem] font-bold uppercase tracking-[0.16em] text-[#FF8A2B]">Conference room</span>
+          </span>
+        </a>
+        <div className="mt-5 max-w-md lg:mt-auto lg:max-w-lg lg:pt-16">
+          <h2 className="m-0 hidden text-[clamp(2.25rem,3.6vw,3.4rem)] font-bold leading-[1.05] tracking-tight text-balance lg:block">
+            The same call. <span className="text-[#FF8A2B]">Your camera, your choice.</span>
+          </h2>
+          <p className="m-0 max-w-md text-[0.98rem] leading-relaxed text-[#D9E6F2] lg:mt-5 lg:text-[1.02rem]">
+            Horace or Rory will let you in. You do not need an account.
+          </p>
+        </div>
+        <p className="mt-auto hidden pt-12 text-[0.8rem] text-[#8EAEC7] lg:block">The Power Genie by Sunrun · Houston</p>
+      </aside>
+      <main className="book-page flex flex-1 items-start justify-center px-5 py-10 sm:items-center sm:px-8 lg:py-12">
+      <div className="w-full max-w-[440px]">
+        <BrandMark className="mb-8 hidden h-auto w-60 rounded-2xl bg-[#0B2233] px-5 py-3 shadow-[inset_0_-3px_0_#FF6B00,0_10px_30px_rgba(11,34,51,0.18)] lg:block" />
+        <p className="m-0 text-[0.72rem] font-bold uppercase tracking-[0.16em] text-[#FF6B00]">The Power Genie</p>
+        <h1 className="m-0 mt-2 text-[2rem] font-bold leading-tight tracking-tight text-[#1A1A2E]">Join the call</h1>
         {loading && <div className="mt-6"><Spinner /></div>}
         {!token && <div className="mt-4"><Notice tone="error">This invite link is incomplete. Ask Horace or Rory for a new one.</Notice></div>}
         {error && <div className="mt-4"><Notice tone="error">{error}</Notice></div>}
@@ -127,6 +149,7 @@ export default function ConferenceJoinPage({ token }: { token: string | null }) 
         )}
         {denied && <div className="mt-5"><Notice tone="warn">The host did not let you in this time. Ask them for a new link if the call is still on.</Notice></div>}
       </div>
+      </main>
     </div>
   );
 }
@@ -141,7 +164,7 @@ function CameraChoice({ camera, onChange }: { camera: boolean | null; onChange: 
         detail="Horace and Rory can see you. You can turn it off during the call."
         icon={<Video className="h-4 w-4" />}
       >
-        <input type="radio" name="guest-camera" value="on" required checked={camera === true} onChange={() => onChange(true)} className="mt-1 h-4 w-4 accent-[#ffcf75]" />
+        <input type="radio" name="guest-camera" value="on" required checked={camera === true} onChange={() => onChange(true)} className="mt-1 h-4 w-4 accent-[#FF6B00]" />
       </CameraOption>
       {camera === true && <CameraPreview />}
       <CameraOption
@@ -150,7 +173,7 @@ function CameraChoice({ camera, onChange }: { camera: boolean | null; onChange: 
         detail="They can hear you. Your camera stays off until you turn it on."
         icon={<VideoOff className="h-4 w-4" />}
       >
-        <input type="radio" name="guest-camera" value="off" required checked={camera === false} onChange={() => onChange(false)} className="mt-1 h-4 w-4 accent-[#ffcf75]" />
+        <input type="radio" name="guest-camera" value="off" required checked={camera === false} onChange={() => onChange(false)} className="mt-1 h-4 w-4 accent-[#FF6B00]" />
       </CameraOption>
     </fieldset>
   );
