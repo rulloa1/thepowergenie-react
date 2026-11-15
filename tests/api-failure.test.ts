@@ -11,6 +11,8 @@ test('a placeholder database URL is a 503, not a fetch TypeError', () => {
     return error instanceof HttpError && error.status === 503 && /https URL/.test(error.message)
   })
   assert.throws(() => supabaseProjectUrl('http://example.supabase.co'), (error: unknown) => error instanceof HttpError)
+  assert.equal(supabaseProjectUrl('http://127.0.0.1:9'), 'http://127.0.0.1:9')
+  assert.equal(supabaseProjectUrl('http://db.test'), 'http://db.test')
 })
 
 test('fetch TypeError from a bad address becomes a database 503', async () => {

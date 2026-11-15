@@ -28,6 +28,12 @@ function isServiceRoleJwt(key: string): boolean {
  * Project URL only. A placeholder, a quoted value, or a path pasted after the
  * host used to reach fetch() and throw TypeError: Failed to parse URL.
  */
+/** Loopback and the reserved .test domain. The integration tests speak plain HTTP to those hosts only. */
+function localTestHost(hostname: string): boolean {
+  const host = hostname.replace(/^\[|\]$/g, '').toLowerCase()
+  return host === 'localhost' || host === '127.0.0.1' || host === '::1' || host.endsWith('.test')
+}
+
 export function supabaseProjectUrl(value: string): string {
   const trimmed = value.trim().replace(/^['"]+|['"]+$/g, '').replace(/\/+$/, '')
   let parsed: URL
@@ -36,10 +42,11 @@ export function supabaseProjectUrl(value: string): string {
   } catch {
     throw new HttpError(503, 'The dashboard database address is not a valid https URL. Set it to https://<project>.supabase.co and redeploy.')
   }
-  if (parsed.protocol !== 'https:' || !parsed.hostname.includes('.')) {
-    throw new HttpError(503, 'The dashboard database address is not a valid https URL. Set it to https://<project>.supabase.co and redeploy.')
+  const httpsProject = parsed.protocol === 'https:' && parsed.hostname.includes('.')
+  if (httpsProject || (parsed.protocol === 'http:' && localTestHost(parsed.hostname))) {
+    return parsed.origin
   }
-  return parsed.origin
+  throw new HttpError(503, 'The dashboard database address is not a valid https URL. Set it to https://<project>.supabase.co and redeploy.')
 }
 
 export function supabaseConfig(): { url: string; key: string } {
