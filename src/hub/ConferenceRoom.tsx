@@ -7,7 +7,7 @@ import { lockPageScroll } from '../lib/scrollLock';
 import type { Profile } from './Dashboard';
 import { conferenceApi, ConferenceError, type JoinInfo, type WaitingGuest } from './conferenceApi';
 import { classifyConferenceProblem, conferenceProblemCopy, type ConferenceProblem } from './conferenceSetup';
-import { Button, Notice, Spinner } from './ui';
+import { BrandMark, Button, Notice, Spinner } from './ui';
 
 const ChatTab = lazy(() => import('./ChatTab'));
 
@@ -45,11 +45,14 @@ export function ConferenceCall({
   };
 
   return (
-    <div className="fixed inset-0 z-[85] flex flex-col bg-[#071b27] text-hub-ink">
-      <header className="flex flex-wrap items-center justify-between gap-2 border-b border-hub-line px-3 py-2">
-        <div className="min-w-0">
-          <p className="m-0 text-[0.72rem] font-bold uppercase tracking-[0.14em] text-hub-accent-ink">Conference room</p>
-          <h2 className="m-0 truncate text-base font-bold">{join.customerName}</h2>
+    <div className="hub-canvas fixed inset-0 z-[85] flex flex-col font-[family:var(--sw-font-body)] text-hub-ink">
+      <header className="flex flex-wrap items-center justify-between gap-2 border-b border-hub-line bg-hub-topbar px-3 py-2 shadow-[inset_0_-3px_0_#FF6B00]">
+        <div className="flex min-w-0 items-center gap-3">
+          <BrandMark className="h-8" />
+          <div className="min-w-0">
+            <p className="m-0 text-[0.72rem] font-bold uppercase tracking-[0.16em] text-hub-accent-ink">Conference room</p>
+            <h2 className="m-0 truncate text-base font-bold">{join.customerName}</h2>
+          </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {isHost && (
@@ -64,7 +67,6 @@ export function ConferenceCall({
       </header>
       <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
         <div className={`pg-call relative min-h-0 flex-1 ${side !== 'call' ? 'hidden lg:block' : ''}`} data-lk-theme="default">
-          <style>{`.pg-call .lk-toast{position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:5}`}</style>
           <LiveKitRoom
             serverUrl={join.serverUrl}
             token={join.token}
@@ -246,11 +248,12 @@ export function ConferenceSheet({
 
   return (
     <div className="fixed inset-0 z-[85] flex items-end justify-center bg-hub-scrim sm:items-center" onClick={onClose}>
-      <div role="dialog" aria-modal="true" aria-labelledby="conference-title" onClick={(event) => event.stopPropagation()} className="w-full max-w-lg rounded-t-3xl bg-hub-surface p-5 text-hub-ink shadow-2xl sm:rounded-3xl">
+      <div role="dialog" aria-modal="true" aria-labelledby="conference-title" onClick={(event) => event.stopPropagation()} className="hub-canvas w-full max-w-lg rounded-t-3xl border border-hub-line bg-hub-surface p-5 font-[family:var(--sw-font-body)] text-hub-ink shadow-[inset_0_-3px_0_#FF6B00,0_24px_60px_rgba(0,0,0,0.35)] sm:rounded-3xl sm:p-6">
+        <BrandMark className="mb-4 h-8" />
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="m-0 text-[0.72rem] font-bold uppercase tracking-[0.14em] text-hub-accent-ink">Conference room</p>
-            <h2 id="conference-title" className="m-0 mt-1 text-xl font-bold">{customerName}</h2>
+            <p className="m-0 text-[0.72rem] font-bold uppercase tracking-[0.16em] text-hub-accent-ink">Conference room</p>
+            <h2 id="conference-title" className="m-0 mt-1 text-2xl font-bold tracking-tight">{customerName}</h2>
           </div>
           <button type="button" onClick={onClose} aria-label="Close" className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-hub-line">
             <X className="h-4 w-4" />
