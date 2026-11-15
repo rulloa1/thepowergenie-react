@@ -62,6 +62,27 @@ test('the Vercel SPA rewrite serves /privacy and /terms', () => {
   assert.equal(pattern.test('/brands/'), true)
   assert.equal(pattern.test('/celebrity-solar'), true)
   assert.equal(pattern.test('/hip-hop-solar'), true)
+  for (const [source, destination] of [
+    ['/launch/gas-genie', '/gas-genie.html'],
+    ['/launch/gas-genie/', '/gas-genie.html'],
+    ['/launch/celebrity-solar', '/celebrity-solar.html'],
+    ['/launch/celebrity-solar/', '/celebrity-solar.html'],
+    ['/launch/hip-hop-solar', '/hip-hop-solar.html'],
+    ['/launch/hip-hop-solar/', '/hip-hop-solar.html'],
+    ['/launch/sport-and-solar', '/sport-and-solar.html'],
+    ['/launch/sport-and-solar/', '/sport-and-solar.html'],
+    ['/sport-and-solar', '/sport-and-solar.html'],
+    ['/sport-and-solar/', '/sport-and-solar.html'],
+  ] as const) {
+    const rule = vercel.rewrites.find(item => item.source === source)
+    assert.equal(rule?.destination, destination, source)
+    const index = vercel.rewrites.findIndex(item => item.source === source)
+    assert.ok(index >= 0 && index < catchAll, `${source} is rewritten before the SPA catch-all`)
+  }
+  for (const file of ['gas-genie.html', 'celebrity-solar.html', 'hip-hop-solar.html', 'sport-and-solar.html']) {
+    assert.match(readFileSync(file, 'utf8'), /<base href="\/">/)
+  }
+
   assert.equal(pattern.test('/gas-genie'), true)
   assert.equal(pattern.test('/homeowner'), true)
   assert.equal(pattern.test('/portal'), true)

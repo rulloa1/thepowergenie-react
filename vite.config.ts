@@ -13,6 +13,34 @@ const CUSTOMER_DATA_NEEDLES = [
   'patricia-ferrell',
 ]
 
+/** Same paths as vercel.json so a direct visit in dev matches production. */
+const LAUNCH_FILES: Record<string, string> = {
+  '/launch/gas-genie': '/gas-genie.html',
+  '/launch/gas-genie/': '/gas-genie.html',
+  '/launch/celebrity-solar': '/celebrity-solar.html',
+  '/launch/celebrity-solar/': '/celebrity-solar.html',
+  '/launch/hip-hop-solar': '/hip-hop-solar.html',
+  '/launch/hip-hop-solar/': '/hip-hop-solar.html',
+  '/launch/sport-and-solar': '/sport-and-solar.html',
+  '/launch/sport-and-solar/': '/sport-and-solar.html',
+  '/sport-and-solar': '/sport-and-solar.html',
+  '/sport-and-solar/': '/sport-and-solar.html',
+}
+
+function serveLaunchPages() {
+  return {
+    name: 'serve-launch-pages',
+    configureServer(server) {
+      server.middlewares.use((req, _res, next) => {
+        const path = (req.url || '').split('?')[0]
+        const file = LAUNCH_FILES[path]
+        if (file) req.url = file
+        next()
+      })
+    },
+  }
+}
+
 function denyPrivateAssets() {
   return {
     name: 'deny-private-assets',
@@ -91,6 +119,7 @@ export default defineConfig({
   publicDir: 'public',
   plugins: [
     denyPrivateAssets(),
+    serveLaunchPages(),
     rejectCustomerDataInBundle(),
     react(),
     tailwindcss(),

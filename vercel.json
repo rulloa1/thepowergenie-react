@@ -64,11 +64,31 @@
       "destination": "/hip-hop-solar.html"
     },
     {
+      "source": "/launch/gas-genie/",
+      "destination": "/gas-genie.html"
+    },
+    {
+      "source": "/launch/celebrity-solar/",
+      "destination": "/celebrity-solar.html"
+    },
+    {
+      "source": "/launch/hip-hop-solar/",
+      "destination": "/hip-hop-solar.html"
+    },
+    {
       "source": "/launch/sport-and-solar",
       "destination": "/sport-and-solar.html"
     },
     {
+      "source": "/launch/sport-and-solar/",
+      "destination": "/sport-and-solar.html"
+    },
+    {
       "source": "/sport-and-solar",
+      "destination": "/sport-and-solar.html"
+    },
+    {
+      "source": "/sport-and-solar/",
       "destination": "/sport-and-solar.html"
     },
     {
