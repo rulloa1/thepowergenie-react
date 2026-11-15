@@ -113,7 +113,9 @@ async function mintToken(roomName: string, identity: string, name: string, isHos
   token.addGrant(participantGrant(roomName, isHost))
   try {
     const jwt = await token.toJwt()
-    if (typeof jwt !== 'string' || !jwt.includes('.')) throw new Error('LiveKit did not return a token string')
+    if (typeof jwt !== 'string' || !jwt.includes('.')) {
+      throw new Error('LiveKit did not return a token string')
+    }
     return jwt
   } catch (error) {
     if (error instanceof HttpError) throw error

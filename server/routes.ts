@@ -243,6 +243,22 @@ function isBlankBill(fields: BillFields): boolean {
   return Object.values(fields).every(value => value == null)
 }
 
+function scrubLog(text: string): string {
+  return text
+    .replace(/sb_secret_[A-Za-z0-9._-]+/g, 'sb_secret_[redacted]')
+    .replace(/Bearer\s+\S+/gi, 'Bearer [redacted]')
+    .replace(/eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/g, '[jwt]')
+}
+
+/** Name alone hid the TypeError. Message and stack stay, secrets do not. */
+export function logApiFailure(error: unknown): void {
+  const err = error instanceof Error ? error : new Error('unknown')
+  const message = scrubLog(err.message).slice(0, 400)
+  console.error('api_failed', err.name, message)
+  const stack = scrubLog(err.stack || '').split('\n').slice(0, 12).join('\n')
+  if (stack) console.error(stack)
+}
+
 export async function handleApi(request: Request): Promise<Response> {
   const url = requestUrl(request)
   try {
@@ -278,7 +294,7 @@ export async function handleApi(request: Request): Promise<Response> {
     return json({ error: 'Not found.' }, 404)
   } catch (error) {
     if (error instanceof HttpError) return json({ error: error.message }, error.status)
-    console.error('api_failed', error instanceof Error ? error.name : 'unknown')
+    logApiFailure(error)
     return json({ error: 'Something went wrong. Please try again.' }, 500)
   }
 }
