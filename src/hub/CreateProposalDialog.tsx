@@ -168,7 +168,7 @@ export default function CreateProposalDialog({
         aria-labelledby={titleId}
         tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
-        className="flex h-full w-full max-w-5xl flex-col overflow-hidden bg-hub-surface shadow-2xl outline-none sm:h-[92vh] sm:rounded-3xl"
+        className="flex h-full w-full max-w-5xl flex-col overflow-hidden bg-hub-surface shadow-2xl outline-none sm:h-[90vh] sm:max-h-[880px] sm:rounded-3xl"
       >
         {/* Top Header */}
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-hub-line bg-hub-surface px-5 py-4">

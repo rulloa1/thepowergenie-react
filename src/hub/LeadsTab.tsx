@@ -968,28 +968,28 @@ export default function LeadsTab({
           <Button
             type="button"
             variant="ghost"
-            className="min-h-12 w-full px-4 text-base sm:w-auto"
+            className="min-h-10 px-3.5 text-sm font-semibold sm:w-auto"
             onClick={() => setRoofDesigner({ open: true, lead: null })}
           >
-            <Compass className="h-4 w-4 text-hub-accent-ink" /> Create roof design
+            <Compass className="h-4 w-4 text-hub-accent-ink" /> Roof design
           </Button>
           <Button
             type="button"
             variant="ghost"
-            className="min-h-12 w-full px-4 text-base sm:w-auto"
+            className="min-h-10 px-3.5 text-sm font-semibold sm:w-auto"
             onClick={() => setProposalCreator({ open: true, lead: null })}
           >
-            <FileText className="h-4 w-4 text-hub-primary" /> Create proposal
+            <FileText className="h-4 w-4 text-hub-primary" /> Proposal
           </Button>
           {feed.writesEnabled && (
-            <Button type="button" variant="accent" className="min-h-12 w-full px-4 text-base sm:w-auto" onClick={() => { setFormError(null); setEditor({ mode: 'create', lead: null }); }}>
+            <Button type="button" variant="accent" className="min-h-10 px-3.5 text-sm font-semibold sm:w-auto" onClick={() => { setFormError(null); setEditor({ mode: 'create', lead: null }); }}>
               <Plus className="h-4 w-4" /> Add customer
             </Button>
           )}
           <details className="relative">
-            <summary className="flex min-h-12 cursor-pointer list-none items-center rounded-xl border border-hub-line bg-hub-surface px-4 text-base font-bold text-hub-ink">More</summary>
+            <summary className="flex min-h-10 cursor-pointer list-none items-center rounded-xl border border-hub-line bg-hub-surface px-3.5 text-sm font-semibold text-hub-ink">More</summary>
             <div className="absolute right-0 z-20 mt-2 grid min-w-44 gap-1 rounded-xl border border-hub-line bg-hub-surface p-2 shadow-xl">
-              <Button type="button" variant="ghost" className="min-h-11 justify-start px-3 text-base" onClick={() => setPricingOpen(true)}>
+              <Button type="button" variant="ghost" className="min-h-10 justify-start px-3 text-sm" onClick={() => setPricingOpen(true)}>
                 <Settings2 className="h-4 w-4" /> Pricing
               </Button>
               {shown.length > 0 && (
@@ -997,14 +997,14 @@ export default function LeadsTab({
                   <button
                     type="button"
                     onClick={() => downloadFile('powergenie-all-leads.csv', leadsToCsvString(shown), 'text/csv;charset=utf-8;')}
-                    className="inline-flex min-h-11 items-center gap-2 rounded-xl px-3 text-left text-base font-semibold text-hub-ink hover:bg-hub-muted"
+                    className="inline-flex min-h-10 items-center gap-2 rounded-xl px-3 text-left text-sm font-semibold text-hub-ink hover:bg-hub-muted"
                   >
                     <FileSpreadsheet className="h-4 w-4" /> Export CSV
                   </button>
                   <button
                     type="button"
                     onClick={() => downloadFile('powergenie-all-leads.json', leadsToJsonString(shown), 'application/json')}
-                    className="inline-flex min-h-11 items-center gap-2 rounded-xl px-3 text-left text-base font-semibold text-hub-ink hover:bg-hub-muted"
+                    className="inline-flex min-h-10 items-center gap-2 rounded-xl px-3 text-left text-sm font-semibold text-hub-ink hover:bg-hub-muted"
                   >
                     <Download className="h-4 w-4" /> Export JSON
                   </button>
@@ -1013,7 +1013,7 @@ export default function LeadsTab({
               <button
                 type="button"
                 onClick={feed.refresh}
-                className="inline-flex min-h-11 items-center gap-2 rounded-xl px-3 text-left text-base font-semibold text-hub-ink hover:bg-hub-muted"
+                className="inline-flex min-h-10 items-center gap-2 rounded-xl px-3 text-left text-sm font-semibold text-hub-ink hover:bg-hub-muted"
               >
                 <RefreshCw className={cn('h-4 w-4', feed.loading && 'animate-spin')} /> Refresh
               </button>
@@ -1024,41 +1024,43 @@ export default function LeadsTab({
 
       <TasksStrip sample={feed.sample} onOpenLead={openLeadById} onOpenPricing={() => setPricingOpen(true)} />
 
-      <div className="mt-4 flex gap-2" role="tablist" aria-label="Lead lists">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={view === 'active'}
-          onClick={() => setView('active')}
-          className={cn(
-            'min-h-[40px] flex-1 rounded-full px-3 text-[0.84rem] font-bold sm:flex-none',
-            view === 'active' ? 'bg-hub-primary text-hub-on-primary' : 'border border-hub-line bg-hub-muted text-hub-soft',
-          )}
-        >
-          Active
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={view === 'archived'}
-          onClick={() => { setView('archived'); setStageFilter(null); }}
-          className={cn(
-            'min-h-[40px] flex-1 rounded-full px-3 text-[0.84rem] font-bold sm:flex-none',
-            view === 'archived' ? 'bg-hub-primary text-hub-on-primary' : 'border border-hub-line bg-hub-muted text-hub-soft',
-          )}
-        >
-          Archived{archivedCount > 0 ? ` (${archivedCount})` : ''}
-        </button>
-      </div>
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex gap-2" role="tablist" aria-label="Lead lists">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={view === 'active'}
+            onClick={() => setView('active')}
+            className={cn(
+              'min-h-[38px] flex-1 rounded-full px-4 text-xs font-bold sm:flex-none',
+              view === 'active' ? 'bg-hub-primary text-hub-on-primary' : 'border border-hub-line bg-hub-muted text-hub-soft',
+            )}
+          >
+            Active
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={view === 'archived'}
+            onClick={() => { setView('archived'); setStageFilter(null); }}
+            className={cn(
+              'min-h-[38px] flex-1 rounded-full px-4 text-xs font-bold sm:flex-none',
+              view === 'archived' ? 'bg-hub-primary text-hub-on-primary' : 'border border-hub-line bg-hub-muted text-hub-soft',
+            )}
+          >
+            Archived{archivedCount > 0 ? ` (${archivedCount})` : ''}
+          </button>
+        </div>
 
-      {view === 'active' && customersInView.length > 0 && (
-        <PipelineSummary
-          stages={customersInView.map((lead) => lead.stage)}
-          total={inView.length}
-          selected={stageFilter}
-          onSelect={setStageFilter}
-        />
-      )}
+        {view === 'active' && customersInView.length > 0 && (
+          <PipelineSummary
+            stages={customersInView.map((lead) => lead.stage)}
+            total={inView.length}
+            selected={stageFilter}
+            onSelect={setStageFilter}
+          />
+        )}
+      </div>
 
       {feed.error && <div className="mt-4"><Notice tone="error">{feed.error}</Notice></div>}
       {!feed.sample && !feed.loading && !feed.error && !feed.writesEnabled && (
@@ -1114,11 +1116,11 @@ export default function LeadsTab({
                           </span>
                           <span className="mt-1 block text-base leading-snug text-hub-soft">{lead.address || 'No address yet'}</span>
                         </button>
-                        <div className="flex flex-wrap items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                           <Button
                             type="button"
                             variant="ghost"
-                            className="min-h-[38px] px-3 text-sm font-semibold"
+                            className="min-h-[34px] px-2.5 text-xs font-semibold"
                             onClick={(e) => {
                               e.stopPropagation();
                               setFormError(null);
@@ -1131,7 +1133,7 @@ export default function LeadsTab({
                           <Button
                             type="button"
                             variant="ghost"
-                            className="min-h-[38px] px-3 text-sm font-semibold"
+                            className="min-h-[34px] px-2.5 text-xs font-semibold"
                             onClick={(e) => {
                               e.stopPropagation();
                               setRoofDesigner({ open: true, lead });
@@ -1143,19 +1145,19 @@ export default function LeadsTab({
                           <Button
                             type="button"
                             variant="ghost"
-                            className="min-h-[38px] px-3 text-sm font-semibold"
+                            className="min-h-[34px] px-2.5 text-xs font-semibold"
                             onClick={(e) => {
                               e.stopPropagation();
                               setProposalCreator({ open: true, lead });
                             }}
                             title={`Create proposal for ${lead.name}`}
                           >
-                            <FileText className="h-3.5 w-3.5 text-hub-primary" /> Create proposal
+                            <FileText className="h-3.5 w-3.5 text-hub-primary" /> Proposal
                           </Button>
                           <Button
                             type="button"
                             variant="ghost"
-                            className="min-h-[38px] px-2.5 text-sm font-semibold text-hub-danger hover:border-hub-danger-line hover:bg-hub-danger-soft"
+                            className="min-h-[34px] px-2 text-xs font-semibold text-hub-danger hover:border-hub-danger-line hover:bg-hub-danger-soft"
                             onClick={(e) => {
                               e.stopPropagation();
                               setDeleteError(null);
@@ -1166,7 +1168,7 @@ export default function LeadsTab({
                             <Trash2 className="h-3.5 w-3.5" /> Delete
                           </Button>
                           {lead.source === 'customer' && (
-                            <ConferenceRoomButton className="w-full shrink-0 sm:w-auto" onClick={() => setConferenceLead(lead)} />
+                            <ConferenceRoomButton size="sm" className="w-full shrink-0 sm:w-auto" onClick={() => setConferenceLead(lead)} />
                           )}
                         </div>
                       </div>

@@ -199,7 +199,7 @@ Confidential & Proprietary — Prepared by The Power Genie / Sunrun
         aria-labelledby={titleId}
         tabIndex={-1}
         onClick={(event) => event.stopPropagation()}
-        className="flex h-full w-full max-w-5xl flex-col overflow-hidden bg-hub-surface text-hub-ink shadow-2xl outline-none sm:h-[92vh] sm:rounded-3xl"
+        className="flex h-full w-full max-w-5xl flex-col overflow-hidden bg-hub-surface text-hub-ink shadow-2xl outline-none sm:h-[90vh] sm:max-h-[880px] sm:rounded-3xl"
       >
         {/* Header */}
         <div className="flex items-center justify-between gap-3 border-b border-hub-line bg-hub-surface px-4 py-3 sm:px-6">

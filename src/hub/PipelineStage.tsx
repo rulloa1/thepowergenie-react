@@ -67,13 +67,13 @@ export function PipelineSummary({
   }
   const lost = counts.get('lost') || 0;
   return (
-    <div className="mt-5 max-w-sm" aria-label="Pipeline">
-      <label htmlFor="customer-stage-filter" className="mb-1.5 block text-base font-semibold text-hub-ink">Show</label>
+    <div className="flex items-center gap-2" aria-label="Pipeline">
+      <label htmlFor="customer-stage-filter" className="whitespace-nowrap text-sm font-semibold text-hub-soft">Show</label>
       <select
         id="customer-stage-filter"
         value={selected ?? ''}
         onChange={(event) => onSelect(event.target.value || null)}
-        className="min-h-12 w-full rounded-xl border border-hub-control bg-hub-surface px-3 text-base text-hub-ink"
+        className="min-h-10 rounded-xl border border-hub-control bg-hub-surface px-3 text-sm font-semibold text-hub-ink"
       >
         <option value="">{`All customers (${total})`}</option>
         {PIPELINE_STEPS.map((step) => (
