@@ -118,7 +118,7 @@ export const workflowApi = {
   cancelFollowup: (followupId: string) => call<{ ok: true }>('cancel-followup', { method: 'POST', body: { followupId } }),
   preview: (proposalId: string) => call<{ html: string }>('preview', { query: { proposal: proposalId } }),
   tasks: () => call<{ rateReady: boolean; googleReady: boolean; tasks: WorkflowTask[] }>('tasks'),
-  glance: () => call<{ savings: Array<{ leadId: string; monthly: number | null }> }>('glance'),
+  glance: (leadIds: string[]) => call<{ savings: Array<{ leadId: string; monthly: number | null }> }>('glance', { query: { ids: leadIds.join(',') } }),
   settings: () => call<{ pricing: PricingSettings; googleReady: boolean }>('settings'),
   saveSettings: (pricing: PricingSettings) => call<{ pricing: PricingSettings }>('settings', { method: 'POST', body: { pricing } }),
 };

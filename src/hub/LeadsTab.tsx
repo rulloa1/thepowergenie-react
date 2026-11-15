@@ -65,15 +65,17 @@ import {
 
 const ConferenceSheet = lazy(() => import('./ConferenceRoom').then((mod) => ({ default: mod.ConferenceSheet })));
 
-function useCustomerGlance(sample: boolean) {
+function useCustomerGlance(sample: boolean, leadIds: string[]) {
   const [tasks, setTasks] = useState<WorkflowTask[]>([]);
   const [savings, setSavings] = useState<Map<string, number | null>>(() => new Map());
+  const idsKey = leadIds.join(',');
   useEffect(() => {
-    if (sample) return;
+    const ids = idsKey ? idsKey.split(',') : [];
+    if (sample || !ids.length) return;
     let alive = true;
     const load = () => {
       workflowApi.tasks().then((result) => { if (alive) setTasks(result.tasks); }).catch(() => {});
-      workflowApi.glance().then((result) => {
+      workflowApi.glance(ids).then((result) => {
         if (alive) setSavings(new Map(result.savings.map((row) => [row.leadId, row.monthly])));
       }).catch(() => {});
     };
@@ -83,7 +85,7 @@ function useCustomerGlance(sample: boolean) {
       alive = false;
       window.removeEventListener(WORKFLOW_CHANGED, load);
     };
-  }, [sample]);
+  }, [sample, idsKey]);
   return { tasks, savings };
 }
 
@@ -631,7 +633,8 @@ export default function LeadsTab({
   const marked = useRef(new Set<string>());
   const scrolled = useRef<string | null>(null);
   const actor: LeadActor = { id: profile.id, fullName: profile.full_name, email: profile.email };
-  const glance = useCustomerGlance(feed.sample);
+  const customerIds = feed.leads.filter((lead) => lead.source === 'customer').map((lead) => lead.id);
+  const glance = useCustomerGlance(feed.sample, customerIds);
   const inView = leadsForView(feed.leads, view);
   const customersInView = inView.filter((lead) => lead.source === 'customer');
   const shown = stageFilter
