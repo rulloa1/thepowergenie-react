@@ -45,9 +45,10 @@ export type JoinInfo = RoomInfo & {
   serverUrl: string;
   token: string;
   userName: string;
+  startWithCamera?: boolean;
 };
 
-export type WaitingGuest = { id: string; name: string };
+export type WaitingGuest = { id: string; name: string; camera?: boolean };
 
 export const conferenceApi = {
   status: () => call<{ configured: boolean }>('status', { auth: true }),
@@ -57,6 +58,7 @@ export const conferenceApi = {
   admit: (customerId: string, guestId: string) => call<{ ok: true }>('admit', { method: 'POST', auth: true, body: { customerId, guestId } }),
   decline: (customerId: string, guestId: string) => call<{ ok: true }>('decline', { method: 'POST', auth: true, body: { customerId, guestId } }),
   lobby: (token: string) => call<{ customerName: string; expiresAt: string; proposalUrl: string | null }>('lobby', { query: { token } }),
-  knock: (token: string, name: string) => call<{ guestId: string; status: 'waiting'; userName: string }>('knock', { method: 'POST', body: { token, name } }),
+  knock: (token: string, name: string, camera: boolean) => call<{ guestId: string; status: 'waiting'; userName: string; camera: boolean }>('knock', { method: 'POST', body: { token, name, camera } }),
+  setCamera: (token: string, guestId: string, camera: boolean) => call<{ ok: true; camera: boolean }>('camera', { method: 'POST', body: { token, guestId, camera } }),
   guest: (token: string, guestId: string) => call<{ status: 'waiting' | 'denied' } | (JoinInfo & { status: 'admitted' })>('guest', { query: { token, guest: guestId } }),
 };

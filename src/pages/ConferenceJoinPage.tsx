@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Video, VideoOff } from 'lucide-react';
 import { ConferenceCall } from '../hub/ConferenceRoom';
 import { conferenceApi, ConferenceError, type JoinInfo } from '../hub/conferenceApi';
@@ -44,7 +44,10 @@ export default function ConferenceJoinPage({ token }: { token: string | null }) 
     const tick = () => {
       conferenceApi.guest(token, guestId).then((result) => {
         if (!alive) return;
-        if (result.status === 'admitted') setJoin(result);
+        if (result.status === 'admitted') {
+          if (typeof result.startWithCamera === 'boolean') setCamera(result.startWithCamera);
+          setJoin(result);
+        }
         if (result.status === 'denied') setDenied(true);
       }).catch((reason: Error) => {
         if (alive) setError(reason.message);
@@ -64,7 +67,7 @@ export default function ConferenceJoinPage({ token }: { token: string | null }) 
     }
     setError(null);
     try {
-      const result = await conferenceApi.knock(token, name);
+      const result = await conferenceApi.knock(token, name, camera);
       setGuestId(result.guestId);
     } catch (reason) {
       setError(reason instanceof ConferenceError ? reason.message : 'Could not join the waiting room.');
@@ -99,55 +102,119 @@ export default function ConferenceJoinPage({ token }: { token: string | null }) 
               <label htmlFor="guest-name" className={labelClass}>Your name</label>
               <input id="guest-name" required maxLength={40} autoComplete="name" value={name} onChange={(event) => setName(event.target.value)} className={inputClass} />
             </div>
-            <fieldset className="m-0 grid gap-2 border-0 p-0">
-              <legend className={labelClass}>Camera</legend>
-              <label className="flex min-h-11 cursor-pointer items-start gap-3 rounded-xl border border-hub-line bg-hub-muted px-3 py-3 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-hub-focus">
-                <input
-                  type="radio"
-                  name="guest-camera"
-                  value="on"
-                  required
-                  checked={camera === true}
-                  onChange={() => setCamera(true)}
-                  className="mt-1 h-4 w-4 accent-[#ffcf75]"
-                />
-                <span>
-                  <span className="flex items-center gap-1.5 font-bold"><Video className="h-4 w-4" /> Use my camera</span>
-                  <span className="mt-0.5 block text-[0.84rem] leading-snug text-hub-soft">Horace and Rory can see you. You can turn it off during the call.</span>
-                </span>
-              </label>
-              <label className="flex min-h-11 cursor-pointer items-start gap-3 rounded-xl border border-hub-line bg-hub-muted px-3 py-3 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-hub-focus">
-                <input
-                  type="radio"
-                  name="guest-camera"
-                  value="off"
-                  required
-                  checked={camera === false}
-                  onChange={() => setCamera(false)}
-                  className="mt-1 h-4 w-4 accent-[#ffcf75]"
-                />
-                <span>
-                  <span className="flex items-center gap-1.5 font-bold"><VideoOff className="h-4 w-4" /> Join without video</span>
-                  <span className="mt-0.5 block text-[0.84rem] leading-snug text-hub-soft">They can hear you. Your camera stays off until you turn it on.</span>
-                </span>
-              </label>
-            </fieldset>
-            <Button type="submit" variant="accent" className="w-full">
-              <Video className="h-4 w-4" /> Ask to join
+            <CameraChoice camera={camera} onChange={setCamera} />
+            <Button type="submit" variant="accent" className="w-full" disabled={camera === null}>
+              {camera === false ? <VideoOff className="h-4 w-4" /> : <Video className="h-4 w-4" />}
+              {camera === false ? 'Ask to join without video' : 'Ask to join'}
             </Button>
           </form>
         )}
-        {guestId && !denied && (
-          <div className="mt-5">
+        {guestId && !denied && token && (
+          <div className="mt-5 grid gap-4">
             <Notice tone="info" title="Waiting for the host">
               Keep this page open. You will join when Horace or Rory lets you in.
               {camera ? ' Your camera will be on, and you can turn it off during the call.' : ' Your camera will stay off until you turn it on.'}
             </Notice>
-            <div className="mt-4 flex justify-center"><Spinner /></div>
+            <CameraChoice
+              camera={camera}
+              onChange={(next) => {
+                setCamera(next);
+                void conferenceApi.setCamera(token, guestId, next).catch((reason: Error) => setError(reason.message));
+              }}
+            />
+            <div className="flex justify-center"><Spinner /></div>
           </div>
         )}
         {denied && <div className="mt-5"><Notice tone="warn">The host did not let you in this time. Ask them for a new link if the call is still on.</Notice></div>}
       </div>
+    </div>
+  );
+}
+
+function CameraChoice({ camera, onChange }: { camera: boolean | null; onChange: (next: boolean) => void }) {
+  return (
+    <fieldset className="m-0 grid gap-2 border-0 p-0">
+      <legend className={labelClass}>Camera</legend>
+      <CameraOption
+        selected={camera === true}
+        label="Use my camera"
+        detail="Horace and Rory can see you. You can turn it off during the call."
+        icon={<Video className="h-4 w-4" />}
+      >
+        <input type="radio" name="guest-camera" value="on" required checked={camera === true} onChange={() => onChange(true)} className="mt-1 h-4 w-4 accent-[#ffcf75]" />
+      </CameraOption>
+      {camera === true && <CameraPreview />}
+      <CameraOption
+        selected={camera === false}
+        label="Join without video"
+        detail="They can hear you. Your camera stays off until you turn it on."
+        icon={<VideoOff className="h-4 w-4" />}
+      >
+        <input type="radio" name="guest-camera" value="off" required checked={camera === false} onChange={() => onChange(false)} className="mt-1 h-4 w-4 accent-[#ffcf75]" />
+      </CameraOption>
+    </fieldset>
+  );
+}
+
+function CameraOption({
+  selected,
+  label,
+  detail,
+  icon,
+  children,
+}: {
+  selected: boolean;
+  label: string;
+  detail: string;
+  icon: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <label className={`flex min-h-11 cursor-pointer items-start gap-3 rounded-xl border px-3 py-3 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-hub-focus ${selected ? 'border-hub-accent-line bg-hub-accent-soft' : 'border-hub-line bg-hub-muted'}`}>
+      {children}
+      <span>
+        <span className="flex items-center gap-1.5 font-bold">{icon} {label}</span>
+        <span className="mt-0.5 block text-[0.84rem] leading-snug text-hub-soft">{detail}</span>
+      </span>
+    </label>
+  );
+}
+
+function CameraPreview() {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [problem, setProblem] = useState<string | null>(null);
+
+  useEffect(() => {
+    let stream: MediaStream | null = null;
+    let cancelled = false;
+    const devices = navigator.mediaDevices;
+    if (!devices?.getUserMedia) {
+      setProblem('This browser did not open the camera. You can still join without video.');
+      return;
+    }
+    devices.getUserMedia({ video: true, audio: false }).then((next) => {
+      if (cancelled) {
+        next.getTracks().forEach((track) => track.stop());
+        return;
+      }
+      stream = next;
+      if (videoRef.current) {
+        videoRef.current.srcObject = next;
+        void videoRef.current.play();
+      }
+    }).catch(() => {
+      if (!cancelled) setProblem('This browser did not open the camera. You can still join without video.');
+    });
+    return () => {
+      cancelled = true;
+      stream?.getTracks().forEach((track) => track.stop());
+    };
+  }, []);
+
+  return (
+    <div>
+      <video ref={videoRef} muted playsInline autoPlay aria-label="Camera preview" className="aspect-video w-full rounded-xl bg-black object-cover" />
+      <p className="m-0 mt-1 text-[0.8rem] text-hub-soft">{problem || 'This preview is only on your phone or computer. Nobody else sees it yet.'}</p>
     </div>
   );
 }

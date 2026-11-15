@@ -25,6 +25,7 @@ type GuestRow = {
   room_id: string
   display_name: string
   status: 'waiting' | 'admitted' | 'denied'
+  wants_camera?: boolean | null
 }
 
 type CustomerRow = { id: string; customer_name: string | null }
@@ -61,6 +62,12 @@ export function newInviteToken(): string {
 
 export function newRoomName(): string {
   return `pg-${randomBytes(16).toString('hex')}`
+}
+
+/** True when the guest wants their camera on as they enter. */
+export function cameraChoice(value: unknown): boolean {
+  if (typeof value !== 'boolean') throw new HttpError(400, 'Choose whether to use your camera.')
+  return value
 }
 
 export function cleanGuestName(value: unknown): string {
@@ -190,7 +197,7 @@ async function guestInRoom(room: RoomRow, guestId: string): Promise<GuestRow> {
   const row = await selectOne<GuestRow>(
     'hub_conference_guests',
     { id: `eq.${guestId}`, room_id: `eq.${room.id}` },
-    'id,room_id,display_name,status',
+    'id,room_id,display_name,status,wants_camera',
   )
   if (!row) throw new HttpError(404, 'That invite link is not valid.')
   return row
@@ -233,6 +240,7 @@ export async function handleConference(request: Request, url: URL): Promise<Resp
     if (!isRecord(body)) throw new HttpError(400, 'Invalid request.')
     const room = await roomByInvite(typeof body.token === 'string' ? body.token : '')
     const name = cleanGuestName(body.name)
+    const wantsCamera = cameraChoice(body.camera)
     const waiting = await selectRows<GuestRow>(
       'hub_conference_guests',
       { room_id: `eq.${room.id}`, status: 'eq.waiting' },
@@ -243,9 +251,10 @@ export async function handleConference(request: Request, url: URL): Promise<Resp
       room_id: room.id,
       display_name: name,
       status: 'waiting',
+      wants_camera: wantsCamera,
     })
     if (!inserted) throw new HttpError(502, 'Could not join the waiting room.')
-    return json({ guestId: inserted.id, status: 'waiting' as const, userName: name })
+    return json({ guestId: inserted.id, status: 'waiting' as const, userName: name, camera: wantsCamera })
   }
 
   if (action === 'guest' && request.method === 'GET') {
@@ -253,7 +262,7 @@ export async function handleConference(request: Request, url: URL): Promise<Resp
     if (!livekitEnv()) notConfigured()
     const room = await roomByInvite(url.searchParams.get('token') || '')
     const guest = await guestInRoom(room, url.searchParams.get('guest') || '')
-    if (guest.status === 'waiting') return json({ status: 'waiting' as const })
+    if (guest.status === 'waiting') return json({ status: 'waiting' as const, camera: guest.wants_camera !== false })
     if (guest.status === 'denied') return json({ status: 'denied' as const })
     const env = livekitEnv()
     if (!env) notConfigured()
@@ -264,9 +273,25 @@ export async function handleConference(request: Request, url: URL): Promise<Resp
       serverUrl: env.url,
       token,
       userName: guest.display_name,
+      startWithCamera: guest.wants_camera !== false,
       customerName: customer.customer_name || 'your solar consult',
       proposalUrl: await proposalUrl(room.customer_id, originOf(url)),
     })
+  }
+
+  if (action === 'camera' && request.method === 'POST') {
+    enforceRateLimit(`conference-camera:${clientIp(request)}`, 30, TEN_MINUTES)
+    if (!livekitEnv()) notConfigured()
+    const body = await readWebJson(request, 4_000)
+    if (!isRecord(body)) throw new HttpError(400, 'Invalid request.')
+    const token = typeof body.token === 'string' ? body.token : ''
+    const guestId = typeof body.guestId === 'string' ? body.guestId : ''
+    const wantsCamera = cameraChoice(body.camera)
+    const room = await roomByInvite(token)
+    const guest = await guestInRoom(room, guestId)
+    if (guest.status !== 'waiting') throw new HttpError(409, 'The host already answered. Your camera choice is locked in.')
+    await patchRows('hub_conference_guests', { id: `eq.${guest.id}`, room_id: `eq.${room.id}` }, { wants_camera: wantsCamera })
+    return json({ ok: true, camera: wantsCamera })
   }
 
   const member = await requireHubMember(request)
@@ -279,17 +304,18 @@ export async function handleConference(request: Request, url: URL): Promise<Resp
     const guests = await selectRows<GuestRow>(
       'hub_conference_guests',
       { room_id: `eq.${room.id}`, status: 'eq.waiting' },
-      { select: 'id,display_name,status', order: 'created_at.asc', limit: 8 },
+      { select: 'id,display_name,status,wants_camera', order: 'created_at.asc', limit: 8 },
     )
     return json({
       invitePath: invitePath(room.invite_token),
-      guests: guests.map((guest) => ({ id: guest.id, name: guest.display_name })),
+      guests: guests.map((guest) => ({ id: guest.id, name: guest.display_name, camera: guest.wants_camera !== false })),
     })
   }
 
   if (request.method !== 'POST') throw new HttpError(404, 'Not found.')
   const body = await readWebJson(request, 4_000)
-  if (!isRecord(body) || typeof body.customerId !== 'string') throw new HttpError(400, 'Choose a customer first.')
+  if (!isRecord(body)) throw new HttpError(400, 'Invalid request.')
+  if (typeof body.customerId !== 'string') throw new HttpError(400, 'Choose a customer first.')
   const customer = await customerOrThrow(body.customerId)
 
   if (action === 'admit' || action === 'decline') {
