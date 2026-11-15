@@ -80,8 +80,13 @@ test('the Vercel SPA rewrite serves /privacy and /terms', () => {
     assert.ok(index >= 0 && index < catchAll, `${source} is rewritten before the SPA catch-all`)
   }
   for (const file of ['gas-genie.html', 'celebrity-solar.html', 'hip-hop-solar.html', 'sport-and-solar.html']) {
-    assert.match(readFileSync(file, 'utf8'), /<base href="\/">/)
+    const html = readFileSync(file, 'utf8')
+    assert.doesNotMatch(html, /<base\s/i, file)
+    assert.match(html, /href="\/assets\/powergenie\.css"/, file)
+    assert.doesNotMatch(html, /href="\/#/, file)
   }
+  assert.match(readFileSync('gas-genie.html', 'utf8'), /href="#pilot-details"/)
+  assert.match(readFileSync('sport-and-solar.html', 'utf8'), /href="#consultation-section"/)
 
   assert.equal(pattern.test('/gas-genie'), true)
   assert.equal(pattern.test('/homeowner'), true)
