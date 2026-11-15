@@ -20,11 +20,14 @@ export function ConferenceCall({
   join,
   isHost,
   customerId,
+  startWithCamera = true,
   onLeave,
 }: {
   join: JoinInfo;
   isHost: boolean;
   customerId?: string;
+  /** Customers can join with the camera off and turn it on from the call bar. */
+  startWithCamera?: boolean;
   onLeave: () => void;
 }) {
   const [side, setSide] = useState<'call' | 'proposal' | 'chat'>('call');
@@ -68,7 +71,7 @@ export function ConferenceCall({
             token={join.token}
             connect
             audio
-            video
+            video={startWithCamera}
             onError={(error) => setConnectionNote(error.message)}
             onDisconnected={() => setConnectionNote('The video connection closed. Use Leave when you are finished.')}
             style={{ height: '100%' }}

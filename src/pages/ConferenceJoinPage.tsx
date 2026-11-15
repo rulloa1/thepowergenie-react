@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Video } from 'lucide-react';
+import { Video, VideoOff } from 'lucide-react';
 import { ConferenceCall } from '../hub/ConferenceRoom';
 import { conferenceApi, ConferenceError, type JoinInfo } from '../hub/conferenceApi';
 import { Button, Notice, Spinner, inputClass, labelClass } from '../hub/ui';
@@ -7,6 +7,7 @@ import { Button, Notice, Spinner, inputClass, labelClass } from '../hub/ui';
 export default function ConferenceJoinPage({ token }: { token: string | null }) {
   const [customerName, setCustomerName] = useState<string | null>(null);
   const [name, setName] = useState('');
+  const [camera, setCamera] = useState<boolean | null>(null);
   const [guestId, setGuestId] = useState<string | null>(null);
   const [join, setJoin] = useState<JoinInfo | null>(null);
   const [denied, setDenied] = useState(false);
@@ -57,6 +58,10 @@ export default function ConferenceJoinPage({ token }: { token: string | null }) 
   const knock = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!token) return;
+    if (camera === null) {
+      setError('Choose whether to use your camera.');
+      return;
+    }
     setError(null);
     try {
       const result = await conferenceApi.knock(token, name);
@@ -67,7 +72,14 @@ export default function ConferenceJoinPage({ token }: { token: string | null }) 
   };
 
   if (join) {
-    return <ConferenceCall join={join} isHost={false} onLeave={() => { setJoin(null); setGuestId(null); }} />;
+    return (
+      <ConferenceCall
+        join={join}
+        isHost={false}
+        startWithCamera={camera === true}
+        onLeave={() => { setJoin(null); setGuestId(null); }}
+      />
+    );
   }
 
   return (
@@ -87,6 +99,39 @@ export default function ConferenceJoinPage({ token }: { token: string | null }) 
               <label htmlFor="guest-name" className={labelClass}>Your name</label>
               <input id="guest-name" required maxLength={40} autoComplete="name" value={name} onChange={(event) => setName(event.target.value)} className={inputClass} />
             </div>
+            <fieldset className="m-0 grid gap-2 border-0 p-0">
+              <legend className={labelClass}>Camera</legend>
+              <label className="flex min-h-11 cursor-pointer items-start gap-3 rounded-xl border border-hub-line bg-hub-muted px-3 py-3 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-hub-focus">
+                <input
+                  type="radio"
+                  name="guest-camera"
+                  value="on"
+                  required
+                  checked={camera === true}
+                  onChange={() => setCamera(true)}
+                  className="mt-1 h-4 w-4 accent-[#ffcf75]"
+                />
+                <span>
+                  <span className="flex items-center gap-1.5 font-bold"><Video className="h-4 w-4" /> Use my camera</span>
+                  <span className="mt-0.5 block text-[0.84rem] leading-snug text-hub-soft">Horace and Rory can see you. You can turn it off during the call.</span>
+                </span>
+              </label>
+              <label className="flex min-h-11 cursor-pointer items-start gap-3 rounded-xl border border-hub-line bg-hub-muted px-3 py-3 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-hub-focus">
+                <input
+                  type="radio"
+                  name="guest-camera"
+                  value="off"
+                  required
+                  checked={camera === false}
+                  onChange={() => setCamera(false)}
+                  className="mt-1 h-4 w-4 accent-[#ffcf75]"
+                />
+                <span>
+                  <span className="flex items-center gap-1.5 font-bold"><VideoOff className="h-4 w-4" /> Join without video</span>
+                  <span className="mt-0.5 block text-[0.84rem] leading-snug text-hub-soft">They can hear you. Your camera stays off until you turn it on.</span>
+                </span>
+              </label>
+            </fieldset>
             <Button type="submit" variant="accent" className="w-full">
               <Video className="h-4 w-4" /> Ask to join
             </Button>
@@ -94,7 +139,10 @@ export default function ConferenceJoinPage({ token }: { token: string | null }) 
         )}
         {guestId && !denied && (
           <div className="mt-5">
-            <Notice tone="info" title="Waiting for the host">Keep this page open. You will join the video call when Horace or Rory lets you in.</Notice>
+            <Notice tone="info" title="Waiting for the host">
+              Keep this page open. You will join when Horace or Rory lets you in.
+              {camera ? ' Your camera will be on, and you can turn it off during the call.' : ' Your camera will stay off until you turn it on.'}
+            </Notice>
             <div className="mt-4 flex justify-center"><Spinner /></div>
           </div>
         )}
