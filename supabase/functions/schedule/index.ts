@@ -1,7 +1,7 @@
 // Dashboard schedule endpoint (signed-in Referral Hub members only).
 //
 //   POST { action: 'status' }                          → this member's Google connection + busy blocks
-//   POST { action: 'create', start, durationMinutes, name, phone?, email?, address?, note? }  (owner)
+//   POST { action: 'create', start, durationMinutes, name, phone?, email?, address?, note? }  (owner or admin)
 //   POST { action: 'reschedule', id, start, durationMinutes }  (owner) moves every member's event
 //   POST { action: 'cancel', id }                       (owner) deletes every member's event
 //   POST { action: 'resync', id }                       retry a hub appointment on every calendar
@@ -249,8 +249,8 @@ Deno.serve(async (req) => {
         : await resyncCustomer(admin, String(body.id || ''));
       return err ? fail(502, 'sync_failed', err) : json({ ok: true });
     }
-    if (user.role !== 'owner') return fail(403, 'forbidden', 'Only the owner can change the schedule.');
     if (action === 'create') return await create(admin, user, body);
+    if (user.role !== 'owner') return fail(403, 'forbidden', 'Only the owner can reschedule or cancel appointments.');
     if (action === 'reschedule') return await reschedule(admin, body);
     if (action === 'cancel') return await cancel(admin, user, String(body.id || ''));
     return fail(400, 'bad_request', 'Unknown action.');

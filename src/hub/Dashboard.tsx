@@ -1,6 +1,6 @@
 import React, { lazy, Suspense, useEffect, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
-import { CalendarDays, FolderOpen, Inbox, LogOut, MessageCircle, Video } from 'lucide-react';
+import { CalendarDays, CalendarPlus, FolderOpen, Inbox, LogOut, MessageCircle, Video } from 'lucide-react';
 import { useLeadFeed } from './useLeadFeed';
 import { hubNavFor } from './hubNav';
 import { hubTabFromLocation, type HubTab } from '../lib/siteRoutes';
@@ -401,17 +401,22 @@ function HubApp({
   onExitDemo?: () => void;
 }) {
   const [tab, setTab] = useState<Tab>(initialTab);
+  const [addingAppointment, setAddingAppointment] = useState(false);
   const leads = useLeadFeed(profile.id);
   const focus = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066CC] focus-visible:ring-offset-2 focus-visible:ring-offset-[#E8F4FD]';
   const tabs = hubNavFor(profile.role).map((item) => ({ ...item, icon: TAB_ICONS[item.id] }));
 
   useEffect(() => {
-    const sync = () => setTab(initialTab());
+    const sync = () => {
+      setAddingAppointment(false);
+      setTab(initialTab());
+    };
     window.addEventListener('popstate', sync);
     return () => window.removeEventListener('popstate', sync);
   }, []);
 
   const go = (t: Tab) => {
+    if (t !== 'schedule') setAddingAppointment(false);
     setTab(t);
     const url = new URL(window.location.href);
     url.pathname = '/dashboard';
@@ -443,6 +448,15 @@ function HubApp({
             <span className="hidden text-base font-bold text-[var(--sw-ink)] sm:inline">Referral Hub</span>
           </div>
           <div className="flex items-center gap-2.5">
+            {!isDemo && (
+              <Button type="button" onClick={() => {
+                go('schedule');
+                setAddingAppointment(true);
+                document.getElementById('a-date')?.focus();
+              }}>
+                <CalendarPlus className="h-4 w-4" aria-hidden="true" /> Add appointment
+              </Button>
+            )}
             <div className="flex items-center gap-2">
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#0B2233] text-[0.78rem] font-bold text-white" aria-hidden="true">
                 {(profile.full_name || profile.email).slice(0, 2).toUpperCase()}
@@ -512,7 +526,7 @@ function HubApp({
           {tab === 'leads' && <LeadsTab feed={leads} profile={profile} />}
           {tab === 'chat' && <ChatTab profile={profile} />}
           {tab === 'files' && <FilesTab sample={isDemo} />}
-          {tab === 'schedule' && <ScheduleTab profile={profile} />}
+          {tab === 'schedule' && <ScheduleTab profile={profile} adding={addingAppointment} setAdding={setAddingAppointment} />}
           {tab === 'conference' && <ConferenceDesk leads={leads.leads} sample={isDemo} />}
         </Suspense>
       </main>

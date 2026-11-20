@@ -88,7 +88,11 @@ const GOOGLE_MESSAGES: Record<string, { tone: 'success' | 'error' | 'warn'; text
   error: { tone: 'error', text: 'Something went wrong connecting Google Calendar. Please try again.' },
 };
 
-export default function ScheduleTab({ profile }: { profile: Profile }) {
+export default function ScheduleTab({ profile, adding, setAdding }: {
+  profile: Profile;
+  adding: boolean;
+  setAdding: React.Dispatch<React.SetStateAction<boolean>>;
+}) {
   const isOwner = profile.role === 'owner';
   const [appts, setAppts] = useState<Appointment[]>([]);
   const [google, setGoogle] = useState<GoogleStatus | null>(null);
@@ -102,7 +106,6 @@ export default function ScheduleTab({ profile }: { profile: Profile }) {
     return g ? GOOGLE_MESSAGES[g] ?? null : null;
   });
   const [showCancelled, setShowCancelled] = useState(false);
-  const [adding, setAdding] = useState(false);
   const [functionsReady, setFunctionsReady] = useState(true);
   const [usageByAppointment, setUsageByAppointment] = useState<Record<string, CustomerUsage>>({});
 
@@ -236,7 +239,7 @@ export default function ScheduleTab({ profile }: { profile: Profile }) {
   }
 
   return (
-    <div className="grid gap-4">
+    <div className="grid gap-4 text-hub-ink">
       {notice && <Notice tone={notice.tone}>{notice.text}</Notice>}
 
       <GoogleCard
@@ -257,15 +260,13 @@ export default function ScheduleTab({ profile }: { profile: Profile }) {
             <button onClick={load} className="flex h-10 w-10 items-center justify-center rounded-full border border-hub-line hover:border-hub-ink" aria-label="Refresh">
               <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} />
             </button>
-            {isOwner && (
               <Button onClick={() => setAdding((v) => !v)} variant={adding ? 'ghost' : 'primary'}>
                 <CalendarPlus className="h-4 w-4" /> {adding ? 'Close' : 'Add appointment'}
               </Button>
-            )}
           </div>
         </div>
 
-        {adding && isOwner && (
+        {adding && (
           <AddAppointment
             onDone={(msg) => {
               setAdding(false);
@@ -718,7 +719,7 @@ function AddAppointment({ onDone }: { onDone: (msg: string) => void }) {
       <div className="grid gap-4 sm:grid-cols-3">
         <div>
           <label htmlFor="a-date" className={labelClass}>Date</label>
-          <input id="a-date" type="date" required value={date} min={todayCentralKey()} onChange={(e) => setDate(e.target.value)} className={inputClass} />
+          <input id="a-date" type="date" autoFocus required value={date} min={todayCentralKey()} onChange={(e) => setDate(e.target.value)} className={inputClass} />
         </div>
         <div>
           <label htmlFor="a-time" className={labelClass}>Start (Central)</label>
