@@ -10,6 +10,7 @@ export default function ConferenceJoinPage({ token }: { token: string | null }) 
   const [camera, setCamera] = useState<boolean | null>(null);
   const [guestId, setGuestId] = useState<string | null>(null);
   const [join, setJoin] = useState<JoinInfo | null>(null);
+  const [statusError, setStatusError] = useState<string | null>(null);
   const [denied, setDenied] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(Boolean(token));
@@ -41,21 +42,29 @@ export default function ConferenceJoinPage({ token }: { token: string | null }) 
   useEffect(() => {
     if (!token || !guestId || join || denied) return;
     let alive = true;
-    const tick = () => {
-      conferenceApi.guest(token, guestId).then((result) => {
+    let timer: number | undefined;
+    const tick = async () => {
+      try {
+        const result = await conferenceApi.guest(token, guestId);
         if (!alive) return;
+        setStatusError(null);
         if (result.status === 'admitted') {
           if (typeof result.startWithCamera === 'boolean') setCamera(result.startWithCamera);
           setJoin(result);
+          return;
         }
-        if (result.status === 'denied') setDenied(true);
-      }).catch((reason: Error) => {
-        if (alive) setError(reason.message);
-      });
+        if (result.status === 'denied') {
+          setDenied(true);
+          return;
+        }
+      } catch {
+        if (!alive) return;
+        setStatusError('Trying to reconnect. Keep this page open.');
+      }
+      timer = window.setTimeout(() => void tick(), 2500);
     };
-    tick();
-    const timer = window.setInterval(tick, 2500);
-    return () => { alive = false; window.clearInterval(timer); };
+    void tick();
+    return () => { alive = false; window.clearTimeout(timer); };
   }, [token, guestId, join, denied]);
 
   const knock = async (event: React.FormEvent) => {
@@ -88,12 +97,11 @@ export default function ConferenceJoinPage({ token }: { token: string | null }) 
   if (guestId && !denied && token) {
     return (
       <main className="grid min-h-[100dvh] content-center justify-items-center gap-5 bg-[#061534] px-4 py-6 font-[family:var(--sw-font-body)]">
-        <h1 className="sr-only">Waiting room</h1>
-        <WaitingRoomVideo />
         <div className="w-full max-w-lg rounded-2xl bg-white p-4 text-hub-ink sm:p-5">
+          <h1 className="m-0 mb-3 text-xl font-bold">Conference waiting room</h1>
           <div className="mb-4 flex items-center gap-3" role="status">
             <Spinner />
-            <p className="m-0 text-sm">Keep this page open. You’ll join automatically when Horace or Rory lets you in.</p>
+            <p className="m-0 text-sm">{statusError ?? 'Keep this page open. You’ll join automatically when Horace or Rory lets you in.'}</p>
           </div>
           {error && <div className="mb-4"><Notice tone="error">{error}</Notice></div>}
           <CameraChoice
@@ -104,6 +112,7 @@ export default function ConferenceJoinPage({ token }: { token: string | null }) 
             }}
           />
         </div>
+        <WaitingRoomVideo />
       </main>
     );
   }
