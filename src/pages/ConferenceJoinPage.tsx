@@ -85,6 +85,35 @@ export default function ConferenceJoinPage({ token }: { token: string | null }) 
     );
   }
 
+  if (guestId && !denied && token) {
+    return (
+      <main className="grid min-h-[100dvh] content-center justify-items-center gap-5 bg-[#061534] px-4 py-6 font-[family:var(--sw-font-body)]">
+        <h1 className="sr-only">Waiting room</h1>
+        <img
+          src="/assets/conference/sunrun-waiting-room.webp"
+          alt="Sunrun · Power Genie Conference"
+          width={1600}
+          height={900}
+          className="h-auto max-h-[60dvh] w-full max-w-5xl object-contain"
+        />
+        <div className="w-full max-w-lg rounded-2xl bg-white p-4 text-hub-ink sm:p-5">
+          <div className="mb-4 flex items-center gap-3" role="status">
+            <Spinner />
+            <p className="m-0 text-sm">Keep this page open. You’ll join automatically when Horace or Rory lets you in.</p>
+          </div>
+          {error && <div className="mb-4"><Notice tone="error">{error}</Notice></div>}
+          <CameraChoice
+            camera={camera}
+            onChange={(next) => {
+              setCamera(next);
+              void conferenceApi.setCamera(token, guestId, next).catch((reason: Error) => setError(reason.message));
+            }}
+          />
+        </div>
+      </main>
+    );
+  }
+
   return (
     <div className="flex min-h-[100dvh] flex-col bg-[#F4F6FA] font-[family:var(--sw-font-body)] lg:flex-row">
       <aside className="relative isolate flex shrink-0 flex-col overflow-hidden bg-[#0B2233] px-6 py-5 text-white shadow-[inset_0_-3px_0_#FF6B00] sm:px-10 lg:w-[46%] lg:px-14 lg:py-12 lg:shadow-[inset_-3px_0_0_#FF6B00]">
@@ -130,22 +159,6 @@ export default function ConferenceJoinPage({ token }: { token: string | null }) 
               {camera === false ? 'Ask to join without video' : 'Ask to join'}
             </Button>
           </form>
-        )}
-        {guestId && !denied && token && (
-          <div className="mt-5 grid gap-4">
-            <Notice tone="info" title="Waiting for the host">
-              Keep this page open. You will join when Horace or Rory lets you in.
-              {camera ? ' Your camera will be on, and you can turn it off during the call.' : ' Your camera will stay off until you turn it on.'}
-            </Notice>
-            <CameraChoice
-              camera={camera}
-              onChange={(next) => {
-                setCamera(next);
-                void conferenceApi.setCamera(token, guestId, next).catch((reason: Error) => setError(reason.message));
-              }}
-            />
-            <div className="flex justify-center"><Spinner /></div>
-          </div>
         )}
         {denied && <div className="mt-5"><Notice tone="warn">The host did not let you in this time. Ask them for a new link if the call is still on.</Notice></div>}
       </div>
