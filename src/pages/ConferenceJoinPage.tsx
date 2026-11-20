@@ -89,13 +89,7 @@ export default function ConferenceJoinPage({ token }: { token: string | null }) 
     return (
       <main className="grid min-h-[100dvh] content-center justify-items-center gap-5 bg-[#061534] px-4 py-6 font-[family:var(--sw-font-body)]">
         <h1 className="sr-only">Waiting room</h1>
-        <img
-          src="/assets/conference/sunrun-waiting-room.webp"
-          alt="Sunrun · Power Genie Conference"
-          width={1600}
-          height={900}
-          className="h-auto max-h-[60dvh] w-full max-w-5xl object-contain"
-        />
+        <WaitingRoomVideo />
         <div className="w-full max-w-lg rounded-2xl bg-white p-4 text-hub-ink sm:p-5">
           <div className="mb-4 flex items-center gap-3" role="status">
             <Spinner />
@@ -164,6 +158,57 @@ export default function ConferenceJoinPage({ token }: { token: string | null }) 
       </div>
       </main>
     </div>
+  );
+}
+
+const waitingRoomPoster = '/assets/conference/sunrun-waiting-room.webp';
+
+function WaitingRoomVideo() {
+  const [reduceMotion, setReduceMotion] = useState(true);
+  useEffect(() => {
+    const preference = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const sync = () => setReduceMotion(preference.matches);
+    sync();
+    preference.addEventListener('change', sync);
+    return () => preference.removeEventListener('change', sync);
+  }, []);
+
+  const className = 'h-auto max-h-[60dvh] w-full max-w-5xl object-contain';
+
+  return (
+    <>
+      {reduceMotion ? (
+        <img
+          src={waitingRoomPoster}
+          alt="Sunrun · Power Genie Conference"
+          width={1599}
+          height={900}
+          className={className}
+        />
+      ) : (
+        <video
+          src="/assets/conference/sunrun-waiting-room.mp4"
+          poster={waitingRoomPoster}
+          aria-label="Sunrun waiting room and solar basics"
+          width={960}
+          height={540}
+          className={className}
+          autoPlay
+          muted
+          loop
+          playsInline
+          controls
+        />
+      )}
+      <details className="w-full max-w-lg px-2 text-sm text-[#dbeafe]">
+        <summary className="cursor-pointer">Read the solar tips</summary>
+        <ul className="mb-0 mt-2 space-y-2 pl-5">
+          <li>Panels turn sunlight into electricity. An inverter makes it usable at home.</li>
+          <li>A battery can store extra solar energy for later, like after the sun goes down.</li>
+          <li>Roof shade and how much electricity you use help determine system size.</li>
+        </ul>
+      </details>
+    </>
   );
 }
 
