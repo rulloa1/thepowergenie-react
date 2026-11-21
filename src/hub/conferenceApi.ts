@@ -67,6 +67,7 @@ export const conferenceApi = {
   decline: (customerId: string, guestId: string) => call<{ ok: true }>('decline', { method: 'POST', auth: true, body: { customerId, guestId } }),
   lobby: (token: string) => call<{ customerName: string; expiresAt: string; proposalUrl: string | null }>('lobby', { query: { token } }),
   knock: (token: string, name: string, camera: boolean) => call<{ guestId: string; status: 'waiting'; userName: string; camera: boolean }>('knock', { method: 'POST', body: { token, name, camera } }),
+  withdraw: (token: string, guestId: string) => call<{ ok: true }>('withdraw', { method: 'POST', body: { token, guestId } }),
   setCamera: (token: string, guestId: string, camera: boolean) => call<{ ok: true; camera: boolean }>('camera', { method: 'POST', body: { token, guestId, camera } }),
   guest: (token: string, guestId: string) => call<{ status: 'waiting' | 'denied' } | (JoinInfo & { status: 'admitted' })>('guest', { query: { token, guest: guestId } }),
 };
