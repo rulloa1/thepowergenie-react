@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Video, VideoOff } from 'lucide-react';
+import ConferenceLobby from './ConferenceLobby';
 import { ConferenceCall } from '../hub/ConferenceRoom';
 import { conferenceApi, ConferenceError, type JoinInfo } from '../hub/conferenceApi';
 import { BrandMark, Button, Notice, Spinner, inputClass, labelClass } from '../hub/ui';
@@ -8,6 +9,7 @@ export default function ConferenceJoinPage({ token }: { token: string | null }) 
   const [customerName, setCustomerName] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [camera, setCamera] = useState<boolean | null>(null);
+  const [leaving, setLeaving] = useState(false);
   const [guestId, setGuestId] = useState<string | null>(null);
   const [join, setJoin] = useState<JoinInfo | null>(null);
   const [statusError, setStatusError] = useState<string | null>(null);
@@ -40,7 +42,7 @@ export default function ConferenceJoinPage({ token }: { token: string | null }) 
   }, [token]);
 
   useEffect(() => {
-    if (!token || !guestId || join || denied) return;
+    if (!token || !guestId || join || denied || leaving) return;
     let alive = true;
     let timer: number | undefined;
     const tick = async () => {
@@ -65,7 +67,7 @@ export default function ConferenceJoinPage({ token }: { token: string | null }) 
     };
     void tick();
     return () => { alive = false; window.clearTimeout(timer); };
-  }, [token, guestId, join, denied]);
+  }, [token, guestId, join, denied, leaving]);
 
   const knock = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -96,24 +98,26 @@ export default function ConferenceJoinPage({ token }: { token: string | null }) 
 
   if (guestId && !denied && token) {
     return (
-      <main className="grid min-h-[100dvh] content-center justify-items-center gap-5 bg-[#061534] px-4 py-6 font-[family:var(--sw-font-body)]">
-        <div className="w-full max-w-lg rounded-2xl bg-white p-4 text-hub-ink sm:p-5">
-          <h1 className="m-0 mb-3 text-xl font-bold">Conference waiting room</h1>
-          <div className="mb-4 flex items-center gap-3" role="status">
-            <Spinner />
-            <p className="m-0 text-sm">{statusError ?? 'Keep this page open. You’ll join automatically when Horace or Rory lets you in.'}</p>
-          </div>
-          {error && <div className="mb-4"><Notice tone="error">{error}</Notice></div>}
-          <CameraChoice
-            camera={camera}
-            onChange={(next) => {
-              setCamera(next);
-              void conferenceApi.setCamera(token, guestId, next).catch((reason: Error) => setError(reason.message));
-            }}
-          />
-        </div>
-        <WaitingRoomVideo />
-      </main>
+      <ConferenceLobby statusError={statusError} leaving={leaving} onLeave={() => {
+        setLeaving(true);
+        void conferenceApi.withdraw(token, guestId).then(() => {
+          setGuestId(null);
+          setError(null);
+          setStatusError(null);
+        }).catch(() => {
+          setStatusError('Could not leave the queue. Please try again.');
+        }).finally(() => setLeaving(false));
+      }}>
+        {error && <div className="mb-4"><Notice tone="error">{error}</Notice></div>}
+        <CameraChoice
+          camera={camera}
+          onChange={(next) => {
+            setCamera(next);
+            setError(null);
+            void conferenceApi.setCamera(token, guestId, next).catch((reason: Error) => setError(reason.message));
+          }}
+        />
+      </ConferenceLobby>
     );
   }
 
@@ -167,57 +171,6 @@ export default function ConferenceJoinPage({ token }: { token: string | null }) 
       </div>
       </main>
     </div>
-  );
-}
-
-const waitingRoomPoster = '/assets/conference/sunrun-waiting-room.webp';
-
-function WaitingRoomVideo() {
-  const [reduceMotion, setReduceMotion] = useState(true);
-  useEffect(() => {
-    const preference = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const sync = () => setReduceMotion(preference.matches);
-    sync();
-    preference.addEventListener('change', sync);
-    return () => preference.removeEventListener('change', sync);
-  }, []);
-
-  const className = 'h-auto max-h-[60dvh] w-full max-w-5xl object-contain';
-
-  return (
-    <>
-      {reduceMotion ? (
-        <img
-          src={waitingRoomPoster}
-          alt="Sunrun · Power Genie Conference"
-          width={1599}
-          height={900}
-          className={className}
-        />
-      ) : (
-        <video
-          src="/assets/conference/sunrun-waiting-room.mp4"
-          poster={waitingRoomPoster}
-          aria-label="Sunrun waiting room and solar basics"
-          width={960}
-          height={540}
-          className={className}
-          autoPlay
-          muted
-          loop
-          playsInline
-          controls
-        />
-      )}
-      <details className="w-full max-w-lg px-2 text-sm text-[#dbeafe]">
-        <summary className="cursor-pointer">Read the solar tips</summary>
-        <ul className="mb-0 mt-2 space-y-2 pl-5">
-          <li>Panels turn sunlight into electricity. An inverter makes it usable at home.</li>
-          <li>A battery can store extra solar energy for later, like after the sun goes down.</li>
-          <li>Roof shade and how much electricity you use help determine system size.</li>
-        </ul>
-      </details>
-    </>
   );
 }
 

@@ -325,6 +325,20 @@ export async function handleConference(request: Request, url: URL): Promise<Resp
     })
   }
 
+  if (action === 'withdraw' && request.method === 'POST') {
+    enforceRateLimit(`conference-withdraw:${clientIp(request)}`, 30, TEN_MINUTES)
+    const body = await readWebJson(request, 4_000)
+    if (!isRecord(body)) throw new HttpError(400, 'Invalid request.')
+    const room = await roomByInvite(typeof body.token === 'string' ? body.token : '')
+    const guest = await guestInRoom(room, typeof body.guestId === 'string' ? body.guestId : '')
+    await patchRows('hub_conference_guests', {
+      id: `eq.${guest.id}`,
+      room_id: `eq.${room.id}`,
+      status: 'in.(waiting,admitted)',
+    }, { status: 'denied' })
+    return json({ ok: true })
+  }
+
   if (action === 'camera' && request.method === 'POST') {
     enforceRateLimit(`conference-camera:${clientIp(request)}`, 30, TEN_MINUTES)
     if (!livekitEnv()) notConfigured()
@@ -381,7 +395,7 @@ export async function handleConference(request: Request, url: URL): Promise<Resp
     const guest = await guestInRoom(room, guestId)
     if (guest.status !== 'waiting') return json({ ok: true, status: guest.status })
     const status = action === 'admit' ? 'admitted' : 'denied'
-    await patchRows('hub_conference_guests', { id: `eq.${guest.id}`, room_id: `eq.${room.id}` }, { status })
+    await patchRows('hub_conference_guests', { id: `eq.${guest.id}`, room_id: `eq.${room.id}`, status: 'eq.waiting' }, { status })
     return json({ ok: true, status })
   }
 
