@@ -38,7 +38,7 @@ function mix(base: string, tint: string, tintAmount: number): string {
 }
 
 describe('referral hub theme tokens', () => {
-  it('keeps the React marketing tokens and uses the static site palette on the hub', () => {
+  it('keeps the React marketing tokens and uses the conference palette on the hub', () => {
     expect(decl('--sw-bg')).toBe('#E8F4FD');
     expect(decl('--sw-ink')).toBe('#1A1A2E');
     expect(decl('--sw-ink-soft')).toBe('#4A5568');
@@ -47,18 +47,18 @@ describe('referral hub theme tokens', () => {
     expect(decl('--pg-green')).toBe('#4CAF50');
     expect(decl('--pg-navy')).toBe('#0B2233');
     expect(decl('--pg-logo')).toBe('#071b27');
-    expect(decl('--hub-bg')).toBe('#071b27');
+    expect(decl('--hub-bg')).toBe('#030d1b');
     expect(decl('--hub-ink')).toBe('#f7fbff');
-    expect(decl('--hub-soft')).toBe('#bed0dc');
+    expect(decl('--hub-soft')).toBe('#b9cfe3');
     expect(decl('--hub-link')).toBe('#87dbff');
-    expect(decl('--hub-primary')).toBe('#d4f1ff');
-    expect(decl('--hub-on-primary')).toBe('#082638');
+    expect(decl('--hub-primary')).toBe('#a7eaff');
+    expect(decl('--hub-on-primary')).toBe('#051b2a');
     expect(decl('--hub-accent-fill')).toBe('#ffcf75');
     expect(decl('--hub-on-accent')).toBe('#102029');
     expect(decl('--hub-accent-ink')).toBe('#ffdc90');
-    expect(decl('--hub-focus')).toBe('#ffdc90');
+    expect(decl('--hub-focus')).toBe('#83e9ff');
     expect(css).toContain('color-mix(in srgb, #ffcf75 16%, var(--hub-surface))');
-    expect(css).toContain('color-mix(in srgb, #87dbff 12%, #071b27)');
+    expect(css).toContain('color-mix(in srgb, #87dbff 12%, #030d1b)');
     expect(css).not.toContain('--hub-bg: var(--sw-bg)');
   });
 
