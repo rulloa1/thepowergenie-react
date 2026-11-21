@@ -430,7 +430,7 @@ function HubApp({
   return (
     <div className="hub-desk flex min-h-[100dvh] flex-col font-[family:var(--sw-font-body)]">
       {isDemo && (
-        <div className="border-b border-hub-warn-line bg-hub-warn px-4 py-2 text-center text-sm text-hub-warn-ink">
+        <div className="border-b border-[#E8C56B] bg-[#FFF8E8] px-4 py-2 text-center text-sm text-[#5C4308]">
           <p className="m-0 flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
             <span>Sample desk. Nothing here is saved. Sign in to work the real customers.</span>
             <button type="button" onClick={onExitDemo} className={cn('min-h-11 cursor-pointer rounded-lg px-2 font-bold underline underline-offset-2', focus)}>
@@ -439,13 +439,13 @@ function HubApp({
           </p>
         </div>
       )}
-      <header className="sticky top-0 z-30 border-b border-hub-line bg-hub-topbar/95 backdrop-blur-md">
+      <header className="sticky top-0 z-30 border-b border-[color-mix(in_srgb,var(--sw-ink)_8%,transparent)] bg-[color-mix(in_srgb,var(--sw-bg)_82%,transparent)] shadow-[inset_0_-3px_0_var(--pg-orange)] backdrop-blur-md">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-2.5 sm:px-6">
           <div className="flex min-w-0 items-center gap-3">
             <a href="/" className={cn('rounded-xl', focus)} title="The Power Genie home">
               <BrandMark className="h-9 shadow-[0_4px_12px_rgba(7,27,39,0.18)]" />
             </a>
-            <span className="hidden text-base font-bold text-hub-ink sm:inline">Referral Hub</span>
+            <span className="hidden text-base font-bold text-[var(--sw-ink)] sm:inline">Referral Hub</span>
           </div>
           <div className="flex items-center gap-2.5">
             {!isDemo && (
@@ -458,19 +458,19 @@ function HubApp({
               </Button>
             )}
             <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-hub-info text-[0.78rem] font-bold text-hub-info-ink" aria-hidden="true">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#0B2233] text-[0.78rem] font-bold text-white" aria-hidden="true">
                 {(profile.full_name || profile.email).slice(0, 2).toUpperCase()}
               </div>
               <span className="hidden text-left text-[0.82rem] leading-tight sm:block">
-                <span className="block font-bold text-hub-ink">{profile.full_name || profile.email}</span>
-                <span className="text-[0.72rem] font-semibold text-hub-soft">{roleLabel(profile.role)}</span>
+                <span className="block font-bold text-[var(--sw-ink)]">{profile.full_name || profile.email}</span>
+                <span className="text-[0.72rem] font-semibold text-[var(--sw-ink-soft)]">{roleLabel(profile.role)}</span>
               </span>
             </div>
             {isDemo ? (
               <button
                 type="button"
                 onClick={onExitDemo}
-                className={cn('min-h-11 cursor-pointer rounded-full border border-hub-control bg-hub-surface px-3 text-[0.78rem] font-bold text-hub-ink hover:border-hub-link', focus)}
+                className={cn('min-h-11 cursor-pointer rounded-full border border-[color-mix(in_srgb,var(--sw-ink)_15%,transparent)] bg-white px-3 text-[0.78rem] font-bold text-[var(--sw-ink)] hover:border-[var(--sw-ink)]', focus)}
               >
                 Exit sample
               </button>
@@ -478,7 +478,7 @@ function HubApp({
               <button
                 type="button"
                 onClick={() => { void supabase!.auth.signOut(); }}
-                className={cn('flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border border-hub-control bg-hub-surface text-hub-soft hover:border-hub-link hover:text-hub-ink', focus)}
+                className={cn('flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border border-[color-mix(in_srgb,var(--sw-ink)_15%,transparent)] bg-white text-[var(--sw-ink-soft)] hover:border-[var(--sw-ink)] hover:text-[var(--sw-ink)]', focus)}
                 aria-label="Sign out"
                 title="Sign out of Referral Hub"
               >
@@ -500,8 +500,8 @@ function HubApp({
                   'inline-flex min-h-12 shrink-0 cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-full px-3 py-2 text-base font-bold transition sm:px-4',
                   focus,
                   active
-                    ? 'bg-hub-primary text-hub-on-primary'
-                    : 'text-hub-soft hover:bg-hub-muted hover:text-hub-ink',
+                    ? 'bg-[var(--sw-ink)] text-white'
+                    : 'text-[var(--sw-ink-soft)] hover:bg-white/80 hover:text-[var(--sw-ink)]',
                 )}
               >
                 <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
@@ -509,7 +509,7 @@ function HubApp({
                 {id === 'leads' && leads.unseen > 0 && (
                   <span className={cn(
                     'inline-flex min-w-5 items-center justify-center rounded-full px-1.5 text-[0.68rem] font-black',
-                    active ? 'bg-hub-on-primary text-hub-primary' : 'bg-hub-accent-fill text-hub-on-accent',
+                    active ? 'bg-white text-[var(--sw-ink)]' : 'bg-[var(--pg-orange)] text-white',
                   )}>
                     {leads.unseen > 99 ? '99+' : leads.unseen}
                     <span className="sr-only"> new leads</span>

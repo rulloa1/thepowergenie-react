@@ -45,21 +45,30 @@ html[data-pg-brand="brands"] {
   --pg-navy: #0B2233;
   --pg-logo: #071b27;
 
-  /* Shared Power Genie dashboard and conference surfaces. */
-  --hub-bg: #030d1b;
-  --hub-bg-end: color-mix(in srgb, #87dbff 12%, #030d1b);
-  --hub-surface: #07192b;
-  --hub-muted: #132b42;
+  /*
+    Referral Hub roles, taken from the static sunrun-powergenie journey
+    (experience.css on master). That sheet overrides the light tokens in
+    index.html and is the page people actually see: navy field, ice primary
+    buttons, gold eyebrows and focus, cyan links.
+    These stay off the React --sw-* tokens above. ScrollWorld still reads those.
+    The static site has no status palette, so success, warn, and error are
+    tuned for this navy field and kept apart from the gold accent.
+  */
+  --hub-bg: #071b27;
+  --hub-bg-end: color-mix(in srgb, #87dbff 12%, #071b27);
+  --hub-surface: #1b2d38;
+  --hub-muted: #2a3b45;
   --hub-ink: #f7fbff;
-  --hub-soft: #b9cfe3;
-  --hub-faint: #93aec4;
-  --hub-line: #286d8a;
-  --hub-line-strong: #4e819b;
-  --hub-control: #648da7;
-  --hub-topbar: #071526;
-  --hub-primary: #a7eaff;
-  --hub-primary-hover: #81dfff;
-  --hub-on-primary: #051b2a;
+  --hub-soft: #bed0dc;
+  --hub-faint: #8aa0b0;
+  --hub-line: #47565f;
+  --hub-line-strong: #6a767d;
+  /* Ghost borders on the static site are #ffffff55. That clears 3:1 on the navy surfaces. */
+  --hub-control: #8f989e;
+  --hub-topbar: #132632;
+  --hub-primary: #d4f1ff;
+  --hub-primary-hover: #b6e6fb;
+  --hub-on-primary: #082638;
   --hub-disabled: #3e5563;
   --hub-accent-ink: #ffdc90;
   --hub-accent-fill: #ffcf75;
@@ -68,16 +77,16 @@ html[data-pg-brand="brands"] {
   --hub-accent-soft: color-mix(in srgb, #ffcf75 16%, var(--hub-surface));
   --hub-accent-line: #ffcf75;
   --hub-link: #87dbff;
-  --hub-link-hover: #a7eaff;
-  --hub-focus: #83e9ff;
-  --hub-focus-soft: color-mix(in srgb, #83e9ff 32%, transparent);
+  --hub-link-hover: #d4f1ff;
+  --hub-focus: #ffdc90;
+  --hub-focus-soft: color-mix(in srgb, #ffdc90 32%, transparent);
   --hub-chart: #ffcf75;
   --hub-chart-top: #ffdc90;
   --hub-on-navy: #d5e3eb;
-  --hub-scrim: color-mix(in srgb, #030d1b 72%, transparent);
+  --hub-scrim: color-mix(in srgb, #071b27 72%, transparent);
   --hub-info-bg: color-mix(in srgb, #87dbff 16%, var(--hub-surface));
   --hub-info-line: #87dbff;
-  --hub-info-ink: #a7eaff;
+  --hub-info-ink: #d4f1ff;
   --hub-warn-bg: color-mix(in srgb, #fbbf24 18%, var(--hub-surface));
   --hub-warn-line: #fbbf24;
   --hub-warn-ink: #fde68a;
@@ -152,10 +161,36 @@ html[data-pg-brand="brands"] {
   color: var(--hub-ink);
 }
 
+/* Signed-in desk. The page behind the cards uses the public site sky, sun still, and solar glow. Cards stay on the hub surfaces so the text contrast does not change. */
 .hub-desk {
-  background: radial-gradient(ellipse at 35% 0%, #0d2d48, var(--hub-bg) 68%) fixed;
+  position: relative;
+  isolation: isolate;
+  background-color: var(--sw-bg);
+  /* Dark cards inherit this. Light chrome sets its own ink. */
   color: var(--hub-ink);
-  color-scheme: dark;
+}
+.hub-desk::before,
+.hub-desk::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+.hub-desk::before {
+  background:
+    linear-gradient(180deg, transparent 0%, color-mix(in srgb, var(--sw-bg) 35%, transparent) 22%, color-mix(in srgb, var(--sw-bg) 88%, transparent) 58%, var(--sw-bg) 100%),
+    radial-gradient(ellipse at 72% 0%, rgba(255, 180, 50, 0.45) 0%, rgba(255, 107, 0, 0.12) 36%, transparent 68%),
+    radial-gradient(60% 42% at 78% 8%, color-mix(in srgb, var(--sw-accent) 16%, transparent), transparent 70%),
+    url("/assets-v2/stills/01-sun.webp") center 18% / cover no-repeat;
+}
+.hub-desk::after {
+  background:
+    linear-gradient(180deg, transparent 0%, transparent 55%, color-mix(in srgb, var(--pg-navy) 8%, transparent) 100%);
+}
+.hub-desk > main > section,
+.hub-desk > main > div {
+  box-shadow: 0 18px 48px rgba(11, 34, 51, 0.14);
 }
 
 /* The public booking page keeps its own light chrome. Shared buttons, fields,
