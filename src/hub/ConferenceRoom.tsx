@@ -1,13 +1,15 @@
 import React, { lazy, Suspense, useEffect, useState } from 'react';
-import { LiveKitRoom, VideoConference } from '@livekit/components-react';
+import { LiveKitRoom, VideoConference, useConnectionState, useRemoteParticipants } from '@livekit/components-react';
 import '@livekit/components-styles';
 import '@livekit/components-styles/prefabs';
-import { Copy, Phone, Video, X } from 'lucide-react';
+import { ConnectionState } from 'livekit-client';
+import { Copy, FileText, Phone, Video, X } from 'lucide-react';
 import { lockPageScroll } from '../lib/scrollLock';
 import type { Profile } from './Dashboard';
 import { conferenceApi, ConferenceError, type JoinInfo, type WaitingGuest } from './conferenceApi';
 import { classifyConferenceProblem, conferenceProblemCopy, type ConferenceProblem } from './conferenceSetup';
 import { BrandMark, Button, Notice, Spinner } from './ui';
+import './ConferenceRoom.css';
 
 const ChatTab = lazy(() => import('./ChatTab'));
 
@@ -45,28 +47,33 @@ export function ConferenceCall({
   };
 
   return (
-    <div className="hub-canvas fixed inset-0 z-[85] flex flex-col font-[family:var(--sw-font-body)] text-hub-ink">
-      <header className="flex flex-wrap items-center justify-between gap-2 border-b border-hub-line bg-hub-topbar px-3 py-2 shadow-[inset_0_-3px_0_#FF6B00]">
+    <div className="pg-conference hub-canvas fixed inset-0 z-[85] flex flex-col font-[family:var(--sw-font-body)] text-hub-ink">
+      <header className="pg-conference-header flex flex-wrap items-center justify-between gap-2 px-3 py-2 sm:px-5">
         <div className="flex min-w-0 items-center gap-3">
-          <BrandMark className="h-8" />
+          <BrandMark className="h-8 shrink-0" />
           <div className="min-w-0">
-            <p className="m-0 text-[0.72rem] font-bold uppercase tracking-[0.16em] text-hub-accent-ink">Conference room</p>
+            <p className="m-0 text-[0.7rem] font-bold uppercase tracking-[0.14em] text-hub-accent-ink">Conference room</p>
             <h2 className="m-0 truncate text-base font-bold">{join.customerName}</h2>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {isHost && (
             <Button type="button" variant="ghost" className="min-h-11 px-3 text-[0.84rem]" onClick={() => void copy()}>
-              <Copy className="h-4 w-4" /> {copied ? 'Link copied' : 'Copy client link'}
+              <Copy className="h-4 w-4" aria-hidden="true" /> <span aria-live="polite">{copied ? 'Link copied' : 'Copy client link'}</span>
             </Button>
           )}
           <Button type="button" variant="danger" className="min-h-11 px-3" onClick={onLeave}>
-            <Phone className="h-4 w-4" /> Leave
+            <Phone className="h-4 w-4" aria-hidden="true" /> Leave
           </Button>
         </div>
       </header>
-      <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
-        <div className={`pg-call relative min-h-0 flex-1 ${side !== 'call' ? 'hidden lg:block' : ''}`} data-lk-theme="default">
+      <nav className="pg-conference-nav mx-2 mt-2 flex lg:hidden" aria-label="Conference views">
+        <SideTab current={side} id="call" onSelect={setSide}>Call</SideTab>
+        <SideTab current={side} id="proposal" onSelect={setSide}>Proposal</SideTab>
+        {isHost && <SideTab current={side} id="chat" onSelect={setSide}>Team chat</SideTab>}
+      </nav>
+      <div className="pg-conference-layout min-h-0 flex-1">
+        <section aria-label="Video call" className={`pg-call relative min-h-0 min-w-0 ${side !== 'call' ? 'hidden lg:block' : ''}`} data-lk-theme="default">
           <LiveKitRoom
             serverUrl={join.serverUrl}
             token={join.token}
@@ -75,43 +82,64 @@ export function ConferenceCall({
             video={startWithCamera}
             onError={(error) => setConnectionNote(plainConnectionNote(error.message))}
             onDisconnected={() => setConnectionNote('The video connection closed. Use Leave when you are finished.')}
-            style={{ height: '100%' }}
+            className="flex h-full flex-col"
           >
             {connectionNote && (
               <p className="m-0 bg-hub-warn px-3 py-2 text-[0.86rem] text-hub-warn-ink" role="status">{connectionNote}</p>
             )}
-            <VideoConference />
+            {!isHost && <WaitingForHost />}
+            <div className="min-h-0 flex-1">
+              <VideoConference />
+            </div>
           </LiveKitRoom>
-        </div>
-        <aside className={`flex w-full flex-col border-hub-line lg:w-[340px] lg:border-l ${side === 'call' ? 'hidden lg:flex' : 'flex min-h-0 flex-1'}`}>
-          <div className="hidden gap-1 border-b border-hub-line p-2 lg:flex" role="tablist" aria-label="Room sections">
+        </section>
+        <aside aria-label="Conference tools" data-view={side} className="pg-conference-tools flex min-h-0 min-w-0 flex-col">
+          {isHost && customerId && <div className="pg-conference-queue max-h-[28dvh] shrink-0 overflow-y-auto empty:hidden"><WaitingList customerId={customerId} /></div>}
+          <nav className="pg-conference-nav mx-2 mt-2 hidden lg:flex" aria-label="Conference tools">
             <SideTab current={side === 'chat' ? 'chat' : 'proposal'} id="proposal" onSelect={setSide}>Proposal</SideTab>
             {isHost && <SideTab current={side} id="chat" onSelect={setSide}>Team chat</SideTab>}
-          </div>
-          <div className="flex gap-1 border-b border-hub-line p-2 lg:hidden" role="tablist" aria-label="Room sections">
-            <SideTab current={side} id="call" onSelect={setSide}>Call</SideTab>
-            <SideTab current={side} id="proposal" onSelect={setSide}>Proposal</SideTab>
-            {isHost && <SideTab current={side} id="chat" onSelect={setSide}>Team chat</SideTab>}
-          </div>
-          <div className={`min-h-0 flex-1 flex-col ${side === 'chat' ? 'hidden' : side === 'proposal' || side === 'call' ? 'flex' : 'hidden'} ${side === 'call' ? 'max-lg:hidden' : ''}`}>
-            {isHost && customerId && <WaitingList customerId={customerId} />}
+          </nav>
+          <div className={`min-h-0 flex-1 flex-col overflow-y-auto ${side === 'chat' ? 'hidden' : 'flex'} ${side === 'call' ? 'max-lg:hidden' : ''}`}>
             {join.proposalUrl ? (
-              <iframe title={`Proposal for ${join.customerName}`} src={join.proposalUrl} className="min-h-[240px] w-full flex-1 border-0 bg-white" />
+              <iframe title={`Proposal for ${join.customerName}`} src={join.proposalUrl} className="m-2 min-h-[240px] w-[calc(100%_-_1rem)] flex-1 rounded-xl border-0 bg-white" />
             ) : (
-              <p className="m-0 p-4 text-[0.9rem] leading-relaxed text-hub-soft">
-                No proposal link yet. Horace can share his screen and walk through the contract. Signing still happens in Sunrun’s own packet.
-              </p>
+              <div className="m-3 rounded-xl border border-hub-line bg-hub-surface p-4">
+                <FileText className="mb-3 h-5 w-5 text-hub-link" aria-hidden="true" />
+                <h3 className="m-0 text-sm font-bold">No proposal linked yet</h3>
+                <p className="mb-0 mt-2 text-sm leading-relaxed text-hub-soft">Your host can share their screen to review the proposal. Signing happens in Sunrun’s packet.</p>
+              </div>
             )}
           </div>
           {isHost && (
-            <div className={`min-h-[40dvh] min-h-0 flex-1 flex-col lg:min-h-0 ${side === 'chat' ? 'flex' : 'hidden'}`}>
-              <p className="m-0 border-b border-hub-line px-3 py-2 text-[0.78rem] text-hub-soft">Team chat stays between Rory and Horace. The client does not see it. Everyone on the call can use the chat button in the call bar.</p>
+            <div className={`min-h-0 flex-1 flex-col overflow-y-auto ${side === 'chat' ? 'flex' : 'hidden'}`}>
+              <p className="m-0 border-b border-hub-line px-3 py-2 text-[0.78rem] text-hub-soft">Team chat is visible to staff only. Use the call toolbar to chat with everyone.</p>
               <Suspense fallback={<div className="p-6 text-center"><Spinner /></div>}>
                 <HostChat />
               </Suspense>
             </div>
           )}
         </aside>
+      </div>
+    </div>
+  );
+}
+
+function WaitingForHost() {
+  const connectionState = useConnectionState();
+  const participants = useRemoteParticipants();
+  if (connectionState !== ConnectionState.Connected || participants.some(({ identity }) => identity.startsWith('host-'))) {
+    return null;
+  }
+
+  return (
+    <div className="pg-conference-wait" role="status">
+      <div className="flex items-center gap-3">
+        <img src="/assets/conference/sunrun-wordmark.webp" alt="Sunrun" className="h-5 w-auto object-contain" />
+        <BrandMark className="h-7" />
+      </div>
+      <div>
+        <p className="m-0 text-sm font-bold">Waiting for host</p>
+        <p className="m-0 text-xs text-hub-soft">Keep this window open. Your host will appear when they connect.</p>
       </div>
     </div>
   );
@@ -126,7 +154,7 @@ function plainConnectionNote(message: string): string {
 function SideTab({ current, id, onSelect, children }: { current: string; id: 'call' | 'proposal' | 'chat'; onSelect: (id: 'call' | 'proposal' | 'chat') => void; children: React.ReactNode }) {
   const on = current === id;
   return (
-    <button type="button" role="tab" aria-selected={on} onClick={() => onSelect(id)} className={`min-h-11 flex-1 rounded-xl px-2 text-[0.84rem] font-bold ${on ? 'bg-hub-primary text-hub-on-primary' : 'text-hub-soft'}`}>
+    <button type="button" aria-pressed={on} onClick={() => onSelect(id)} className="min-h-11 flex-1 rounded-lg px-2 text-[0.84rem] font-bold">
       {children}
     </button>
   );

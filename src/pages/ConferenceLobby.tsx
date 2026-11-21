@@ -38,7 +38,7 @@ export default function ConferenceLobby({ children, statusError, leaving, onLeav
         <div className="pg-lobby-brands">
           <img src="/assets/conference/sunrun-wordmark.webp" alt="Sunrun" />
           <span />
-          <img src="/assets/brand/power-genie-lockup.webp" alt="Power Genie" />
+          <img src="/assets/brand/power-genie-lockup.webp" alt="The Power Genie" />
         </div>
         <p>Conference room</p>
         <button className="pg-lobby-leave" type="button" disabled={leaving} onClick={onLeave}><Phone size={16} /> {leaving ? 'Leaving…' : 'Leave'}</button>
@@ -46,11 +46,11 @@ export default function ConferenceLobby({ children, statusError, leaving, onLeav
       <div className="pg-lobby-layout">
         <section className="pg-lobby-stage" aria-label="Conference waiting room artwork">
           <img src={media + '/command-center.webp'} alt="" />
-          <span className="pg-lobby-badge"><i /> Waiting for host</span>
+          <span className="pg-lobby-badge"><i aria-hidden="true" /> Guest lobby</span>
           <div className="pg-lobby-name"><strong>Emilia Cruz</strong><span>Virtual assistant</span></div>
         </section>
         <aside className="pg-lobby-panel">
-          <h1>Your host will join shortly</h1>
+          <h1>Waiting for host</h1>
           <p role="status">{statusError ?? 'Keep this page open. You’ll join automatically when your host lets you in.'}</p>
           <h2>While you wait</h2>
           {clip ? (
