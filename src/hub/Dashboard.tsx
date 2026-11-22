@@ -260,15 +260,17 @@ function AuthCard({ title, children }: { title: string; children: React.ReactNod
 }
 
 function SignIn({ onExploreDemo }: { onExploreDemo?: () => void }) {
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [resetSent, setResetSent] = useState(false);
   const [linkSent, setLinkSent] = useState(false);
 
+  const email = dashboardLoginEmail(identifier);
+
   const emailLink = async () => {
-    if (!email.trim()) return setError('Enter your email first, then tap “Email me a sign-in link”.');
+    if (!email) return setError('Enter your username or email first, then tap “Email me a sign-in link”.');
     setError(null);
     setResetSent(false);
     setBusy(true);
@@ -285,7 +287,7 @@ function SignIn({ onExploreDemo }: { onExploreDemo?: () => void }) {
       }
     }
     const { error } = await supabase!.auth.signInWithOtp({
-      email: dashboardLoginEmail(email),
+      email,
       options: { shouldCreateUser: false, emailRedirectTo: `${window.location.origin}/dashboard` },
     });
     setBusy(false);
@@ -298,17 +300,17 @@ function SignIn({ onExploreDemo }: { onExploreDemo?: () => void }) {
     e.preventDefault();
     setBusy(true);
     setError(null);
-    const { error } = await supabase!.auth.signInWithPassword({ email: dashboardLoginEmail(email), password });
+    const { error } = await supabase!.auth.signInWithPassword({ email, password });
     setBusy(false);
-    if (error) setError(error.message === 'Invalid login credentials' ? 'That email and password don’t match.' : error.message);
+    if (error) setError(error.message === 'Invalid login credentials' ? 'Check your username or email and password.' : error.message);
   };
 
   const reset = async () => {
-    if (!email.trim()) return setError('Enter your email first, then tap “Forgot password”.');
+    if (!email) return setError('Enter your username or email first, then tap “Forgot password”.');
     setError(null);
     setLinkSent(false);
     setBusy(true);
-    const { error } = await supabase!.auth.resetPasswordForEmail(dashboardLoginEmail(email), { redirectTo: `${window.location.origin}/dashboard` });
+    const { error } = await supabase!.auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/dashboard` });
     setBusy(false);
     if (error) return setError(error.message);
     setResetSent(true);
@@ -319,7 +321,7 @@ function SignIn({ onExploreDemo }: { onExploreDemo?: () => void }) {
       <form onSubmit={signIn} className="grid gap-4">
         <div>
           <label htmlFor="s-email" className={authLabelClass}>Username or email</label>
-          <input id="s-email" type="text" autoComplete="username" autoCapitalize="none" spellCheck={false} required value={email} onChange={(e) => setEmail(e.target.value)} className={authInputClass} />
+          <input id="s-email" type="text" autoComplete="username" autoCapitalize="none" spellCheck={false} required value={identifier} onChange={(e) => setIdentifier(e.target.value)} className={authInputClass} />
         </div>
         <div>
           <div className="mb-1.5 flex items-baseline justify-between gap-3">

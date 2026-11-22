@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Video, VideoOff } from 'lucide-react';
+import ConferenceLobby from './ConferenceLobby';
 import { ConferenceCall } from '../hub/ConferenceRoom';
 import { conferenceApi, ConferenceError, type JoinInfo } from '../hub/conferenceApi';
 import { BrandMark, Button, Notice, Spinner, inputClass, labelClass } from '../hub/ui';
@@ -8,6 +9,7 @@ export default function ConferenceJoinPage({ token }: { token: string | null }) 
   const [customerName, setCustomerName] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [camera, setCamera] = useState<boolean | null>(null);
+  const [leaving, setLeaving] = useState(false);
   const [guestId, setGuestId] = useState<string | null>(null);
   const [join, setJoin] = useState<JoinInfo | null>(null);
   const [statusError, setStatusError] = useState<string | null>(null);
@@ -40,7 +42,7 @@ export default function ConferenceJoinPage({ token }: { token: string | null }) 
   }, [token]);
 
   useEffect(() => {
-    if (!token || !guestId || join || denied) return;
+    if (!token || !guestId || join || denied || leaving) return;
     let alive = true;
     let timer: number | undefined;
     const tick = async () => {
@@ -65,7 +67,7 @@ export default function ConferenceJoinPage({ token }: { token: string | null }) 
     };
     void tick();
     return () => { alive = false; window.clearTimeout(timer); };
-  }, [token, guestId, join, denied]);
+  }, [token, guestId, join, denied, leaving]);
 
   const knock = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -96,29 +98,26 @@ export default function ConferenceJoinPage({ token }: { token: string | null }) 
 
   if (guestId && !denied && token) {
     return (
-      <main className="pg-conference pg-lobby font-[family:var(--sw-font-body)]">
-        <div className="pg-lobby-top"><BrandMark /><span className="pg-sunrun">sunrun</span><span className="pg-lobby-badge">Waiting for your host</span></div>
-        <div className="pg-lobby-grid">
-        <section className="pg-lobby-media"><WaitingRoomVideo /></section>
-        <div className="pg-lobby-card">
-          <p className="pg-desk-eyebrow">YOUR SOLAR CONSULTATION</p>
-          <h1 className="m-0 mb-3 text-2xl font-bold">You’re in the waiting room</h1>
-          <div className="mb-4 flex items-center gap-3" role="status">
-            <Spinner />
-            <p className="m-0 text-sm">{statusError ?? 'Keep this page open. You’ll join automatically when Horace or Rory lets you in.'}</p>
-          </div>
-          {error && <div className="mb-4"><Notice tone="error">{error}</Notice></div>}
-          <CameraChoice
-            camera={camera}
-            onChange={(next) => {
-              setCamera(next);
-              void conferenceApi.setCamera(token, guestId, next).catch((reason: Error) => setError(reason.message));
-            }}
-          />
-          <p className="pg-lobby-footnote">Your camera preview stays on this device until the host admits you. Signing takes place in Sunrun’s own packet.</p>
-        </div>
-        </div>
-      </main>
+      <ConferenceLobby statusError={statusError} leaving={leaving} onLeave={() => {
+        setLeaving(true);
+        void conferenceApi.withdraw(token, guestId).then(() => {
+          setGuestId(null);
+          setError(null);
+          setStatusError(null);
+        }).catch(() => {
+          setStatusError('Could not leave the queue. Please try again.');
+        }).finally(() => setLeaving(false));
+      }}>
+        {error && <div className="mb-4"><Notice tone="error">{error}</Notice></div>}
+        <CameraChoice
+          camera={camera}
+          onChange={(next) => {
+            setCamera(next);
+            setError(null);
+            void conferenceApi.setCamera(token, guestId, next).catch((reason: Error) => setError(reason.message));
+          }}
+        />
+      </ConferenceLobby>
     );
   }
 

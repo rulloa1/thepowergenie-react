@@ -166,6 +166,7 @@ html[data-pg-brand="brands"] {
   position: relative;
   isolation: isolate;
   background-color: var(--sw-bg);
+  /* Dark cards inherit this. Light chrome sets its own ink. */
   color: var(--hub-ink);
 }
 .hub-desk::before,

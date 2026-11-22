@@ -1,0 +1,121 @@
+.pg-conference-header {
+  border-bottom: 1px solid #33566b;
+  background: linear-gradient(110deg, #132f40, #091b29 60%);
+}
+
+.pg-conference-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.5rem;
+}
+
+.pg-conference .pg-call,
+.pg-conference-tools {
+  border: 1px solid #33566b;
+  border-radius: 0.875rem;
+  background: #0b202f;
+}
+
+.pg-conference .pg-call {
+  flex: 1;
+  --lk-control-active-bg: #d4f1ff;
+  --lk-control-active-hover-bg: #b6e6fb;
+}
+
+.pg-conference-nav {
+  gap: 0.25rem;
+  padding: 0.25rem;
+  border: 1px solid #33566b;
+  border-radius: 0.75rem;
+  background: #081a26;
+}
+
+.pg-conference-nav button {
+  cursor: pointer;
+  color: var(--hub-soft);
+}
+
+.pg-conference-nav button:hover {
+  background: #193546;
+  color: var(--hub-ink);
+}
+
+.pg-conference-nav button[aria-pressed='true'] {
+  background: var(--hub-primary);
+  color: var(--hub-on-primary);
+}
+
+.pg-conference-nav button:focus-visible,
+.pg-conference .lk-control-bar button:focus-visible {
+  outline: 2px solid var(--hub-focus);
+  outline-offset: 2px;
+}
+
+.pg-conference .lk-control-bar {
+  border-radius: 0 0 0.875rem 0.875rem;
+  background: #081a26;
+}
+
+.pg-conference .lk-button[data-lk-enabled='true'],
+.pg-conference .lk-button[aria-pressed='true'] {
+  color: var(--hub-on-primary);
+}
+
+.pg-conference .lk-participant-placeholder {
+  background:
+    radial-gradient(ellipse at 50% 43%, #1f4b63 0%, transparent 60%),
+    #0d2636;
+}
+
+.pg-conference .lk-participant-placeholder svg {
+  width: clamp(3rem, 16%, 7rem);
+  height: auto;
+  padding: 0;
+  color: #b6daeb;
+}
+
+.pg-conference .lk-participant-metadata-item {
+  padding: 0.4rem 0.55rem;
+  background: #081a26ed;
+}
+
+.pg-conference-wait {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 1rem;
+  padding: 0.55rem 0.75rem;
+  border-bottom: 1px solid #33566b;
+  background: #102c40;
+}
+
+@media (width < 64rem) {
+  .pg-conference-tools:not([data-view='call']) {
+    flex: 1;
+  }
+
+  .pg-conference-tools[data-view='call']:not(:has(.pg-conference-queue:not(:empty))) {
+    display: none;
+  }
+}
+
+@media (width <= 760px) {
+  .pg-conference .lk-control-bar {
+    gap: 0.3rem;
+    padding-inline: 0.3rem;
+  }
+
+  .pg-conference .lk-control-bar .lk-button {
+    padding-inline: 0.55rem;
+  }
+}
+
+@media (width >= 64rem) {
+  .pg-conference-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) clamp(20rem, 30vw, 31rem);
+    gap: 0.75rem;
+    padding: 0.75rem;
+  }
+}
