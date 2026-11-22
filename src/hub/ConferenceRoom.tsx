@@ -154,13 +154,6 @@ export function ConferenceCall({
           )}
         </aside>
       </div>
-              <Suspense fallback={<div className="p-6 text-center"><Spinner /></div>}>
-                <HostChat />
-              </Suspense>
-            </div>
-          )}
-        </aside>
-      </div>
     </div>
   );
 }
