@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto'
+import { handleVideoStudio } from './video-studio.js'
 import type { UIMessage } from 'ai'
 import { EMPTY_BILL, type BillFields } from '../shared/types.js'
 import { streamAssistant, streamTextResponse } from './chat.js'
@@ -17,6 +18,7 @@ import { notifyPageVisit } from './notify.js'
 import { inviteDashboardMember } from './admin-invite.js'
 import { handleProposalPage, handleWorkflow } from './workflow/routes.js'
 import { handleConference } from './conference.js'
+import { handleHubAccess } from './hub-access.js'
 import { handleTeslaLive, handleTeslaHistory } from './tesla.js'
 import { handleSequenceStatus, handleSequenceStart, handleSequencePause, handleSequenceResume, handleUnsubscribe } from './sequence.js'
 
@@ -226,9 +228,10 @@ export async function handleInvite(request: Request): Promise<Response> {
   return json(result)
 }
 
-const ASSISTANT_ROUTES = new Set(['chat', 'uploads', 'bill', 'lead', 'slots', 'extract', 'hub-bill', 'visit', 'invite', 'workflow', 'proposal', 'conference'])
 
 /** One function serves every assistant route. The widget calls /api/assistant?route=. */
+const ASSISTANT_ROUTES = new Set(['chat', 'uploads', 'bill', 'lead', 'slots', 'extract', 'hub-bill', 'visit', 'invite', 'workflow', 'proposal', 'conference', 'hub-access', 'video-studio'])
+
 function assistantRoute(url: URL): string {
   if (url.pathname === '/api/assistant') {
     const route = url.searchParams.get('route') || ''
@@ -263,6 +266,11 @@ export async function handleApi(request: Request): Promise<Response> {
   const url = requestUrl(request)
   try {
     const pathname = assistantRoute(url)
+    if (pathname === '/api/hub-access' && request.method === 'POST') {
+      guard(request, 'hub-access', 10, TEN_MINUTES)
+      return await handleHubAccess(request)
+    }
+    if (pathname === '/api/video-studio') return await handleVideoStudio(request)
     if (pathname === '/api/chat' && request.method === 'POST') return await handleChat(request)
     if (pathname === '/api/uploads' && request.method === 'POST') return await handleUploads(request)
     if (pathname === '/api/bill' && request.method === 'POST') return await handleBill(request)

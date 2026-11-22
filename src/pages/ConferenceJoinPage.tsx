@@ -10,6 +10,7 @@ export default function ConferenceJoinPage({ token }: { token: string | null }) 
   const [camera, setCamera] = useState<boolean | null>(null);
   const [guestId, setGuestId] = useState<string | null>(null);
   const [join, setJoin] = useState<JoinInfo | null>(null);
+  const [statusError, setStatusError] = useState<string | null>(null);
   const [denied, setDenied] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(Boolean(token));
@@ -41,21 +42,29 @@ export default function ConferenceJoinPage({ token }: { token: string | null }) 
   useEffect(() => {
     if (!token || !guestId || join || denied) return;
     let alive = true;
-    const tick = () => {
-      conferenceApi.guest(token, guestId).then((result) => {
+    let timer: number | undefined;
+    const tick = async () => {
+      try {
+        const result = await conferenceApi.guest(token, guestId);
         if (!alive) return;
+        setStatusError(null);
         if (result.status === 'admitted') {
           if (typeof result.startWithCamera === 'boolean') setCamera(result.startWithCamera);
           setJoin(result);
+          return;
         }
-        if (result.status === 'denied') setDenied(true);
-      }).catch((reason: Error) => {
-        if (alive) setError(reason.message);
-      });
+        if (result.status === 'denied') {
+          setDenied(true);
+          return;
+        }
+      } catch {
+        if (!alive) return;
+        setStatusError('Trying to reconnect. Keep this page open.');
+      }
+      timer = window.setTimeout(() => void tick(), 2500);
     };
-    tick();
-    const timer = window.setInterval(tick, 2500);
-    return () => { alive = false; window.clearInterval(timer); };
+    void tick();
+    return () => { alive = false; window.clearTimeout(timer); };
   }, [token, guestId, join, denied]);
 
   const knock = async (event: React.FormEvent) => {
@@ -85,21 +94,49 @@ export default function ConferenceJoinPage({ token }: { token: string | null }) 
     );
   }
 
+  if (guestId && !denied && token) {
+    return (
+      <main className="pg-conference pg-lobby font-[family:var(--sw-font-body)]">
+        <div className="pg-lobby-top"><BrandMark /><span className="pg-sunrun">sunrun</span><span className="pg-lobby-badge">Waiting for your host</span></div>
+        <div className="pg-lobby-grid">
+        <section className="pg-lobby-media"><WaitingRoomVideo /></section>
+        <div className="pg-lobby-card">
+          <p className="pg-desk-eyebrow">YOUR SOLAR CONSULTATION</p>
+          <h1 className="m-0 mb-3 text-2xl font-bold">You’re in the waiting room</h1>
+          <div className="mb-4 flex items-center gap-3" role="status">
+            <Spinner />
+            <p className="m-0 text-sm">{statusError ?? 'Keep this page open. You’ll join automatically when Horace or Rory lets you in.'}</p>
+          </div>
+          {error && <div className="mb-4"><Notice tone="error">{error}</Notice></div>}
+          <CameraChoice
+            camera={camera}
+            onChange={(next) => {
+              setCamera(next);
+              void conferenceApi.setCamera(token, guestId, next).catch((reason: Error) => setError(reason.message));
+            }}
+          />
+          <p className="pg-lobby-footnote">Your camera preview stays on this device until the host admits you. Signing takes place in Sunrun’s own packet.</p>
+        </div>
+        </div>
+      </main>
+    );
+  }
+
   return (
-    <div className="flex min-h-[100dvh] flex-col bg-[#F4F6FA] font-[family:var(--sw-font-body)] lg:flex-row">
-      <aside className="relative isolate flex shrink-0 flex-col overflow-hidden bg-[#0B2233] px-6 py-5 text-white shadow-[inset_0_-3px_0_#FF6B00] sm:px-10 lg:w-[46%] lg:px-14 lg:py-12 lg:shadow-[inset_-3px_0_0_#FF6B00]">
-        <img src="/assets/stills/06-cta.webp" alt="" aria-hidden="true" className="absolute inset-0 -z-10 hidden h-full w-full object-cover opacity-40 lg:block" />
+    <div className="pg-conference pg-lobby-entry flex min-h-[100dvh] flex-col font-[family:var(--sw-font-body)] lg:flex-row">
+      <aside className="pg-lobby-intro relative isolate flex shrink-0 flex-col overflow-hidden px-6 py-5 text-white sm:px-10 lg:w-[46%] lg:px-14 lg:py-12">
+        <img src="/assets-v2/stills/06-cta.webp" alt="" aria-hidden="true" className="absolute inset-0 -z-10 hidden h-full w-full object-cover opacity-40 lg:block" />
         <div aria-hidden="true" className="absolute inset-0 -z-10 hidden bg-gradient-to-t from-[#0B2233] via-[#0B2233]/80 to-[#0B2233]/55 lg:block" />
         <a href="/" className="flex items-center gap-3 rounded-xl text-white no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9A3412] focus-visible:ring-offset-2" title="The Power Genie home">
           <img src="/assets/brand/power-genie-icon.png" alt="" className="h-10 w-10 rounded-xl bg-white/10 object-cover lg:h-12 lg:w-12" />
           <span className="leading-tight">
             <span className="block text-base font-bold lg:text-lg">The Power Genie</span>
-            <span className="block text-[0.7rem] font-bold uppercase tracking-[0.16em] text-[#FF8A2B]">Conference room</span>
+            <span className="block text-[0.7rem] font-bold uppercase tracking-[0.16em] text-[#67cfff]">Sunrun · Conference room</span>
           </span>
         </a>
         <div className="mt-5 max-w-md lg:mt-auto lg:max-w-lg lg:pt-16">
           <h2 className="m-0 hidden text-[clamp(2.25rem,3.6vw,3.4rem)] font-bold leading-[1.05] tracking-tight text-balance lg:block">
-            The same call. <span className="text-[#FF8A2B]">Your camera, your choice.</span>
+            A brighter home starts <span className="text-[#67cfff]">with a conversation.</span>
           </h2>
           <p className="m-0 max-w-md text-[0.98rem] leading-relaxed text-[#D9E6F2] lg:mt-5 lg:text-[1.02rem]">
             Horace or Rory will let you in. You do not need an account.
@@ -107,11 +144,10 @@ export default function ConferenceJoinPage({ token }: { token: string | null }) 
         </div>
         <p className="mt-auto hidden pt-12 text-[0.8rem] text-[#8EAEC7] lg:block">The Power Genie by Sunrun · Houston</p>
       </aside>
-      <main className="book-page flex flex-1 items-start justify-center px-5 py-10 sm:items-center sm:px-8 lg:py-12">
-      <div className="w-full max-w-[440px]">
-        <BrandMark className="mb-8 hidden h-auto w-60 rounded-2xl bg-[#0B2233] px-5 py-3 shadow-[inset_0_-3px_0_#FF6B00,0_10px_30px_rgba(11,34,51,0.18)] lg:block" />
-        <p className="m-0 text-[0.72rem] font-bold uppercase tracking-[0.16em] text-[#FF6B00]">The Power Genie</p>
-        <h1 className="m-0 mt-2 text-[2rem] font-bold leading-tight tracking-tight text-[#1A1A2E]">Join the call</h1>
+      <main className="flex flex-1 items-start justify-center px-5 py-8 sm:items-center sm:px-8 lg:py-12">
+      <div className="pg-lobby-card w-full max-w-[480px]">
+        <p className="pg-desk-eyebrow">WELCOME TO THE POWER GENIE</p>
+        <h1 className="m-0 mt-2 text-[2rem] font-bold leading-tight tracking-tight">Join your solar consultation</h1>
         {loading && <div className="mt-6"><Spinner /></div>}
         {!token && <div className="mt-4"><Notice tone="error">This invite link is incomplete. Ask Horace or Rory for a new one.</Notice></div>}
         {error && <div className="mt-4"><Notice tone="error">{error}</Notice></div>}
@@ -131,26 +167,72 @@ export default function ConferenceJoinPage({ token }: { token: string | null }) 
             </Button>
           </form>
         )}
-        {guestId && !denied && token && (
-          <div className="mt-5 grid gap-4">
-            <Notice tone="info" title="Waiting for the host">
-              Keep this page open. You will join when Horace or Rory lets you in.
-              {camera ? ' Your camera will be on, and you can turn it off during the call.' : ' Your camera will stay off until you turn it on.'}
-            </Notice>
-            <CameraChoice
-              camera={camera}
-              onChange={(next) => {
-                setCamera(next);
-                void conferenceApi.setCamera(token, guestId, next).catch((reason: Error) => setError(reason.message));
-              }}
-            />
-            <div className="flex justify-center"><Spinner /></div>
-          </div>
-        )}
         {denied && <div className="mt-5"><Notice tone="warn">The host did not let you in this time. Ask them for a new link if the call is still on.</Notice></div>}
       </div>
       </main>
     </div>
+  );
+}
+
+const waitingRoomPoster = '/assets/conference/sunrun-waiting-room.webp';
+
+function WaitingRoomVideo() {
+  const [reduceMotion, setReduceMotion] = useState(true);
+  const [clip, setClip] = useState('home');
+  const clips = [
+    { id: 'home', title: 'Your home, powered by the sun', src: '/assets-v2/vid/mobile/06-cta-loop.mp4', poster: '/assets-v2/stills/06-cta.webp' },
+    { id: 'community', title: 'A brighter neighborhood', src: '/assets-v2/vid/mobile/05-community-loop.mp4', poster: '/assets-v2/stills/05-community.webp' },
+    { id: 'welcome', title: 'Welcome · Sunrun and Power Genie', src: '/assets/conference/sunrun-waiting-room.mp4', poster: waitingRoomPoster },
+    { id: 'battery', title: 'Explore battery storage', src: '/assets-v2/vid/mobile/03-battery-loop.mp4', poster: '/assets-v2/stills/03-battery.webp' },
+  ];
+  const selectedClip = clips.find((item) => item.id === clip)!;
+  useEffect(() => {
+    const preference = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const sync = () => setReduceMotion(preference.matches);
+    sync();
+    preference.addEventListener('change', sync);
+    return () => preference.removeEventListener('change', sync);
+  }, []);
+
+  const className = 'h-auto max-h-[60dvh] w-full max-w-5xl object-contain';
+
+  return (
+    <>
+      <div className="pg-lobby-media-heading"><p className="pg-desk-eyebrow">WHILE YOU WAIT</p><h2>Meet your home’s next chapter.</h2><p>Explore solar and storage before your advisor joins.</p></div>
+      <label className="pg-lobby-clip-label">Watch a short introduction<select aria-label="Waiting room clip" value={clip} onChange={(event) => setClip(event.target.value)}>{clips.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}</select></label>
+      {reduceMotion ? (
+        <img
+          src={selectedClip.poster}
+          alt="Sunrun · Power Genie Conference"
+          width={1599}
+          height={900}
+          className={className}
+        />
+      ) : (
+        <video
+          key={clip}
+          src={selectedClip.src}
+          poster={selectedClip.poster}
+          aria-label="Sunrun waiting room and solar basics"
+          width={960}
+          height={540}
+          className={className}
+          autoPlay
+          muted
+          loop
+          playsInline
+          controls
+        />
+      )}
+      <details className="w-full max-w-lg px-2 text-sm text-[#dbeafe]">
+        <summary className="cursor-pointer">Read the solar tips</summary>
+        <ul className="mb-0 mt-2 space-y-2 pl-5">
+          <li>Panels turn sunlight into electricity. An inverter makes it usable at home.</li>
+          <li>A battery can store extra solar energy for later, like after the sun goes down.</li>
+          <li>Roof shade and how much electricity you use help determine system size.</li>
+        </ul>
+      </details>
+    </>
   );
 }
 

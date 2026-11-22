@@ -1,0 +1,1 @@
+var e=``,t=0;function n(n){let r=Date.now();if(!(e===n&&r-t<3e5)){e=n,t=r;try{fetch(`/api/visit`,{method:`POST`,headers:{"content-type":`application/json`},body:JSON.stringify({page:n}),keepalive:!0}).catch(()=>{})}catch{}}}export{n as t};

@@ -24,6 +24,14 @@
   ],
   "rewrites": [
     {
+      "source": "/video-studio",
+      "destination": "/video-studio.html"
+    },
+    {
+      "source": "/video-studio/",
+      "destination": "/video-studio.html"
+    },
+    {
       "source": "/api/(chat|uploads|bill|lead|slots|visit|invite)",
       "destination": "/api/assistant?route=$1"
     },

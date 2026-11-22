@@ -4,6 +4,7 @@ import { ConferenceRoomButton } from './ConferenceRoomButton';
 import type { Lead } from './useLeadFeed';
 import { Notice, Spinner } from './ui';
 import { classifyConferenceProblem, conferenceProblemCopy } from './conferenceSetup';
+import './conference.css';
 
 const ConferenceSheet = lazy(() => import('./ConferenceRoom').then((mod) => ({ default: mod.ConferenceSheet })));
 
@@ -45,8 +46,8 @@ export default function ConferenceDesk({ leads, sample }: { leads: Lead[]; sampl
   }, [sample]);
 
   return (
-    <section aria-label="Conference room" className="rounded-3xl bg-hub-surface p-4 sm:p-6">
-      <h2 className="m-0 text-2xl font-bold tracking-tight text-hub-ink">Conference room</h2>
+    <section aria-label="Conference room" className="pg-conference pg-conference-desk rounded-3xl border border-hub-line p-4 sm:p-6">
+      <div className="pg-desk-heading"><div><p className="pg-desk-eyebrow">SUNRUN · THE POWER GENIE</p><h2 className="m-0 text-2xl font-bold tracking-tight text-hub-ink">Your solar conference room</h2></div><img src="/assets/brand/power-genie-icon.png" alt="The Power Genie" width="56" height="56" /></div>
       <p className="m-0 mt-2 max-w-prose text-base leading-relaxed text-hub-soft">
         Pick a customer to start a video room, or join one that is already open. Horace and Rory both use this page.
       </p>

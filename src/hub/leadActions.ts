@@ -86,7 +86,7 @@ export async function createManualLead(draft: LeadDraft, actor: LeadActor, file:
     customerId: id,
     actor,
     type: 'hub_lead_added',
-    message: file && !warning ? 'Lead added from the Referral Hub. Bill attached.' : 'Lead added from the Referral Hub.',
+    message: file && !warning ? 'Lead added from the Dashboard. Bill attached.' : 'Lead added from the Dashboard.',
     now,
   }));
   return warning ? { ok: true, warning, id } : { ok: true, id };
@@ -130,7 +130,7 @@ export async function updateManualLead(leadId: string, draft: LeadDraft, actor: 
     customerId: leadId,
     actor,
     type: 'hub_lead_updated',
-    message: 'Lead updated from the Referral Hub.',
+    message: 'Lead updated from the Dashboard.',
     now,
   }));
   return warning ? { ok: true, warning } : { ok: true };
@@ -147,7 +147,7 @@ export async function archiveCustomerLead(leadId: string, actor: LeadActor, now 
     customerId: leadId,
     actor,
     type: 'hub_lead_archived',
-    message: 'Lead archived from the Referral Hub. The row and bill file were kept.',
+    message: 'Lead archived from the Dashboard. The row and bill file were kept.',
     now,
   }));
   return { ok: true };
@@ -199,7 +199,7 @@ export async function restoreCustomerLead(leadId: string, actor: LeadActor, now 
     customerId: leadId,
     actor,
     type: 'hub_lead_restored',
-    message: 'Lead restored to the active Referral Hub list.',
+    message: 'Lead restored to the active Dashboard list.',
     now,
   }));
   return { ok: true };

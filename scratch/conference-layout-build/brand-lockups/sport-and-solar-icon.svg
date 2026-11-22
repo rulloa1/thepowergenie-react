@@ -1,0 +1,104 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- Emerald to Cyan Athletic Gradient -->
+    <linearGradient id="emeraldGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00FFA3"/>
+      <stop offset="50%" stop-color="#00E599"/>
+      <stop offset="100%" stop-color="#00B4D8"/>
+    </linearGradient>
+
+    <!-- Deep Midnight Gradient for Shield Core -->
+    <linearGradient id="shieldCore" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0a1d2e"/>
+      <stop offset="50%" stop-color="#06121f"/>
+      <stop offset="100%" stop-color="#03080e"/>
+    </linearGradient>
+
+    <!-- Championship Gold Accent -->
+    <linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFE699"/>
+      <stop offset="40%" stop-color="#F59E0B"/>
+      <stop offset="100%" stop-color="#D97706"/>
+    </linearGradient>
+
+    <!-- Lightning Bolt High-Velocity Gradient -->
+    <linearGradient id="boltGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="25%" stop-color="#A7F3D0"/>
+      <stop offset="70%" stop-color="#00E599"/>
+      <stop offset="100%" stop-color="#059669"/>
+    </linearGradient>
+
+    <!-- Outer Glow Filter -->
+    <filter id="neonBlur" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="12" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+
+    <filter id="intenseGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="22" result="blur1"/>
+      <feGaussianBlur stdDeviation="8" result="blur2"/>
+      <feMerge>
+        <feMergeNode in="blur1"/>
+        <feMergeNode in="blur2"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Ambient Glow Behind Shield -->
+  <circle cx="256" cy="245" r="190" fill="url(#emeraldGlow)" opacity="0.22" filter="url(#intenseGlow)"/>
+
+  <!-- Radial Solar Flare / Stadium Floodlight Rays -->
+  <g opacity="0.35" transform="translate(256, 245)">
+    <line x1="0" y1="-180" x2="0" y2="-215" stroke="#00E599" stroke-width="3" stroke-linecap="round"/>
+    <line x1="127" y1="-127" x2="152" y2="-152" stroke="#00E599" stroke-width="3" stroke-linecap="round"/>
+    <line x1="180" y1="0" x2="215" y2="0" stroke="#00E599" stroke-width="3" stroke-linecap="round"/>
+    <line x1="127" y1="127" x2="152" y2="152" stroke="#00E599" stroke-width="3" stroke-linecap="round"/>
+    <line x1="-127" y1="-127" x2="-152" y2="-152" stroke="#00E599" stroke-width="3" stroke-linecap="round"/>
+    <line x1="-180" y1="0" x2="-215" y2="0" stroke="#00E599" stroke-width="3" stroke-linecap="round"/>
+    <line x1="-127" y1="127" x2="-152" y2="152" stroke="#00E599" stroke-width="3" stroke-linecap="round"/>
+
+    <line x1="68" y1="-165" x2="82" y2="-198" stroke="#FFE699" stroke-width="2" stroke-linecap="round" opacity="0.6"/>
+    <line x1="165" y1="-68" x2="198" y2="-82" stroke="#FFE699" stroke-width="2" stroke-linecap="round" opacity="0.6"/>
+    <line x1="-68" y1="-165" x2="-82" y2="-198" stroke="#FFE699" stroke-width="2" stroke-linecap="round" opacity="0.6"/>
+    <line x1="-165" y1="-68" x2="-198" y2="-82" stroke="#FFE699" stroke-width="2" stroke-linecap="round" opacity="0.6"/>
+  </g>
+
+  <!-- Outer Beveled Shield Border -->
+  <path d="M 256,40 L 420,105 C 420,290 350,395 256,468 C 162,395 92,290 92,105 Z"
+        fill="none" stroke="url(#emeraldGlow)" stroke-width="12" stroke-linejoin="round"
+        filter="url(#neonBlur)"/>
+
+  <!-- Secondary Inner Gold Precision Wireframe -->
+  <path d="M 256,60 L 400,118 C 400,278 338,375 256,442 C 174,375 112,278 112,118 Z"
+        fill="url(#shieldCore)" stroke="url(#goldGradient)" stroke-width="3" stroke-linejoin="round"/>
+
+  <!-- Energy Vector Track Ring (Solar Orbit) -->
+  <ellipse cx="256" cy="245" rx="125" ry="125" fill="none" stroke="rgba(0, 229, 153, 0.28)" stroke-width="2" stroke-dasharray="10 8"/>
+  <ellipse cx="256" cy="245" rx="85" ry="85" fill="none" stroke="rgba(245, 158, 11, 0.35)" stroke-width="1.5" stroke-dasharray="4 6"/>
+
+  <!-- Championship Star Accent at Apex -->
+  <polygon points="256,82 262,96 277,96 265,105 269,119 256,110 243,119 247,105 235,96 250,96"
+           fill="url(#goldGradient)" filter="url(#neonBlur)"/>
+
+  <!-- Bold Kinetic Solar Lightning Bolt (Centerpiece) -->
+  <g filter="url(#intenseGlow)">
+    <!-- Bolt Silhouette Backing for Deep Pop -->
+    <polygon points="285,115 175,260 252,260 215,385 345,230 268,230"
+             fill="#022c22" opacity="0.95"/>
+    <!-- Main High-Voltage Kinetic Bolt -->
+    <polygon points="280,120 180,265 255,265 220,380 340,235 265,235"
+             fill="url(#boltGradient)" stroke="#ffffff" stroke-width="2" stroke-linejoin="round"/>
+  </g>
+
+  <!-- Specular Lens Flare on Bolt Vertex -->
+  <circle cx="255" cy="265" r="7" fill="#FFFFFF" filter="url(#intenseGlow)"/>
+  <line x1="230" y1="265" x2="280" y2="265" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" opacity="0.9"/>
+  <line x1="255" y1="240" x2="255" y2="290" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" opacity="0.9"/>
+
+  <!-- Lower Chevron Ribs (Athletic Performance Wings) -->
+  <path d="M 175,340 L 256,400 L 337,340" fill="none" stroke="url(#emeraldGlow)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" opacity="0.85"/>
+  <path d="M 195,372 L 256,418 L 317,372" fill="none" stroke="url(#goldGradient)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0.75"/>
+</svg>
+

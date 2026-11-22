@@ -1,0 +1,79 @@
+/* Shared dashboard palette, scoped away from the public pages and sign-in. */
+.hub-dashboard {
+  --sw-bg: #060d1c;
+  --sw-ink: #eef5ff;
+  --sw-ink-soft: #a7bbd5;
+  --pg-orange: #268cff;
+  --hub-bg: #060d1c;
+  --hub-bg-end: #0b1b33;
+  --hub-surface: #0d192e;
+  --hub-muted: #14243d;
+  --hub-topbar: #0a1427;
+  --hub-line: #2b4464;
+  --hub-line-strong: #52759c;
+  --hub-control: #52759c;
+  --hub-ink: #eef5ff;
+  --hub-soft: #a7bbd5;
+  --hub-faint: #9bb3d0;
+  --hub-primary: #176ded;
+  --hub-primary-hover: #125ac8;
+  --hub-on-primary: #fff;
+  --hub-disabled: #263c57;
+  --hub-accent-fill: #176ded;
+  --hub-accent-fill-hover: #125ac8;
+  --hub-on-accent: #fff;
+  --hub-accent-ink: #67cfff;
+  --hub-accent-line: #3c93ee;
+  --hub-accent-soft: #132e50;
+  --hub-link: #83d6ff;
+  --hub-link-hover: #c4ecff;
+  --hub-focus: #67cfff;
+  --hub-focus-soft: #67cfff33;
+  --hub-chart: #3c93ee;
+  --hub-chart-top: #83d6ff;
+  --hub-info-bg: #112c49;
+  --hub-info-line: #305b88;
+  --hub-info-ink: #d5eaff;
+  --hub-scrim: #020916c9;
+  color-scheme: dark;
+  background: #060d1c;
+}
+.hub-dashboard::before {
+  background: linear-gradient(180deg, #06152b26, #060d1c66 60%, #060d1cb3),
+    url('/assets-v2/stills/06-cta.webp') center center / cover no-repeat;
+  filter: brightness(1.12) saturate(1.2) contrast(1.06);
+}
+.hub-dashboard::after {
+  background:
+    radial-gradient(ellipse at 12% 28%, #ffb34338, transparent 48%),
+    radial-gradient(ellipse at 88% 8%, #278dff26, transparent 56%);
+}
+.hub-dashboard > header {
+  background: #09172bf2;
+  border-color: #25466e;
+  box-shadow: inset 0 -2px #268cff, 0 4px 28px #1265cb22;
+}
+.hub-dashboard > header button {
+  background-color: #152b48;
+  color: #e5f1ff;
+  border-color: #3b6087;
+}
+.hub-dashboard > header button:hover { background-color: #1c3c61; }
+.hub-dashboard nav button[aria-current='page'] {
+  background: #176ded;
+  color: #fff;
+  box-shadow: inset 0 1px #83d6ff66, 0 0 20px #147bff30;
+}
+.hub-dashboard nav button:focus-visible { outline: 2px solid #67cfff; outline-offset: 2px; }
+.hub-dashboard > main > section,
+.hub-dashboard > main > div {
+  box-shadow: 0 16px 48px #02091633;
+}
+.hub-dashboard > main { min-width: 0; padding-bottom: max(24px, env(safe-area-inset-bottom)); }
+.hub-dashboard input,
+.hub-dashboard select,
+.hub-dashboard textarea { color-scheme: dark; }
+@media (max-width: 640px) {
+  .hub-dashboard > header nav { gap: 4px; }
+  .hub-dashboard > header nav button { flex: 1 0 auto; min-height: 44px; font-size: 14px; }
+}

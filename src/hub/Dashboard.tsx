@@ -1,10 +1,13 @@
 import React, { lazy, Suspense, useEffect, useState } from 'react';
+import './dashboard.css';
 import type { Session } from '@supabase/supabase-js';
-import { CalendarDays, FolderOpen, Inbox, LogOut, MessageCircle, Video } from 'lucide-react';
+import { CalendarDays, CalendarPlus, FolderOpen, Inbox, LogOut, MessageCircle, Video } from 'lucide-react';
 import { useLeadFeed } from './useLeadFeed';
 import { hubNavFor } from './hubNav';
 import { hubTabFromLocation, type HubTab } from '../lib/siteRoutes';
 import { arrivalAuthType, supabase } from '../lib/supabase';
+import { powerGenieEmail } from '../../shared/hub-access';
+import { dashboardLoginEmail } from '../../shared/hub-login';
 import { BrandMark, Button, Notice, NotConfigured, Spinner, cn } from './ui';
 
 const ChatTab = lazy(() => import('./ChatTab'));
@@ -64,7 +67,7 @@ export default function Dashboard() {
   });
 
   useEffect(() => {
-    document.title = 'Referral Hub — The Power Genie';
+    document.title = 'Dashboard — The Power Genie';
     const robots = document.createElement('meta');
     robots.name = 'robots';
     robots.content = 'noindex, nofollow';
@@ -105,13 +108,21 @@ export default function Dashboard() {
       return;
     }
     let alive = true;
-    void Promise.resolve(
+    void (async () => {
+      if (powerGenieEmail(session.user.email || '')) {
+        const access = await fetch('/api/assistant?route=hub-access', {
+          method: 'POST', headers: { authorization: `Bearer ${session.access_token}` },
+        });
+        if (!access.ok) throw new Error('Could not activate dashboard access.');
+      }
+      return await Promise.resolve(
       supabase
         .from('hub_profiles')
         .select('id, email, full_name, role')
         .eq('id', session.user.id)
         .maybeSingle(),
-    ).then(({ data, error }) => {
+      );
+    })().then(({ data, error }) => {
         if (!alive) return;
         if (error) {
           setProfile(null);
@@ -140,10 +151,18 @@ export default function Dashboard() {
     setIsDemo(false);
   };
 
-  if (isDemo) {
+  useEffect(() => {
+    if (session && isDemo) {
+      setDemoQuery(false);
+      setIsDemo(false);
+    }
+  }, [session, isDemo]);
+
+  if (supabase && !ready) return <FullPageSpinner />;
+  if (isDemo && !session) {
     return <HubApp profile={DEMO_PROFILE} isDemo onExitDemo={closeSample} />;
   }
-  if (!supabase) return <NotConfigured what="The Referral Hub" onExploreDemo={openSample} />;
+  if (!supabase) return <NotConfigured what="The Dashboard" onExploreDemo={openSample} />;
   if (!ready) return <FullPageSpinner />;
   if (sessionError) return <AuthProblem title="Couldn't open the hub" message={sessionError} />;
   if (!session) return <SignIn onExploreDemo={openSample} />;
@@ -208,7 +227,7 @@ function AuthCard({ title, children }: { title: string; children: React.ReactNod
           <img src="/assets/brand/power-genie-icon.png" alt="" className="h-10 w-10 rounded-xl bg-white/10 object-cover lg:h-12 lg:w-12" />
           <span className="leading-tight">
             <span className="block text-base font-bold lg:text-lg">The Power Genie</span>
-            <span className="block text-[0.7rem] font-bold uppercase tracking-[0.16em] text-[#FF8A2B]">Referral Hub</span>
+            <span className="block text-[0.7rem] font-bold uppercase tracking-[0.16em] text-[#FF8A2B]">Dashboard</span>
           </span>
         </a>
 
@@ -229,7 +248,7 @@ function AuthCard({ title, children }: { title: string; children: React.ReactNod
         <div className="w-full max-w-[400px]">
           <img
             src="/assets/brand/power-genie-lockup.webp"
-            alt="The Power Genie Referral Hub"
+            alt="The Power Genie Dashboard"
             className="mb-8 hidden h-auto w-60 rounded-2xl bg-[#0B2233] px-5 py-3 shadow-[inset_0_-3px_0_#FF6B00,0_10px_30px_rgba(11,34,51,0.18)] lg:block"
           />
           <h1 className="m-0 text-[2rem] font-bold leading-tight tracking-tight text-[#1A1A2E]">{title}</h1>
@@ -253,13 +272,25 @@ function SignIn({ onExploreDemo }: { onExploreDemo?: () => void }) {
     setError(null);
     setResetSent(false);
     setBusy(true);
+    if (powerGenieEmail(email)) {
+      try {
+        const prepared = await fetch('/api/assistant?route=hub-access', {
+          method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email: email.trim() }),
+        });
+        if (!prepared.ok) throw new Error();
+      } catch {
+        setBusy(false);
+        setError('Could not prepare your sign-in. Please try again.');
+        return;
+      }
+    }
     const { error } = await supabase!.auth.signInWithOtp({
-      email: email.trim(),
+      email: dashboardLoginEmail(email),
       options: { shouldCreateUser: false, emailRedirectTo: `${window.location.origin}/dashboard` },
     });
     setBusy(false);
     // Same message either way, so the form never reveals who has access.
-    if (error && !/not allowed|signups not allowed|user not found/i.test(error.message)) return setError(error.message);
+    if (error && (powerGenieEmail(email) || !/not allowed|signups not allowed|user not found/i.test(error.message))) return setError(error.message);
     setLinkSent(true);
   };
 
@@ -267,7 +298,7 @@ function SignIn({ onExploreDemo }: { onExploreDemo?: () => void }) {
     e.preventDefault();
     setBusy(true);
     setError(null);
-    const { error } = await supabase!.auth.signInWithPassword({ email: email.trim(), password });
+    const { error } = await supabase!.auth.signInWithPassword({ email: dashboardLoginEmail(email), password });
     setBusy(false);
     if (error) setError(error.message === 'Invalid login credentials' ? 'That email and password don’t match.' : error.message);
   };
@@ -277,7 +308,7 @@ function SignIn({ onExploreDemo }: { onExploreDemo?: () => void }) {
     setError(null);
     setLinkSent(false);
     setBusy(true);
-    const { error } = await supabase!.auth.resetPasswordForEmail(email.trim(), { redirectTo: `${window.location.origin}/dashboard` });
+    const { error } = await supabase!.auth.resetPasswordForEmail(dashboardLoginEmail(email), { redirectTo: `${window.location.origin}/dashboard` });
     setBusy(false);
     if (error) return setError(error.message);
     setResetSent(true);
@@ -287,8 +318,8 @@ function SignIn({ onExploreDemo }: { onExploreDemo?: () => void }) {
     <AuthCard title="Sign in">
       <form onSubmit={signIn} className="grid gap-4">
         <div>
-          <label htmlFor="s-email" className={authLabelClass}>Email</label>
-          <input id="s-email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} className={authInputClass} />
+          <label htmlFor="s-email" className={authLabelClass}>Username or email</label>
+          <input id="s-email" type="text" autoComplete="username" autoCapitalize="none" spellCheck={false} required value={email} onChange={(e) => setEmail(e.target.value)} className={authInputClass} />
         </div>
         <div>
           <div className="mb-1.5 flex items-baseline justify-between gap-3">
@@ -359,7 +390,7 @@ function SetPassword({ onDone }: { onDone: () => void }) {
     <AuthCard title="Set your password">
       <form onSubmit={save} className="grid gap-4">
         <p className="m-0 text-[0.95rem] leading-relaxed text-[#4A5568]">
-          Choose a password for this invite. You will use it the next time you open the Referral Hub.
+          Choose a password for this invite. You will use it the next time you open the Dashboard.
         </p>
         <div>
           <label htmlFor="p1" className={authLabelClass}>New password</label>
@@ -382,7 +413,7 @@ function NotInvited({ email }: { email: string }) {
   return (
     <AuthCard title="No access yet">
       <p className="m-0 text-[#4A5568]">
-        <span className="font-semibold text-[#1A1A2E]">{email}</span> isn't on the Referral Hub. Ask Horace or Rory for an invite.
+        <span className="font-semibold text-[#1A1A2E]">{email}</span> isn't on the Dashboard. Ask Horace or Rory for an invite.
       </p>
       <Button variant="ghost" className="mt-6 w-full rounded-full" onClick={() => supabase!.auth.signOut()}>
         Sign out
@@ -401,17 +432,22 @@ function HubApp({
   onExitDemo?: () => void;
 }) {
   const [tab, setTab] = useState<Tab>(initialTab);
+  const [addingAppointment, setAddingAppointment] = useState(false);
   const leads = useLeadFeed(profile.id);
   const focus = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066CC] focus-visible:ring-offset-2 focus-visible:ring-offset-[#E8F4FD]';
   const tabs = hubNavFor(profile.role).map((item) => ({ ...item, icon: TAB_ICONS[item.id] }));
 
   useEffect(() => {
-    const sync = () => setTab(initialTab());
+    const sync = () => {
+      setAddingAppointment(false);
+      setTab(initialTab());
+    };
     window.addEventListener('popstate', sync);
     return () => window.removeEventListener('popstate', sync);
   }, []);
 
   const go = (t: Tab) => {
+    if (t !== 'schedule') setAddingAppointment(false);
     setTab(t);
     const url = new URL(window.location.href);
     url.pathname = '/dashboard';
@@ -423,7 +459,7 @@ function HubApp({
   };
 
   return (
-    <div className="hub-desk flex min-h-[100dvh] flex-col font-[family:var(--sw-font-body)]">
+    <div className="hub-desk hub-dashboard flex min-h-[100dvh] flex-col font-[family:var(--sw-font-body)]">
       {isDemo && (
         <div className="border-b border-[#E8C56B] bg-[#FFF8E8] px-4 py-2 text-center text-sm text-[#5C4308]">
           <p className="m-0 flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
@@ -440,9 +476,18 @@ function HubApp({
             <a href="/" className={cn('rounded-xl', focus)} title="The Power Genie home">
               <BrandMark className="h-9 shadow-[0_4px_12px_rgba(7,27,39,0.18)]" />
             </a>
-            <span className="hidden text-base font-bold text-[var(--sw-ink)] sm:inline">Referral Hub</span>
+            <span className="hidden text-base font-bold text-[var(--sw-ink)] sm:inline">Dashboard</span>
           </div>
           <div className="flex items-center gap-2.5">
+            {!isDemo && (
+              <Button type="button" onClick={() => {
+                go('schedule');
+                setAddingAppointment(true);
+                document.getElementById('a-date')?.focus();
+              }}>
+                <CalendarPlus className="h-4 w-4" aria-hidden="true" /> Add appointment
+              </Button>
+            )}
             <div className="flex items-center gap-2">
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#0B2233] text-[0.78rem] font-bold text-white" aria-hidden="true">
                 {(profile.full_name || profile.email).slice(0, 2).toUpperCase()}
@@ -466,7 +511,7 @@ function HubApp({
                 onClick={() => { void supabase!.auth.signOut(); }}
                 className={cn('flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border border-[color-mix(in_srgb,var(--sw-ink)_15%,transparent)] bg-white text-[var(--sw-ink-soft)] hover:border-[var(--sw-ink)] hover:text-[var(--sw-ink)]', focus)}
                 aria-label="Sign out"
-                title="Sign out of Referral Hub"
+                title="Sign out of Dashboard"
               >
                 <LogOut className="h-4 w-4" />
               </button>
@@ -512,7 +557,7 @@ function HubApp({
           {tab === 'leads' && <LeadsTab feed={leads} profile={profile} />}
           {tab === 'chat' && <ChatTab profile={profile} />}
           {tab === 'files' && <FilesTab sample={isDemo} />}
-          {tab === 'schedule' && <ScheduleTab profile={profile} />}
+          {tab === 'schedule' && <ScheduleTab profile={profile} adding={addingAppointment} setAdding={setAddingAppointment} />}
           {tab === 'conference' && <ConferenceDesk leads={leads.leads} sample={isDemo} />}
         </Suspense>
       </main>

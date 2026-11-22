@@ -1,0 +1,11 @@
+User-agent: *
+Disallow: /dashboard
+Disallow: /pipeline
+Disallow: /hub
+Disallow: /homeowner
+Disallow: /portal
+Disallow: /referrals
+Disallow: /node/dashboard
+Allow: /
+
+Sitemap: https://thepowergenie.theroyeffect.com/sitemap.xml

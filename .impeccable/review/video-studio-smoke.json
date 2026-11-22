@@ -1,0 +1,26 @@
+{
+  "passed": true,
+  "realExport": {
+    "width": 720,
+    "height": 1280,
+    "duration": null
+  },
+  "errors": [],
+  "checks": [
+    "desktop",
+    "mobile",
+    "connections",
+    "keys not persisted",
+    "scene navigation",
+    "playback",
+    "narration editing",
+    "real video export and playback",
+    "local storyboard",
+    "incomplete export blocked",
+    "scene add/delete",
+    "aspect ratio",
+    "API validation",
+    "uploaded clip playback and export",
+    "uploaded narration and audio mixing"
+  ]
+}

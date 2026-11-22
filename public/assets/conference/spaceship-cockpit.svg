@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
+<defs>
+ <radialGradient id="space"><stop stop-color="#17385c"/><stop offset="1" stop-color="#020817"/></radialGradient>
+ <linearGradient id="metal" x2="0" y2="1"><stop stop-color="#38516c"/><stop offset=".45" stop-color="#101e30"/><stop offset="1" stop-color="#233c54"/></linearGradient>
+ <radialGradient id="earth" cx=".3" cy=".25"><stop stop-color="#a3edff"/><stop offset=".3" stop-color="#258ad4"/><stop offset=".8" stop-color="#123b77"/><stop offset="1" stop-color="#061b39"/></radialGradient>
+ <radialGradient id="sun"><stop stop-color="#fffde0"/><stop offset=".15" stop-color="#ffdc80"/><stop offset=".45" stop-color="#e89c3622"/><stop offset="1" stop-color="#e89c3600"/></radialGradient>
+ <pattern id="stars" width="191" height="139" patternUnits="userSpaceOnUse"><circle cx="17" cy="24" r="1.2" fill="#d5eeff"/><circle cx="96" cy="73" r=".8" fill="white"/><circle cx="159" cy="32" r="1.4" fill="#98caff"/><circle cx="42" cy="118" r=".6" fill="white"/></pattern>
+ <pattern id="panels" width="43" height="32" patternUnits="userSpaceOnUse"><rect width="42" height="31" fill="#163f77" stroke="#70b7f2" stroke-width=".6"/><path d="M21 0V31M0 16H42" stroke="#6ea9d7" stroke-width=".4"/></pattern>
+ <clipPath id="planet"><circle cx="960" cy="330" r="164"/></clipPath>
+</defs>
+<rect width="1280" height="720" fill="url(#metal)"/>
+<path d="M82 78Q640 10 1198 78L1155 533Q640 604 125 533Z" fill="url(#space)" stroke="#5c7895" stroke-width="8"/>
+<path d="M82 78Q640 10 1198 78L1155 533Q640 604 125 533Z" fill="url(#stars)"/>
+<circle cx="259" cy="170" r="145" fill="url(#sun)"/>
+<circle cx="960" cy="330" r="174" fill="#6acfff" opacity=".12"/>
+<circle cx="960" cy="330" r="164" fill="url(#earth)"/>
+<g clip-path="url(#planet)" opacity=".75">
+<path d="M844 189l49 12 18 24 57 9 13 26-32 18-23 39-40 9-13 46-29-28-9-50-24-17-10-38ZM970 340l40-14 44 29-9 38-34 20-10 65-34-26-17-42Z" fill="#459c8e"/>
+<path d="M794 256Q942 205 1105 274M803 359Q953 294 1125 366M856 433Q960 405 1086 445" fill="none" stroke="#e2f6ff" stroke-width="17" opacity=".65"/>
+</g>
+<g transform="translate(120 400) skewY(-14)"><rect width="260" height="111" rx="3" fill="url(#panels)" stroke="#94c9ee" stroke-width="3"/><path d="M130 0V111" stroke="#d5edff" stroke-width="6"/></g>
+<path d="M70 59L129 548M1210 59L1152 548M426 52L367 561M852 52L913 561" fill="none" stroke="#0b1729" stroke-width="26"/>
+<path d="M70 59L129 548M1210 59L1152 548M426 52L367 561M852 52L913 561" fill="none" stroke="#4b6984" stroke-width="5"/>
+<path d="M0 0H1280V57Q640 0 0 57ZM0 545Q640 641 1280 545V720H0Z" fill="url(#metal)" stroke="#0a1728" stroke-width="6"/>
+<path d="M44 560Q640 650 1236 560M130 44Q640 -6 1150 44" fill="none" stroke="#59c8ff" stroke-width="4"/>
+<g fill="#091827" stroke="#496983" stroke-width="2"><path d="M60 607L345 640 323 705H33Z"/><path d="M935 640L1220 607 1247 705H957Z"/></g>
+<g stroke="#42d8ed" fill="none" stroke-width="3"><path d="M80 643l36-10 23 19 32-12 29 23 63-11M992 667h171m-171 16h109"/><circle cx="1169" cy="662" r="20"/></g>
+<g fill="#62d3ff"><rect x="453" y="22" width="70" height="5" rx="2"/><rect x="757" y="22" width="70" height="5" rx="2"/><circle cx="575" cy="680" r="4"/><circle cx="592" cy="680" r="4"/><circle cx="609" cy="680" r="4"/></g>
+<text x="640" y="658" text-anchor="middle" font-family="sans-serif" font-size="14" letter-spacing="5" fill="#b4e6ff">POWER GENIE · SOLAR COMMAND</text>
+</svg>

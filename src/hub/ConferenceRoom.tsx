@@ -1,7 +1,10 @@
-import React, { lazy, Suspense, useEffect, useState } from 'react';
-import { LiveKitRoom, VideoConference } from '@livekit/components-react';
+import React, { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import { LiveKitRoom, VideoConference, MediaDeviceSelect, useParticipants, useConnectionState, useRoomContext } from '@livekit/components-react';
+import { MediaDeviceFailure, Track, LocalAudioTrack } from 'livekit-client';
 import '@livekit/components-styles';
 import '@livekit/components-styles/prefabs';
+import './conference.css';
+import SpaceshipBackground from './SpaceshipBackground';
 import { Copy, Phone, Video, X } from 'lucide-react';
 import { lockPageScroll } from '../lib/scrollLock';
 import type { Profile } from './Dashboard';
@@ -32,7 +35,24 @@ export function ConferenceCall({
   const [side, setSide] = useState<'call' | 'proposal' | 'chat'>('call');
   const [copied, setCopied] = useState(false);
   const [connectionNote, setConnectionNote] = useState<string | null>(null);
+  const [deviceNote, setDeviceNote] = useState<string | null>(null);
+  const [adminVoice, setAdminVoice] = useState(false);
   useEffect(() => lockPageScroll(), []);
+  useEffect(() => {
+    let alive = true;
+    setAdminVoice(false);
+    if (!isHost) return;
+    void (async () => {
+      const { supabase } = await import('../lib/supabase');
+      if (!supabase) return;
+      const { data } = await supabase.auth.getSession();
+      const id = data.session?.user.id;
+      if (!id) return;
+      const profile = await supabase.from('hub_profiles').select('role').eq('id', id).maybeSingle();
+      if (alive && !profile.error) setAdminVoice(profile.data?.role === 'admin');
+    })().catch(() => {});
+    return () => { alive = false; };
+  }, [isHost]);
 
   const copy = async () => {
     try {
@@ -45,10 +65,11 @@ export function ConferenceCall({
   };
 
   return (
-    <div className="hub-canvas fixed inset-0 z-[85] flex flex-col font-[family:var(--sw-font-body)] text-hub-ink">
+    <div className="pg-conference hub-canvas fixed inset-0 z-[85] flex h-dvh min-h-0 flex-col overflow-hidden font-[family:var(--sw-font-body)] text-hub-ink">
       <header className="flex flex-wrap items-center justify-between gap-2 border-b border-hub-line bg-hub-topbar px-3 py-2 shadow-[inset_0_-3px_0_#FF6B00]">
         <div className="flex min-w-0 items-center gap-3">
           <BrandMark className="h-8" />
+          <span className="pg-sunrun">sunrun</span>
           <div className="min-w-0">
             <p className="m-0 text-[0.72rem] font-bold uppercase tracking-[0.16em] text-hub-accent-ink">Conference room</p>
             <h2 className="m-0 truncate text-base font-bold">{join.customerName}</h2>
@@ -66,24 +87,37 @@ export function ConferenceCall({
         </div>
       </header>
       <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
-        <div className={`pg-call relative min-h-0 flex-1 ${side !== 'call' ? 'hidden lg:block' : ''}`} data-lk-theme="default">
-          <LiveKitRoom
-            serverUrl={join.serverUrl}
-            token={join.token}
-            connect
-            audio
-            video={startWithCamera}
-            onError={(error) => setConnectionNote(plainConnectionNote(error.message))}
-            onDisconnected={() => setConnectionNote('The video connection closed. Use Leave when you are finished.')}
-            style={{ height: '100%' }}
-          >
-            {connectionNote && (
-              <p className="m-0 bg-hub-warn px-3 py-2 text-[0.86rem] text-hub-warn-ink" role="status">{connectionNote}</p>
-            )}
-            <VideoConference />
-          </LiveKitRoom>
+        <div className={`pg-call relative min-h-0 min-w-0 flex-1 flex-col ${side !== 'call' ? 'hidden lg:flex' : 'flex'}`} data-lk-theme="default">
+          {connectionNote && (
+            <p className="m-0 shrink-0 bg-hub-warn px-3 py-2 text-[0.86rem] text-hub-warn-ink" role="status">{connectionNote}</p>
+          )}
+          {deviceNote && <div className="pg-device-notice" role="status"><p>{deviceNote}</p><button type="button" aria-label="Dismiss device message" onClick={() => setDeviceNote(null)}><X size={18} /></button></div>}
+          <div className="relative min-h-0 min-w-0 flex-1">
+            <LiveKitRoom
+              serverUrl={join.serverUrl}
+              token={join.token}
+              connect
+              audio={false}
+              options={{ audioCaptureDefaults: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } }}
+              video={false}
+              onError={(error) => {
+                const failure = MediaDeviceFailure.getFailure(error);
+                if (failure && failure !== MediaDeviceFailure.Other) setDeviceNote(deviceFailureCopy(failure));
+                else setConnectionNote(plainConnectionNote(error.message));
+              }}
+              onMediaDeviceFailure={(failure, kind) => setDeviceNote(deviceFailureCopy(failure, kind))}
+              onDisconnected={() => setConnectionNote('The video connection closed. Use Leave when you are finished.')}
+              style={{ height: '100%', display: 'flex', flexDirection: 'column', minHeight: 0 }}
+            >
+              <StartRoomDevices camera={startWithCamera} onProblem={setDeviceNote} />
+              <RoomPresence />
+              <SpaceshipBackground host={isHost} onProblem={setDeviceNote} />
+              <VideoConference />
+              <RoomAudioSettings onProblem={setDeviceNote} showVoiceSetup={adminVoice} />
+            </LiveKitRoom>
+          </div>
         </div>
-        <aside className={`flex w-full flex-col border-hub-line lg:w-[340px] lg:border-l ${side === 'call' ? 'hidden lg:flex' : 'flex min-h-0 flex-1'}`}>
+        <aside className={`flex w-full flex-col border-hub-line lg:w-[340px] lg:shrink-0 lg:flex-none lg:border-l ${side === 'call' ? 'shrink-0' : 'min-h-0 flex-1'}`}>
           <div className="hidden gap-1 border-b border-hub-line p-2 lg:flex" role="tablist" aria-label="Room sections">
             <SideTab current={side === 'chat' ? 'chat' : 'proposal'} id="proposal" onSelect={setSide}>Proposal</SideTab>
             {isHost && <SideTab current={side} id="chat" onSelect={setSide}>Team chat</SideTab>}
@@ -96,7 +130,7 @@ export function ConferenceCall({
           <div className={`min-h-0 flex-1 flex-col ${side === 'chat' ? 'hidden' : side === 'proposal' || side === 'call' ? 'flex' : 'hidden'} ${side === 'call' ? 'max-lg:hidden' : ''}`}>
             {isHost && customerId && <WaitingList customerId={customerId} />}
             {join.proposalUrl ? (
-              <iframe title={`Proposal for ${join.customerName}`} src={join.proposalUrl} className="min-h-[240px] w-full flex-1 border-0 bg-white" />
+              <><a className="pg-signing-link" href={join.proposalUrl} target="_blank" rel="noopener noreferrer">Open proposal / Sunrun signing ↗</a><iframe title={`Proposal for ${join.customerName}`} src={join.proposalUrl} className="min-h-0 w-full flex-1 border-0 bg-white" /></>
             ) : (
               <p className="m-0 p-4 text-[0.9rem] leading-relaxed text-hub-soft">
                 No proposal link yet. Horace can share his screen and walk through the contract. Signing still happens in Sunrun’s own packet.
@@ -104,7 +138,7 @@ export function ConferenceCall({
             )}
           </div>
           {isHost && (
-            <div className={`min-h-[40dvh] min-h-0 flex-1 flex-col lg:min-h-0 ${side === 'chat' ? 'flex' : 'hidden'}`}>
+            <div className={`min-h-0 flex-1 flex-col lg:min-h-0 ${side === 'chat' ? 'flex' : 'hidden'}`}>
               <p className="m-0 border-b border-hub-line px-3 py-2 text-[0.78rem] text-hub-soft">Team chat stays between Rory and Horace. The client does not see it. Everyone on the call can use the chat button in the call bar.</p>
               <Suspense fallback={<div className="p-6 text-center"><Spinner /></div>}>
                 <HostChat />
@@ -117,7 +151,89 @@ export function ConferenceCall({
   );
 }
 
+function deviceFailureCopy(failure?: MediaDeviceFailure, kind?: MediaDeviceKind): string {
+  const device = kind === 'audioinput' ? 'Microphone' : kind === 'videoinput' ? 'Camera' : 'Camera or microphone';
+  if (failure === MediaDeviceFailure.PermissionDenied) return `${device} access is blocked. Open the site controls beside your browser’s address, allow the device, then use its button in the call bar. Also check your computer or phone’s privacy settings. You can stay in the room with the device off.`;
+  if (failure === MediaDeviceFailure.NotFound) return `${device} was not found. Connect a device or choose another in the call bar. You can stay in the room.`;
+  if (failure === MediaDeviceFailure.DeviceInUse) return `${device} could not start. Close other apps using it, then try its button in the call bar.`;
+  return `${device} could not start. Check the device and browser permissions, then try its button in the call bar.`;
+}
+
+function StartRoomDevices({ camera, onProblem }: { camera: boolean; onProblem: (message: string) => void }) {
+  const room = useRoomContext();
+  const connection = useConnectionState();
+  const started = useRef(false);
+  useEffect(() => {
+    if (connection !== 'connected' || started.current) return;
+    started.current = true;
+    void room.localParticipant.setMicrophoneEnabled(true).catch((error: Error) => onProblem(deviceFailureCopy(MediaDeviceFailure.getFailure(error), 'audioinput')));
+    if (camera) void room.localParticipant.setCameraEnabled(true).catch((error: Error) => onProblem(deviceFailureCopy(MediaDeviceFailure.getFailure(error), 'videoinput')));
+  }, [room, connection, camera, onProblem]);
+  return null;
+}
+
+function RoomPresence() {
+  const participants = useParticipants();
+  const connection = useConnectionState();
+  return <div className="pg-presence" role="status"><span className="pg-connection">{connection} · {participants.length} in room</span></div>;
+}
+
+function RoomAudioSettings({ onProblem, showVoiceSetup }: { onProblem: (message: string) => void; showVoiceSetup: boolean }) {
+  const room = useRoomContext();
+  const connection = useConnectionState();
+  const [busy, setBusy] = useState(false);
+  const [status, setStatus] = useState<string | null>(null);
+  const connectCocina = async () => {
+    setBusy(true);
+    setStatus(null);
+    try {
+      let devices = await navigator.mediaDevices.enumerateDevices();
+      if (!devices.some((device) => device.kind === 'audioinput' && device.label)) {
+        const permission = await navigator.mediaDevices.getUserMedia({ audio: true });
+        permission.getTracks().forEach((track) => track.stop());
+        devices = await navigator.mediaDevices.enumerateDevices();
+      }
+      const cable = devices.find((device) => device.kind === 'audioinput' && /^CABLE Output(?:\s|$)/i.test(device.label));
+      if (!cable) throw new Error('CABLE Output is unavailable. Start Cocina Voice and enable VB-CABLE in Windows Sound.');
+      const options = { deviceId: { exact: cable.deviceId }, echoCancellation: false, noiseSuppression: false, autoGainControl: false };
+      await room.switchActiveDevice('audioinput', cable.deviceId);
+      const track = room.localParticipant.getTrackPublication(Track.Source.Microphone)?.track;
+      if (track instanceof LocalAudioTrack) await track.restartTrack(options);
+      await room.localParticipant.setMicrophoneEnabled(true, options);
+      setStatus('CABLE Output selected. This room is ready to receive Cocina Voice audio.');
+    } catch (error) {
+      const failure = MediaDeviceFailure.getFailure(error);
+      const message = failure && failure !== MediaDeviceFailure.Other ? deviceFailureCopy(failure, 'audioinput') : error instanceof Error ? error.message : 'Could not connect Cocina Voice.';
+      setStatus(message);
+      onProblem(message);
+    } finally { setBusy(false); }
+  };
+  return (
+    <details className="pg-audio-settings">
+      <summary>Audio devices</summary>
+      <div>
+        <span>Microphone</span>
+        <MediaDeviceSelect kind="audioinput" aria-label="Microphone devices" onDeviceSelectError={(error) => onProblem(deviceFailureCopy(MediaDeviceFailure.getFailure(error), 'audioinput'))} />
+        <span>Speaker</span>
+        <MediaDeviceSelect kind="audiooutput" aria-label="Speaker devices" onDeviceSelectError={(error) => onProblem(`Speaker could not switch: ${error.message}`)} />
+        {showVoiceSetup && (
+          <details className="pg-cocina-help">
+            <summary>Cocina Voice · Emilia Cruz</summary>
+            <p>In Cocina Voice, choose CABLE Input as the sound output. Use headphones for this room’s speakers.</p>
+            <button type="button" className="lk-button" disabled={busy || connection !== 'connected'} onClick={() => void connectCocina()}>{busy ? 'Connecting…' : 'Use Cocina Voice'}</button>
+            {connection !== 'connected' && <p>Connect to the room before selecting Cocina Voice.</p>}
+            <p>For a separate voice participant, join the invite as Emilia Cruz with the camera off. In Cocina Voice, select Answer conference questions and share this meeting tab with tab audio.</p>
+            {status && <p role="status">{status}</p>}
+          </details>
+        )}
+        <p>Speaker selection depends on your browser. Otherwise use your system sound settings.</p>
+      </div>
+    </details>
+  );
+}
+
 function plainConnectionNote(message: string): string {
+  if (/permission denied|notallowederror/i.test(message)) return 'Device access was denied. Allow microphone access in this site’s browser permissions, then enable the microphone in the call bar.'
   if (/authorization|token|401/i.test(message)) return 'The room could not verify this join. Ask Horace or Rory to let you in again.'
   if (/signal|websocket|network|fetch/i.test(message)) return 'Could not reach the video service. Check your connection, then try again.'
   return message
@@ -247,8 +363,8 @@ export function ConferenceSheet({
   if (join) return <ConferenceCall join={join} isHost customerId={customerId} startWithCamera={hostCamera} onLeave={onClose} />;
 
   return (
-    <div className="fixed inset-0 z-[85] flex items-end justify-center bg-hub-scrim sm:items-center" onClick={onClose}>
-      <div role="dialog" aria-modal="true" aria-labelledby="conference-title" onClick={(event) => event.stopPropagation()} className="hub-canvas w-full max-w-lg rounded-t-3xl border border-hub-line bg-hub-surface p-5 font-[family:var(--sw-font-body)] text-hub-ink shadow-[inset_0_-3px_0_#FF6B00,0_24px_60px_rgba(0,0,0,0.35)] sm:rounded-3xl sm:p-6">
+    <div className="pg-room-overlay fixed inset-0 z-[85] flex items-end justify-center bg-hub-scrim sm:items-center" onClick={onClose}>
+      <div role="dialog" aria-modal="true" aria-labelledby="conference-title" onClick={(event) => event.stopPropagation()} className="pg-conference pg-room-sheet hub-canvas w-full max-w-lg rounded-t-3xl border border-hub-line p-5 font-[family:var(--sw-font-body)] text-hub-ink sm:rounded-3xl sm:p-6">
         <BrandMark className="mb-4 h-8" />
         <div className="flex items-start justify-between gap-3">
           <div>

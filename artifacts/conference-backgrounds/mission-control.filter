@@ -1,0 +1,8 @@
+[0:v]scale=1920:1080:flags=lanczos,setsar=1,format=yuv444p,split=2[base][moving];
+[moving]pad=1936:1096:8:8:color=black,crop=1920:1080:x='8+2*(1-cos(2*PI*n/240))':y='8+0.5*(1-cos(2*PI*n/240))'[shift];
+nullsrc=s=1920x1080:r=30:d=8,format=yuv444p,geq=lum='if(between(X,540,1350)*between(Y,415,655),255,0)':cb=128:cr=128,gblur=sigma=12[mask];
+[base][shift][mask]maskedmerge[orbital];
+color=c=black:s=24x12:r=30:d=8,format=rgba,geq=r=103:g=223:b=255:a='200*pow(sin(PI*T/8),2)*exp(-pow((X-12)/5,2)-pow((Y-6)/2.5,2))'[leftflow];
+color=c=black:s=24x12:r=30:d=8,format=rgba,geq=r=103:g=223:b=255:a='200*pow(sin(PI*T/8),2)*exp(-pow((X-12)/5,2)-pow((Y-6)/2.5,2))'[rightflow];
+[orbital][leftflow]overlay=x='25+185*t/8':y='824-48*t/8':shortest=1[leftactive];
+[leftactive][rightflow]overlay=x='1708+160*t/8':y='774+36*t/8':shortest=1,format=yuv420p[out]

@@ -15,6 +15,8 @@ const CUSTOMER_DATA_NEEDLES = [
 
 /** Same paths as vercel.json so a direct visit in dev matches production. */
 const LAUNCH_FILES: Record<string, string> = {
+  '/video-studio': '/video-studio.html',
+  '/video-studio/': '/video-studio.html',
   '/launch/gas-genie': '/gas-genie.html',
   '/launch/gas-genie/': '/gas-genie.html',
   '/launch/celebrity-solar': '/celebrity-solar.html',
@@ -93,6 +95,7 @@ function powerGenieApi() {
         const path = req.url?.split('?')[0] ?? ''
         const route = new URL(req.url || '/', 'http://127.0.0.1').searchParams.get('route') || ''
         const assistant =
+          path === '/api/video-studio' ||
           (path === '/api/assistant' && /^(chat|uploads|bill|lead|slots|hub-bill|visit|invite|workflow|proposal|conference)$/.test(route)) ||
           /^\/api\/(chat|uploads|bill|lead|slots|hub-bill|visit|invite)$/.test(path) ||
           path.startsWith('/api/tesla')
@@ -116,6 +119,9 @@ function powerGenieApi() {
 }
 
 export default defineConfig({
+  build: {
+    rollupOptions: { input: { main: 'index.html', studio: 'video-studio.html' } },
+  },
   publicDir: 'public',
   plugins: [
     denyPrivateAssets(),

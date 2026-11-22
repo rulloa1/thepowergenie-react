@@ -1,0 +1,328 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Cocina Voice 1.7</title>
+<style>
+*{box-sizing:border-box}body{margin:0;color:#33291f;background:#f4eee1;font:17px/1.5 "Segoe UI",sans-serif}main{max-width:720px;margin:7vh auto;padding:26px}header{border-top:5px solid #9d422b;padding-top:20px}h1{font:normal clamp(44px,9vw,78px)/1 Georgia,serif;letter-spacing:-.06em;margin:0}p{margin:12px 0 22px}label,summary{font-weight:600}section{background:#fffaf2;padding:24px;border:1px solid #cfbdab;border-radius:16px;margin:18px 0}input[type=password],textarea{display:block;width:100%;font:inherit;padding:14px;border:1px solid #978874;background:white;border-radius:8px;margin:8px 0}textarea{min-height:130px;resize:vertical;font-size:22px}button{background:#713521;color:#fff;border:0;border-radius:8px;padding:10px 16px;font:inherit;cursor:pointer;margin:5px 5px 5px 0}button:disabled{opacity:.5}summary{cursor:pointer}small{display:block;color:#655445}#spanish{font:italic 28px/1.35 Georgia,serif;color:#64452e;overflow-wrap:anywhere}#status{min-height:26px}details{margin:20px 0}a{color:#753c27}
+main{margin:1rem auto;padding:clamp(12px,3vw,24px)}select{max-width:100%}textarea{min-height:80px}section{padding:16px;margin:12px 0}h1{font-size:clamp(36px,6vw,56px)}</style><main><header><h1>Cocina Voice</h1><small>Emilia Cruz · Version 1.7</small><p>Type in English. Hear it in Mexican Spanish.</p></header>
+<section><button id="testSound">Test speakers</button> <button id="testVoice" disabled>Test Emilia’s voice</button><small id="audioResult" role="status">Test speakers plays two tones on your Windows default output.</small></section><section id="setup"><label for="key">Deepgram API key</label><input id="key" type="password" autocomplete="off"><small>The Windows launcher saves your key encrypted under your Windows account. Chrome translates locally and sends the Spanish text to Deepgram for speech.</small><small id="keyState"></small><button id="start">Start voice</button></section>
+<section><label for="entry">Your English</label><textarea id="entry" maxlength="900" disabled placeholder="What would you like to say?"></textarea><small>Pause for a second to speak, or press Enter immediately.</small><p id="spanish" lang="es"></p><button id="stop" disabled>Stop audio</button><button id="retry" hidden>Retry phrase</button></section>
+<button id="callButton">Answer conference questions</button><small>Open the Power Genie conference room in a separate Chrome tab. This sends meeting audio to Deepgram while connected.</small><small id="repair" role="status"></small><p id="heard"></p><div id="status" role="status">Connect your voice to begin.</div>
+<details><summary>Sound &amp; conference calls</summary><p><label><input type="checkbox" id="kitchen"> Continuous kitchen sounds</label></p>
+<p>For a Power Genie conference, install <a target="_blank" rel="noreferrer" href="https://vb-audio.com/Cable/">VB-CABLE</a> once. Choose <b>CABLE Input</b> here. In the Power Genie room, select <b>CABLE Output</b> as the microphone, unmute, and keep the camera off. Set Windows Output to your speakers or headphones. To join as a separate audio-only guest, use the room invite and choose Ask to join without video.</p><button id="devices">Choose sound output</button><select aria-label="Sound output" id="output"><option value="">Computer speakers</option></select><p><label><input type="checkbox" id="monitor"> Also hear Emilia on my headphones (Windows default output)</label></p><small>Chrome may request microphone permission to list devices. The app immediately releases the microphone.</small></details></main>
+<script>
+const el=id=>document.getElementById(id);
+let translator, ctx, timer, version=0, busy=false, active, failed, apiKey;
+const queue=[], sources=new Set();
+const status=s=>el('status').textContent=s;
+const usingLauncher=location.protocol==='http:' && location.hostname==='127.0.0.1';
+let restoredKey='';
+async function loadSavedKey(){
+ if(!usingLauncher){el('keyState').textContent='Use Open Cocina Voice.cmd to remember your key.';return;}
+ el('start').disabled=true;
+ try{
+  const r=await fetch('/key/load',{method:'POST',body:'{}'});
+  if(!r.ok)throw Error();
+  restoredKey=(await r.json()).key;
+  if(restoredKey&&!el('key').value){el('key').value=restoredKey;el('keyState').textContent='Saved key loaded.';}
+ }catch{el('keyState').textContent='Saved key unavailable. You can enter a key for this session.';}
+ finally{el('start').disabled=false;}
+}
+async function rememberKey(){
+  let saveNotice='';
+  if(usingLauncher && apiKey!==restoredKey){
+   try{const r=await fetch('/key/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:apiKey})});if(!r.ok)throw Error();restoredKey=apiKey;}
+   catch{saveNotice=' Windows could not save your key. It will work for this session.';}
+  }
+ return saveNotice;
+}
+loadSavedKey();
+el('start').onclick=async()=>{
+ if(!(el('key').value.trim()||apiKey))return status('Enter your Deepgram API key.');
+ el('start').disabled=true;
+ try{
+  if(!window.Translator)throw Error('Open this app in an up-to-date desktop Google Chrome with built-in translation.');
+  ctx??=new AudioContext(); const ready=ctx.resume();
+  status('Preparing English to Spanish. The first use may download a language pack.');
+  translator=await Translator.create({sourceLanguage:'en',targetLanguage:'es',monitor(m){m.addEventListener('downloadprogress',e=>status('Downloading language pack · '+Math.round(e.loaded*100)+'%'));}});
+  await ready;
+  apiKey=el('key').value.trim()||apiKey;
+  const saveNotice=await rememberKey();
+  el('key').value='';el('setup').hidden=true;el('testVoice').disabled=false;el('entry').disabled=false;el('stop').disabled=false;el('entry').focus();setRoomActive(true);status('Ready to speak.'+saveNotice);
+ }catch(e){status(e.message);el('start').disabled=false;}
+};
+el('devices').onclick=async()=>{
+ try{
+  const stream=await navigator.mediaDevices.getUserMedia({audio:true});stream.getTracks().forEach(t=>t.stop());
+  const devices=await navigator.mediaDevices.enumerateDevices();
+  const list=el('output');const previous=list.value;list.replaceChildren(new Option('Computer speakers',''));
+  for(const d of devices.filter(d=>d.kind==='audiooutput' && d.deviceId!=='default'))list.add(new Option(d.label,d.deviceId));
+  list.value=previous;list.focus();status('Choose an output for the voice and kitchen sounds.');
+ }catch(e){status('Could not list devices. Check Chrome microphone permission.');}
+};
+el('output').onchange=async()=>{try{ctx??=new AudioContext();await ctx.setSinkId(el('output').value);syncKitchen();status('Sound output changed.');}catch(e){el('output').value=ctx?.sinkId||'';status('Output change failed. Check the device and try again.');}};
+function submit(){clearTimeout(timer);const text=el('entry').value.trim();if(!text)return;queue.push(text);el('entry').value='';drain();}
+el('entry').oninput=e=>{clearTimeout(timer);if(!e.isComposing)timer=setTimeout(submit,1100);};
+el('entry').onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();submit();}};
+let headphones;
+async function openHeadphones(){
+ headphones??=new AudioContext();
+ await headphones.resume();
+ return headphones;
+}
+el('monitor').onchange=async()=>{
+ if(el('monitor').checked){
+  try{await openHeadphones();}
+  catch{el('monitor').checked=false;status('Could not open the Windows default output.');}
+ }
+ syncKitchen();
+};
+el('testSound').onclick=async()=>{
+ try{
+  const output=await openHeadphones();
+  for(const [offset,hz] of [[0.04,440],[0.42,660]]){
+   const osc=output.createOscillator(),gain=output.createGain(),start=output.currentTime+offset;
+   osc.frequency.value=hz;gain.gain.setValueAtTime(0,start);gain.gain.linearRampToValueAtTime(.18,start+.025);gain.gain.linearRampToValueAtTime(0,start+.29);
+   osc.connect(gain);gain.connect(output.destination);osc.onended=()=>{osc.disconnect();gain.disconnect();};osc.start(start);osc.stop(start+.3);
+  }
+  el('audioResult').textContent='Two tones sent to the Windows default output. If silent, choose your headphones or speakers in Windows Sound and check Chrome in Volume mixer.';
+ }catch(e){el('audioResult').textContent='Speaker test failed: '+e.message;}
+};
+function sendBuffer(output,buffer,when){
+ const source=output.createBufferSource();source.buffer=buffer;source.connect(output.destination);sources.add(source);
+ source.onended=()=>{sources.delete(source);source.disconnect();};source.start(when);
+}
+function monitorCable(){
+ const selected=el('output').selectedOptions[0];
+ return el('monitor').checked && headphones?.state==='running' && ctx.sinkId && selected?.value===ctx.sinkId && /^CABLE Input(?: \(|$)/i.test(selected.textContent);
+}
+function schedule(buffer,when){
+ sendBuffer(ctx,buffer,when);
+ if(monitorCable()){
+  sendBuffer(headphones,buffer,headphones.currentTime+Math.max(0,when-ctx.currentTime));
+ }
+}
+el('testVoice').onclick=async()=>{
+ if(busy||call)return status('Finish the current phrase or disconnect the meeting before testing.');
+ const v=version;
+ busy=true;el('testVoice').disabled=true;
+ try{
+  await ctx.resume();await speak('Hola',v,true);
+  if(v===version)el('audioResult').textContent='Deepgram audio played to '+(el('output').selectedOptions[0]?.textContent||'the selected output')+'.';
+ }catch(e){el('audioResult').textContent='Voice test: '+e.message;}
+ finally{busy=false;el('testVoice').disabled=false;if(queue.length)drain();}
+};
+// The room loop runs on the audio clock, independently of speech packets.
+const roomSources=new Map();
+let roomBuffer, roomActive=false;
+function makeKitchenBuffer(output){
+ const rate=16000,seconds=24;
+ const buffer=output.createBuffer(1,rate*seconds,rate);
+ const samples=buffer.getChannelData(0);
+ let steam=0;
+ for(let i=0;i<samples.length;i++){
+  const t=i/rate;
+  steam=.91*steam+.09*(Math.random()*2-1);
+  samples[i]=steam*(.046+.007*Math.sin(2*Math.PI*t/8));
+ }
+ for(const at of [3.1,8.7,8.94,17.6,21.2]){
+  for(let i=0;i<rate*.22;i++){
+   const t=i/rate;
+   samples[Math.floor(at*rate)+i]+=.016*Math.sin(2*Math.PI*740*t)*Math.exp(-32*t);
+  }
+ }
+ // Smooth the seam without inserting a silent gap.
+ const n=256;
+ for(let i=0;i<n;i++)samples[samples.length-n+i]+=(samples[0]-samples[samples.length-1])*i/(n-1);
+ return buffer;
+}
+function syncKitchen(){
+ const targets=new Set();
+ if(roomActive && ctx && el('kitchen').checked){
+  targets.add(ctx);
+  if(monitorCable())targets.add(headphones);
+ }
+ for(const [output,source] of roomSources){
+  if(!targets.has(output)){source.stop();source.disconnect();roomSources.delete(output);}
+ }
+ for(const output of targets){
+  if(roomSources.has(output))continue;
+  roomBuffer??=makeKitchenBuffer(output);
+  const source=output.createBufferSource();source.buffer=roomBuffer;source.loop=true;
+  source.connect(output.destination);source.start(0,(performance.now()/1000)%roomBuffer.duration);roomSources.set(output,source);
+ }
+}
+function setRoomActive(enabled){roomActive=enabled;syncKitchen();}
+el('kitchen').onchange=()=>setRoomActive(Boolean(apiKey)&&el('kitchen').checked);
+function nextPacketTime(end){
+ return end>ctx.currentTime+.005 ? end : ctx.currentTime+.12;
+}
+function playPCM(bytes,when,state){
+ const count=bytes.length/2, buffer=ctx.createBuffer(1,count,24000), samples=buffer.getChannelData(0), view=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);
+ for(let i=0;i<count;i++)samples[i]=view.getInt16(i*2,true)/32768*.94;
+ state.frame+=count;schedule(buffer,when);return when+buffer.duration;
+}
+async function requestSpeech(text,key,signal){
+ if(location.protocol==='http:' && location.hostname==='127.0.0.1'){
+  try{
+   const response=await fetch('/speak',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text,key}),signal});
+   if(![502,503,504].includes(response.status))return response;
+  }catch(error){if(signal.aborted)throw error;}
+ }
+ try{
+  return await fetch('https://api.deepgram.com/v1/speak?model=aura-2-estrella-es&encoding=linear16&sample_rate=24000&container=none',{
+   method:'POST',headers:{Authorization:'Token '+key,'Content-Type':'application/json'},body:JSON.stringify({text}),signal
+  });
+ }catch(error){
+  if(signal.aborted)throw error;
+  throw Error('Chrome could not reach api.deepgram.com. Start the extracted app with Open Cocina Voice.cmd and keep its window open. If already open, check the network connection to Deepgram.');
+ }
+}
+async function speak(text,v,alreadySpanish=false){
+ setRoomActive(true);
+ const es=alreadySpanish?text:await translator.translate(text);if(v!==version)return;
+ el('spanish').textContent=es;if(call){if(!call.ready)throw Error('Wait for the meeting connection.');call.ws.send(JSON.stringify({type:'InjectAgentMessage',message:es,behavior:'queue'}));return;}status('Connecting voice…');active=new AbortController();
+ const r=await requestSpeech(es,apiKey,active.signal);
+ if(!r.ok){
+  if(r.status===401||r.status===403){el('setup').hidden=false;el('start').disabled=false;el('entry').disabled=true;throw Error('Deepgram declined this API key. Enter an active key with speech access above.');}
+  if(r.status===402)throw Error('Deepgram requires available credit on this account.');
+  if(r.status===429)throw Error('Deepgram is busy. Wait a moment.');
+  throw Error('Speech service returned HTTP '+r.status+'.');
+ }
+ const reader=r.body.getReader(),state={rustle:0,frame:0};let leftover=null,end=0;
+ while(v===version){
+  const {done,value}=await reader.read();if(done||v!==version)break;
+  let bytes=value;if(leftover!==null){bytes=new Uint8Array(value.length+1);bytes[0]=leftover;bytes.set(value,1);leftover=null;}
+  if(bytes.length%2){leftover=bytes[bytes.length-1];bytes=bytes.subarray(0,-1);}
+  if(bytes.length){status('Speaking…');end=playPCM(bytes,nextPacketTime(end),state);}
+ }
+ if(v===version&&!state.frame)throw Error('No audio received. Try the phrase again.');
+ while(v===version&&ctx.currentTime<end)await new Promise(r=>setTimeout(r,40));
+}
+async function drain(){
+ if(busy||failed)return;busy=true;const v=version;
+ try{while(v===version&&queue.length){const phrase=queue.shift();try{status('Translating…');await speak(phrase,v);}catch(e){if(v===version){failed=phrase;el('retry').hidden=false;status(e.message+' Use Retry phrase.');}break;}}}
+ finally{busy=false;if(!failed){if(queue.length)drain();else if(v===version)status('Ready to speak.');}}
+}
+el('retry').onclick=()=>{if(failed)queue.unshift(failed);failed=null;el('retry').hidden=true;drain();};
+el('stop').onclick=()=>{setRoomActive(false);endCall('Stopped.');version++;clearTimeout(timer);active?.abort();for(const s of sources)s.stop();queue.length=0;failed=null;el('retry').hidden=true;status('Stopped. Type your next phrase.');el('entry').focus();};
+let call=null;
+function endCall(message){
+ const current=call;if(!current)return;call=null;
+ clearInterval(current.watchdog);clearTimeout(current.retry);clearTimeout(current.handshake);
+ el('repair').textContent='';
+ current.capture?.getTracks().forEach(t=>t.stop());current.processor?.disconnect();current.input?.disconnect();current.micCtx?.close().catch(()=>{});
+ current.ws?.close();for(const source of sources)source.stop();
+ el('callButton').textContent='Answer conference questions';status(message);
+}
+async function routeConferenceAudio(prompt=true){
+ const findCable=devices=>devices.find(d=>d.kind==='audiooutput' && /^CABLE Input(?: \(|$)/i.test(d.label));
+ let cable=findCable(await navigator.mediaDevices.enumerateDevices());
+ if(!cable && prompt){
+  const permission=await navigator.mediaDevices.getUserMedia({audio:true});
+  permission.getTracks().forEach(track=>track.stop());
+  cable=findCable(await navigator.mediaDevices.enumerateDevices());
+ }
+ if(!cable)throw Error('CABLE Input is unavailable. Check that VB-CABLE is enabled in Windows Sound, then reconnect.');
+ if(ctx.sinkId!==cable.deviceId)await ctx.setSinkId(cable.deviceId);
+ const outputs=el('output');
+ if(!Array.from(outputs.options).some(option=>option.value===cable.deviceId))outputs.add(new Option(cable.label,cable.deviceId));
+ outputs.value=cable.deviceId;
+ syncKitchen();
+}
+const captureProcessor = `class ConferencePCM extends AudioWorkletProcessor {
+ constructor(){super();this.samples=new Int16Array(1024);this.offset=0;}
+ process(inputs){
+  const channel=inputs[0][0];
+  for(let i=0;i<128;i++){
+   this.samples[this.offset++]=Math.max(-1,Math.min(1,channel?.[i]||0))*32767;
+   if(this.offset===this.samples.length){
+    this.port.postMessage(this.samples.buffer,[this.samples.buffer]);
+    this.samples=new Int16Array(1024);this.offset=0;
+   }
+  }
+  return true;
+ }
+}
+registerProcessor('conference-pcm',ConferencePCM);`;
+async function repairMeeting(c){
+ if(c!==call || c.repairing)return;
+ c.repairing=true;
+ try{
+  if(!c.capture.getAudioTracks().some(t=>t.readyState==='live')){
+   endCall('Tab sharing ended. Select Answer conference questions and share the room tab with audio.');return;
+  }
+  await routeConferenceAudio(false);c.routeReady=true;
+  if(call!==c)return;
+  for(const context of [ctx,c.micCtx])if(context.state==='suspended')await context.resume();
+  if(call===c)el('repair').textContent='Automatic repair on · Conference output is CABLE Input.';
+ }catch{c.routeReady=false;if(call===c)el('repair').textContent='Checking for CABLE Input. Enable VB-CABLE in Windows Sound if it stays unavailable.';}
+ finally{c.repairing=false;}
+}
+function connectAgent(c){
+  const ws=new WebSocket('wss://agent.deepgram.com/v1/agent/converse',['token',apiKey]);c.ws=ws;ws.binaryType='arraybuffer';
+  ws.onmessage=({data})=>{
+   if(call!==c || c.ws!==ws)return;
+   if(typeof data!=='string'){const bytes=new Uint8Array(data);if(bytes.length && c.routeReady)c.end=playPCM(bytes,nextPacketTime(c.end),c);return;}
+   const event=JSON.parse(data);
+   switch(event.type){
+    case 'Welcome':ws.send(JSON.stringify({type:'Settings',audio:{input:{encoding:'linear16',sample_rate:16000},output:{encoding:'linear16',sample_rate:24000,container:'none'}},agent:{listen:{provider:{type:'deepgram',model:'nova-3',language:'multi'}},think:{provider:{type:'open_ai',model:'gpt-4o-mini'},prompt:'You voice Emilia Cruz, the mother of Jesse. Speak with the gentle conversational rhythm of a Mexican grandmother preparing tamales in her kitchen. Answer questions addressed to you in English or Spanish using natural Mexican Spanish. Give one short, relevant answer and leave room for the caller. Ask for clarification when needed. Use only the supplied family detail. If asked for other personal facts you do not know, say so. No narration, sound effects, or exaggerated catchphrases.'},speak:{provider:{type:'deepgram',model:'aura-2-estrella-es'}},...(!c.connectedBefore && {greeting:'Hola, soy Emilia Cruz, la mamá de Jesse.'})}}));break;
+    case 'SettingsApplied':clearTimeout(c.handshake);c.connectedBefore=true;c.attempt=0;setRoomActive(true);c.ready=true;status('Listening to the meeting.');break;
+    case 'UserStartedSpeaking':for(const source of sources)source.stop();c.end=0;status('Listening…');break;
+    case 'AgentThinking':status('Preparing an answer…');break;
+    case 'ConversationText':if(event.role==='assistant')el('spanish').textContent=event.content;else el('heard').textContent='Heard · '+event.content;break;
+    case 'AgentAudioDone':status('Listening to the meeting.');break;
+    case 'InjectionRefused':status('The agent is busy. Type the phrase again after this turn.');break;
+    case 'Error':endCall(event.description||'Deepgram could not start this call.');break;
+   }
+  };
+  c.handshake=setTimeout(()=>{if(!c.ready && c.ws===ws)ws.close();},15000);
+  ws.onerror=()=>ws.close();
+  ws.onclose=({code})=>{
+   if(call!==c || c.ws!==ws)return;
+   clearTimeout(c.handshake);c.ready=false;c.ws=null;c.end=0;
+   if([1008,4401,4403].includes(code)){endCall('Deepgram declined the connection. Check key and voice access.');return;}
+   const delay=Math.min(30000,1000*2**Math.min(c.attempt++,5));
+   status('Reconnecting to Deepgram in '+delay/1000+' seconds.');
+   c.retry=setTimeout(()=>{if(call===c)connectAgent(c);},delay);
+  };
+}
+async function toggleCall(){
+ if(call){endCall('Meeting audio disconnected.');return;}
+ const key=el('key').value.trim()||apiKey||restoredKey;
+ if(!key){el('key').focus();return status('Enter your Deepgram key, then select Answer conference questions.');}
+ if(busy)return status('Wait for the current phrase to finish.');
+ const c={ready:false,end:0,frame:0,rustle:0};call=c;
+ el('callButton').textContent='Disconnect meeting';status('Choose the Power Genie conference tab and enable tab audio.');
+ try{
+  ctx??=new AudioContext();
+  const resumed=ctx.resume();
+  const capture=await navigator.mediaDevices.getDisplayMedia({video:true,audio:true,selfBrowserSurface:'exclude',systemAudio:'exclude'});
+  if(call!==c){capture.getTracks().forEach(t=>t.stop());return;}
+  c.capture=capture;await resumed;if(call!==c)return;
+  apiKey=key;const saveNotice=await rememberKey();if(call!==c)return;el('keyState').textContent=saveNotice||'Voice key ready.';el('stop').disabled=false;
+  if(!capture.getAudioTracks().length)throw Error('Choose a Chrome tab and enable Share tab audio.');
+  try{await routeConferenceAudio();c.routeReady=true;}catch(error){el('repair').textContent=error.message;}
+  if(call!==c)return;
+  capture.getTracks().forEach(t=>t.onended=()=>{if(call===c)endCall('Sharing stopped. Select Answer conference questions and share the room tab with audio to resume.');});
+  // Only audio enters the processing graph. No video frames are read or transmitted.
+  c.micCtx=new AudioContext({sampleRate:16000});await c.micCtx.resume();
+  if(call!==c)return;
+  c.input=c.micCtx.createMediaStreamSource(new MediaStream(capture.getAudioTracks()));
+  const moduleURL=URL.createObjectURL(new Blob([captureProcessor],{type:'text/javascript'}));
+  try{await c.micCtx.audioWorklet.addModule(moduleURL);}finally{URL.revokeObjectURL(moduleURL);}
+  if(call!==c)return;
+  c.processor=new AudioWorkletNode(c.micCtx,'conference-pcm');
+  c.processor.port.onmessage=({data})=>{
+   const ws=c.ws;
+   if(c.ready && ws?.readyState===WebSocket.OPEN)ws.send(data);
+  };
+  c.input.connect(c.processor);c.processor.connect(c.micCtx.destination);
+  c.attempt=0;
+  el('repair').textContent=c.routeReady?'Automatic repair on · Conference output is CABLE Input.':el('repair').textContent;
+  c.watchdog=setInterval(()=>repairMeeting(c),4000);
+  connectAgent(c);
+ }catch(e){if(call===c)endCall(e.message);}
+}
+el('callButton').onclick=toggleCall;
+window.addEventListener('pagehide',()=>{setRoomActive(false);endCall('Disconnected.');});
+</script></html>
+
+

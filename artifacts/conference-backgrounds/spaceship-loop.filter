@@ -1,0 +1,4 @@
+[0:v]scale=1920:1080:flags=lanczos,setsar=1,format=yuv444p,split=2[base][moving];
+[moving]pad=1936:1096:8:8:color=black,crop=1920:1080:x='8+4*sin(2*PI*n/240)':y='8+2*sin(2*PI*n/240)'[shift];
+color=c=black:s=1920x1080:r=30:d=8,format=yuv444p,drawbox=x=540:y=415:w=810:h=240:color=white:t=fill,gblur=sigma=12[mask];
+[base][shift][mask]maskedmerge,eq=brightness='0.003*sin(2*PI*t/8)':eval=frame,format=yuv420p[out]
