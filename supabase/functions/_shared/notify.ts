@@ -7,8 +7,10 @@
 export type LeadAlert = {
   /** Lead or appointment id. Sent as Resend's Idempotency-Key. */
   id: string
-  source: 'assistant' | 'booking'
+  source: 'assistant' | 'booking' | 'dashboard'
   name: string
+  phone?: string | null
+  email?: string | null
   address: string
   kwh: number | null
   amount: number | null
@@ -57,7 +59,7 @@ function splitList(value: string | undefined): string[] {
 }
 
 export function leadAlertText(alert: LeadAlert): string {
-  const source = alert.source === 'assistant' ? 'Website assistant' : 'Booking page'
+  const source = alert.source === 'assistant' ? 'Website assistant' : alert.source === 'dashboard' ? 'Dashboard' : 'Booking page'
   const kwh = alert.kwh == null ? 'not on the bill' : `${Math.round(alert.kwh).toLocaleString('en-US')} kWh`
   const amount = alert.amount == null
     ? 'not on the bill'
@@ -65,6 +67,8 @@ export function leadAlertText(alert: LeadAlert): string {
   return [
     `New Power Genie lead (${source})`,
     `Name: ${oneLine(alert.name) || 'not provided'}`,
+    ...(alert.phone ? [`Phone: ${oneLine(alert.phone)}`] : []),
+    ...(alert.email ? [`Email: ${oneLine(alert.email)}`] : []),
     `Address: ${oneLine(alert.address) || 'not provided'}`,
     `kWh: ${kwh}`,
     `Amount: ${amount}`,
@@ -91,11 +95,11 @@ function base64(input: string): string {
   return out
 }
 
-async function sendEmail(alert: LeadAlert, env: NotifyEnv, fetchImpl: AlertFetch, text: string): Promise<void> {
+async function sendEmail(alert: LeadAlert, env: NotifyEnv, fetchImpl: AlertFetch, text: string): Promise<'accepted' | 'unconfigured' | 'failed'> {
   const key = env.resendApiKey?.trim()
   const from = env.notifyFrom?.trim()
   const to = splitList(env.notifyEmailTo).filter((email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
-  if (!key || !from || to.length === 0) return
+  if (!key || !from || to.length === 0) return 'unconfigured'
   try {
     const response = await fetchImpl('https://api.resend.com/emails', {
       method: 'POST',
@@ -112,8 +116,10 @@ async function sendEmail(alert: LeadAlert, env: NotifyEnv, fetchImpl: AlertFetch
       }),
     })
     if (!response.ok) console.error('lead_alert_email_failed', response.status)
+    return response.ok ? 'accepted' : 'failed'
   } catch (error) {
     console.error('lead_alert_email_failed', error instanceof Error ? error.name : 'unknown')
+    return 'failed'
   }
 }
 
@@ -141,14 +147,16 @@ async function sendSms(alert: LeadAlert, env: NotifyEnv, fetchImpl: AlertFetch, 
   }))
 }
 
-export async function sendLeadAlert(alert: LeadAlert, env: NotifyEnv, fetchImpl: AlertFetch = fetch): Promise<void> {
+export async function sendLeadAlert(alert: LeadAlert, env: NotifyEnv, fetchImpl: AlertFetch = fetch): Promise<'accepted' | 'failed' | 'unconfigured'> {
   const text = leadAlertText(alert)
   try {
-    await Promise.all([
+    const [status] = await Promise.all([
       sendEmail(alert, env, fetchImpl, text),
       sendSms(alert, env, fetchImpl, text),
     ])
+    return status
   } catch (error) {
     console.error('lead_alert_failed', error instanceof Error ? error.name : 'unknown')
+    return 'failed'
   }
 }

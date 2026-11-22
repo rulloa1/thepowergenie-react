@@ -25,6 +25,17 @@ import {
 } from '../_shared/google.ts';
 import { bookingWindow, SLOT_TIME_ZONE } from '../_shared/slots.ts';
 
+import { notifyAppointment } from '../_shared/appointment-alert.ts';
+import { dashboardLeadUrl, siteOrigin } from '../_shared/notify.ts';
+
+async function emailBooking(admin: Admin, a: { id: string; source: string; customer_name: string; starts_at: string; address: string | null; email: string | null; phone: string | null; kwh?: number | null; bill_amount?: number | null }, includeTeam: boolean) {
+  const { count } = await admin.from('hub_appointment_files').select('id', { head: true, count: 'exact' }).eq('appointment_id', a.id).eq('kind', 'light_bill');
+  return notifyAppointment(admin, { id: a.id, source: a.source === 'public' ? 'booking' : 'dashboard', name: a.customer_name,
+    email: a.email, phone: a.phone, address: a.address || '', kwh: a.kwh ?? null, amount: a.bill_amount ?? null,
+    appointment: new Date(a.starts_at).toLocaleString('en-US', { timeZone: SLOT_TIME_ZONE, timeZoneName: 'short' }),
+    billAttached: !!count, dashboardUrl: dashboardLeadUrl(siteOrigin(env('SITE_URL')), a.id) }, includeTeam);
+}
+
 const MINUTE = 60_000;
 
 function publicMember(connection: Connection) {
@@ -118,6 +129,7 @@ async function create(admin: Admin, user: HubUser, body: Record<string, unknown>
   }
 
   const warning = await syncHubAppointment(admin, appt, { hasLightBill: false });
+  await emailBooking(admin, appt, true);
   return json({ ok: true, id: appt.id, warning });
 }
 
@@ -251,6 +263,12 @@ Deno.serve(async (req) => {
     }
     if (action === 'create') return await create(admin, user, body);
     if (user.role !== 'owner') return fail(403, 'forbidden', 'Only the owner can reschedule or cancel appointments.');
+    if (action === 'retry_owner_email') {
+      const { data: a } = await admin.from('hub_appointments').select('*').eq('id', String(body.id || '')).eq('status','booked').maybeSingle();
+      if (!a) return fail(404, 'not_found', 'Appointment not found.');
+      const status = a.owner_email_status === 'accepted' ? 'accepted' : await emailBooking(admin, a, false);
+      return json({ status });
+    }
     if (action === 'reschedule') return await reschedule(admin, body);
     if (action === 'cancel') return await cancel(admin, user, String(body.id || ''));
     return fail(400, 'bad_request', 'Unknown action.');

@@ -41,6 +41,9 @@ export type Lead = {
   ratePlan: string | null;
   cancelled: boolean;
   unseen: boolean;
+  referralRep?: string | null;
+  referralState?: string | null;
+  ownerEmailStatus?: string | null;
   workflowOption?: 'option_b_ownership' | 'option_a_ppa';
 };
 
@@ -101,6 +104,10 @@ type FileRow = {
 };
 
 type AppointmentRow = {
+  note?: string | null;
+  referral_rep?: string | null;
+  referral_state?: string | null;
+  owner_email_status?: string | null;
   id: string;
   created_at: string;
   starts_at: string;
@@ -172,6 +179,7 @@ function customerSource(notes: string | null, createdBy: string | null): string 
   if (notes) {
     if (notes.includes('Referral source: celebrity-solar')) return 'Celebrity Solar';
     if (notes.includes('Referral source: hip-hop-solar')) return 'Hip-Hop Solar';
+    if (notes.includes('Referral source: gas-genie')) return 'Gas-Genie';
     if (notes.includes('Referral source: sport-and-solar')) return 'Sport & Solar';
     if (notes.includes('Website assistant lead')) return 'Website assistant';
   }
@@ -243,7 +251,7 @@ export function toLeads(customers: CustomerRow[], files: FileRow[], appointments
   });
 
   const fromBookings: Lead[] = appointments.map((row) => {
-    const file = (row.hub_appointment_files || []).find((item) => item.storage_path);
+    const file = (row.hub_appointment_files || []).find((item) => item.storage_path && item.kind === 'light_bill');
     return {
       id: row.id,
       source: 'booking',
@@ -269,7 +277,10 @@ export function toLeads(customers: CustomerRow[], files: FileRow[], appointments
       pastDue: null,
       currentCharges: null,
       totalDue: null,
-      notes: null,
+      notes: text(row.note),
+      referralRep: text(row.referral_rep),
+      referralState: text(row.referral_state),
+      ownerEmailStatus: text(row.owner_email_status),
       utility: null,
       stage: null,
       createdBy: null,

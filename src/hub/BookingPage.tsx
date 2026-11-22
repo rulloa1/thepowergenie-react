@@ -5,6 +5,7 @@ import { readMeterRequest } from '../lib/esiId';
 import { callFunction, supabase } from '../lib/supabase';
 import { usageStatusCopy } from '../lib/usage';
 import { BrandMark, Button, Notice, NotConfigured, Spinner, cn, inputClass, labelClass } from './ui';
+import BillingHistoryFields from './BillingHistoryFields';
 import { SlotPicker, type SlotPickerHandle } from './SlotPicker';
 import { formatBytes, formatDay, formatShortDay, formatTime } from './time';
 import { trackInfoPageVisit } from '../lib/visitTrack';
@@ -102,6 +103,9 @@ export default function BookingPage() {
       return;
     }
     fd.set('start', bookingSlot.start);
+    const referral = new URLSearchParams(window.location.search);
+    fd.set('ref', referral.get('ref') || '');
+    fd.set('state', referral.get('state') || '');
     fd.delete('bill');
     if (bill) fd.set('bill', bill, bill.name);
     if (meterCheck.value) {
@@ -312,6 +316,7 @@ export default function BookingPage() {
                     <textarea id="b-note" name="note" rows={3} maxLength={1000} placeholder="e.g. Disconnect notice issued, high summer AC bill, interested in Powerwall 3..." className={cn(inputClass, 'resize-y')} />
                   </div>
 
+                  <BillingHistoryFields />
                   <details ref={preparationRef} className="rounded-2xl border border-[#E2E8F0] bg-[#F8FAFC] p-4">
                     <summary className="cursor-pointer rounded-md text-[0.94rem] font-bold text-[#1A1A2E] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00]">
                       Prepare for your call (optional)

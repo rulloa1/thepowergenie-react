@@ -31,6 +31,7 @@ interface BillFile {
 }
 
 interface Appointment {
+  owner_email_status?: string | null;
   id: string;
   starts_at: string;
   ends_at: string;
@@ -489,6 +490,20 @@ function AppointmentCard({
   onRescheduled: (warning: string | null) => void;
 }) {
   const [opening, setOpening] = useState<string | null>(null);
+  const [emailStatus, setEmailStatus] = useState(a.owner_email_status);
+  const [emailBusy, setEmailBusy] = useState(false);
+  const [emailError, setEmailError] = useState('');
+  useEffect(() => setEmailStatus(a.owner_email_status), [a.id, a.owner_email_status]);
+  async function retryEmail() {
+    setEmailBusy(true);
+    setEmailError('');
+    try {
+      const result = await callFunction<{ status: string }>('schedule', { body: { action: 'retry_owner_email', id: a.id } });
+      if (result.error) setEmailError(result.error.message);
+      else setEmailStatus(result.data?.status);
+    } catch { setEmailError('Could not retry the owner email.'); }
+    finally { setEmailBusy(false); }
+  }
   const [moving, setMoving] = useState(false);
   const cancelled = a.status === 'cancelled';
   const sync = syncLine(a, members, events);
@@ -532,6 +547,11 @@ function AppointmentCard({
             <MapPin className="h-4 w-4 shrink-0 text-hub-soft" />{a.address}
           </a>
         )}
+        {isOwner && !cancelled && <div className="flex flex-wrap items-center gap-2">
+          <span role="status">Owner booking email · {emailStatus === 'accepted' ? 'Accepted by email provider' : emailStatus === 'failed' ? 'Send failed' : emailStatus === 'unconfigured' ? 'Email setup needed' : 'No send recorded'}</span>
+          {emailStatus !== 'accepted' && <Button variant="ghost" onClick={retryEmail} disabled={emailBusy}>{emailBusy ? 'Sending…' : 'Send booking email'}</Button>}
+          {emailError && <span role="alert">{emailError}</span>}
+        </div>}
         {usage ? <UsageCard usage={usage} /> : null}
         {a.note && <p className="m-0 mt-1 whitespace-pre-wrap rounded-xl bg-hub-muted px-3 py-2 text-[0.88rem]">{a.note}</p>}
       </div>

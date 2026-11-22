@@ -11,7 +11,8 @@ import { METER_CONSENT_TEXT, readMeterRequest } from '../_shared/meter.ts';
 import { sniffBill, type BillKind } from '../_shared/bill-file.ts';
 import { adminClient, bookedIntervals, type Admin } from '../_shared/db.ts';
 import { fail, json, notConfigured, preflight, serviceKey, env } from '../_shared/http.ts';
-import { dashboardLeadUrl, sendLeadAlert, siteOrigin } from '../_shared/notify.ts';
+import { dashboardLeadUrl, siteOrigin } from '../_shared/notify.ts';
+import { notifyAppointment } from '../_shared/appointment-alert.ts';
 import { readUploadedBill } from '../_shared/read-bill.ts';
 import { availabilityBusy, googleConfigured, syncHubAppointment } from '../_shared/google.ts';
 import { bookingWindow, DEFAULT_RULES, generateSlots, isBookableSlot, SLOT_TIME_ZONE } from '../_shared/slots.ts';
@@ -158,6 +159,20 @@ async function book(admin: Admin, req: Request) {
     }
   }
 
+  const history = new Map((fields?.usageHistory ?? []).map(point => [point.month, point.kwh]));
+  const monthsEntered = new Set<string>();
+  for (const [key, raw] of form.entries()) {
+    if (!key.startsWith('usage-') || raw === '') continue;
+    const month = key.slice(6);
+    const kwh = typeof raw === 'string' && raw.trim() ? Number(raw) : NaN;
+    monthsEntered.add(month);
+    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month) || !Number.isFinite(kwh) || kwh < 0 || kwh > 1000000 || monthsEntered.size > 12) {
+      return fail(400, 'invalid_usage', 'Check the monthly kWh values.');
+    }
+    history.set(month, kwh);
+  }
+  const usageHistory = [...history].sort(([a], [b]) => a.localeCompare(b)).map(([month,kwh]) => ({ month,kwh }));
+
   // Re-check the slot against the rules, the database (including website consults) and Google — right now.
   const now = new Date();
   try {
@@ -197,6 +212,8 @@ async function book(admin: Admin, req: Request) {
       email,
       address,
       note: note || null,
+      referral_rep: clean(form.get('ref'), 64).replace(/[^a-zA-Z0-9 _.-]/g, '') || null,
+      referral_state: /^[A-Z]{2}$/.test(clean(form.get('state'), 8)) ? clean(form.get('state'), 8) : null,
       client_ip_hash: ipKey,
       kwh: fields?.kwhThisPeriod ?? null,
       bill_amount: billAmount(fields),
@@ -205,7 +222,7 @@ async function book(admin: Admin, req: Request) {
       tdu: fields?.tdu ?? null,
       rep_puct_certificate: fields?.repPuctCertificate ?? null,
       avg_monthly_kwh: fields?.avgMonthlyKwh ?? null,
-      usage_history: fields?.usageHistory ?? null,
+      usage_history: usageHistory.length ? usageHistory : null,
     })
     .select('id')
     .single();
@@ -268,10 +285,10 @@ async function book(admin: Admin, req: Request) {
     google_event_id: null,
   }, { hasLightBill: !!bill });
 
-  await sendLeadAlert({
+  await notifyAppointment(admin, {
     id: appt.id,
     source: 'booking',
-    name,
+    name, phone, email,
     address,
     kwh: fields?.kwhThisPeriod ?? null,
     amount: billAmount(fields),
@@ -286,18 +303,7 @@ async function book(admin: Admin, req: Request) {
     }).format(startDate),
     billAttached: !!bill,
     dashboardUrl: dashboardLeadUrl(siteOrigin(env('SITE_URL')), appt.id),
-  }, {
-    resendApiKey: env('RESEND_API_KEY'),
-    notifyFrom: env('NOTIFY_FROM'),
-    notifyEmailTo: env('NOTIFY_EMAIL_TO'),
-    twilioAccountSid: env('TWILIO_ACCOUNT_SID'),
-    twilioAuthToken: env('TWILIO_AUTH_TOKEN'),
-    twilioFrom: env('TWILIO_FROM'),
-    notifySmsTo: env('NOTIFY_SMS_TO'),
-  }, (url, init) => fetch(url, { ...init, signal: AbortSignal.timeout(12_000) }).then((response) => ({
-    ok: response.ok,
-    status: response.status,
-  })));
+  });
 
   return json({
     ok: true,

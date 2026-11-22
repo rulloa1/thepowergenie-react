@@ -46,6 +46,8 @@ import ArchiveLeadDialog from './ArchiveLeadDialog';
 import DeleteLeadDialog from './DeleteLeadDialog';
 import LeadForm from './LeadForm';
 import PricingDialog from './PricingDialog';
+import IntakeDesk from './IntakeDesk';
+import TodayAgenda from './TodayAgenda';
 import TasksStrip from './TasksStrip';
 import WorkflowPanel from './WorkflowPanel';
 import RoofDesignDialog from './RoofDesignDialog';
@@ -74,26 +76,29 @@ const ConferenceSheet = lazy(() => import('./ConferenceRoom').then((mod) => ({ d
 
 function useCustomerGlance(sample: boolean, leadIds: string[]) {
   const [tasks, setTasks] = useState<WorkflowTask[]>([]);
+  const [tasksReady, setTasksReady] = useState(sample);
   const [savings, setSavings] = useState<Map<string, number | null>>(() => new Map());
   const idsKey = leadIds.join(',');
   useEffect(() => {
     const ids = idsKey ? idsKey.split(',') : [];
-    if (sample || !ids.length) return;
+    if (sample) return;
     let alive = true;
     const load = () => {
-      workflowApi.tasks().then((result) => { if (alive) setTasks(result.tasks); }).catch(() => {});
-      workflowApi.glance(ids).then((result) => {
+      workflowApi.tasks().then((result) => { if (alive) { setTasks(result.tasks); setTasksReady(true); } }).catch(() => { if (alive) setTasksReady(false); });
+      if (ids.length) workflowApi.glance(ids).then((result) => {
         if (alive) setSavings(new Map(result.savings.map((row) => [row.leadId, row.monthly])));
       }).catch(() => {});
     };
     load();
+    const timer = window.setInterval(load, 120000);
     window.addEventListener(WORKFLOW_CHANGED, load);
     return () => {
+      window.clearInterval(timer);
       alive = false;
       window.removeEventListener(WORKFLOW_CHANGED, load);
     };
   }, [sample, idsKey]);
-  return { tasks, savings };
+  return { tasks, savings, tasksReady };
 }
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -621,7 +626,7 @@ export default function LeadsTab({
   profile,
 }: {
   feed: LeadFeed;
-  profile: { id: string; email: string; full_name: string | null };
+  profile: { id: string; email: string; full_name: string | null; role: 'owner' | 'admin' };
 }) {
   const [openId, setOpenId] = useState(() => new URLSearchParams(window.location.search).get('id'));
   const [opening, setOpening] = useState<string | null>(null);
@@ -712,7 +717,7 @@ export default function LeadsTab({
   const openLeadById = (leadId: string) => {
     const lead = feed.leads.find((item) => item.id === leadId && item.source === 'customer') || feed.leads.find((item) => item.id === leadId);
     if (!lead) return;
-    if (lead.archived) setView('archived');
+    setView(lead.archived ? 'archived' : 'active');
     setStageFilter(null);
     scrolled.current = null;
     select(lead);
@@ -1022,6 +1027,8 @@ export default function LeadsTab({
         </div>
       </div>
 
+      {profile.role === 'owner' && <TodayAgenda feed={feed} tasks={glance.tasks} tasksReady={glance.tasksReady} openLead={openLeadById} openRoom={setConferenceLead} />}
+      {profile.role === 'owner' && !feed.loading && !feed.error && <IntakeDesk leads={feed.leads} openLead={openLeadById} />}
       <TasksStrip sample={feed.sample} onOpenLead={openLeadById} onOpenPricing={() => setPricingOpen(true)} />
 
       <div className="mt-4 flex gap-2" role="tablist" aria-label="Lead lists">

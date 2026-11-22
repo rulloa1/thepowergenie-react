@@ -77,3 +77,25 @@
   .hub-dashboard > header nav { gap: 4px; }
   .hub-dashboard > header nav button { flex: 1 0 auto; min-height: 44px; font-size: 14px; }
 }
+.today-agenda,.today-wrap { background: #112438; color: #eaf5ff; border: 1px solid #36556b; border-radius: 1rem; padding: clamp(1rem,2vw,1.5rem); }
+.today-agenda { margin-top: 1rem; }
+.today-title,.today-meeting,.today-alert { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .75rem; }
+.today-title h3,.today-meeting h4,.today-wrap h2 { margin: 0; font-size: 1.35rem; font-weight: 700; }
+.today-title span,.today-agenda small,.today-brief dt { color: #b4cedf; font-size: .84rem; }
+.today-meeting { margin-top: 1rem; }
+.today-brief { display: grid; grid-template-columns: 1fr 1fr 2fr; gap: .85rem; padding-block: 1rem; }
+.today-brief dd { margin: .2rem 0 0; overflow-wrap: anywhere; }
+.today-picker,.today-wrap label { display: grid; gap: .35rem; }
+.today-picker select,.today-wrap :is(input,select,textarea) { width: 100%; padding: .65rem; color: #edf5ff; background: #09192a; border: 1px solid #52718a; border-radius: .5rem; }
+.today-followups { border-top: 1px solid #38506a; margin-top: .7rem; padding-top: .7rem; }
+.today-followups summary { font-weight: 650; cursor: pointer; }
+.today-followups button { min-height: 44px; display: flex; gap: 1rem; align-items: center; justify-content: space-between; width: 100%; text-align: left; color: #c7edff; }
+.today-followups span { white-space: nowrap; }
+.today-alert { padding: .4rem max(1rem,calc((100% - 75rem)/2)); background: #153747; color: #d6f7ff; }
+.today-wrap { display: grid; gap: .85rem; width: min(100%,30rem); max-height: 90dvh; overflow: auto; }
+.today-wrap p { margin: 0; }
+@media(max-width:640px){.today-brief { grid-template-columns: 1fr 1fr; }.today-brief > :last-child {grid-column:1/-1;} }
+.intake-row { display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.6rem;border-top:1px solid #38506a;padding:.8rem 0; }
+.intake-row p { margin:.3rem 0 0; }
+.intake-row a { color:#a3e6ff;text-decoration:underline;padding:.5rem; }
+.today-picker input { min-width:0;border:1px solid #52718a;background:#09192a;color:white;padding:.65rem;border-radius:.5rem; }
