@@ -1,5 +1,6 @@
 import React, { lazy, Suspense, useEffect, useState } from 'react';
 import './dashboard.css';
+import GuestAlerts from './GuestAlerts';
 import type { Session } from '@supabase/supabase-js';
 import { CalendarDays, CalendarPlus, FolderOpen, Inbox, LogOut, MessageCircle, Video } from 'lucide-react';
 import { useLeadFeed } from './useLeadFeed';
@@ -552,6 +553,7 @@ function HubApp({
             );
           })}
         </nav>
+        {!isDemo && <GuestAlerts />}
       </header>
 
       <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col px-4 py-5 sm:px-6">
