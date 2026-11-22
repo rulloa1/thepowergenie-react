@@ -61,22 +61,12 @@
 .pg-lobby-stage {
   position: relative;
   isolation: isolate;
-  min-height: 30rem;
-  background: #0a243c;
+  align-self: start;
+  aspect-ratio: 1376 / 768;
+  background: #081420;
 }
 
-.pg-lobby-stage img {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  animation: pg-lobby-drift 16s ease-in-out infinite alternate;
-}
-
-@keyframes pg-lobby-drift {
-  from { transform: scale(1); }
-  to { transform: scale(1.055) translateX(-.6%); }
-}
+.pg-lobby-stage img { display: block; width: 100%; height: 100%; }
 
 .pg-lobby-badge, .pg-lobby-name {
   position: absolute;
@@ -96,7 +86,7 @@
 }
 
 .pg-lobby-badge i { width: .55rem; height: .55rem; border-radius: 50%; background: #ffd35e; }
-.pg-lobby-name { bottom: 1rem; display: grid; border-radius: .75rem; }
+.pg-lobby-name { bottom: 6%; left: 50%; transform: translateX(-50%); margin: 0; white-space: nowrap; font-size: clamp(.9rem, 2vw, 1.5rem); border-radius: .75rem; }
 .pg-lobby-name span, .pg-lobby-panel p { color: #b9cfe3; }
 .pg-lobby-name span { font-size: .8rem; }
 .pg-lobby-panel { padding: clamp(1rem, 2vw, 1.6rem); background: #07192b; }
@@ -135,7 +125,7 @@
   .pg-lobby-header { gap: .5rem; }
   .pg-lobby-header p { display: none; }
   .pg-lobby-layout { grid-template-columns: minmax(0, 1fr); gap: .7rem; padding: .7rem; }
-  .pg-lobby-stage { min-height: 0; aspect-ratio: 16/10; }
+
   .pg-lobby-clip { aspect-ratio: 3.5; }
 }
 

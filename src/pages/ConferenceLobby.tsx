@@ -45,12 +45,11 @@ export default function ConferenceLobby({ children, statusError, leaving, onLeav
       </header>
       <div className="pg-lobby-layout">
         <section className="pg-lobby-stage" aria-label="Conference waiting room artwork">
-          <img src={media + '/command-center.webp'} alt="" />
+          <img src={media + '/orbital-lounge.webp'} alt="" />
           <span className="pg-lobby-badge"><i aria-hidden="true" /> Guest lobby</span>
-          <div className="pg-lobby-name"><strong>Emilia Cruz</strong><span>Virtual assistant</span></div>
+          <h1 className="pg-lobby-name">Waiting for host</h1>
         </section>
         <aside className="pg-lobby-panel">
-          <h1>Waiting for host</h1>
           <p role="status">{statusError ?? 'Keep this page open. You’ll join automatically when your host lets you in.'}</p>
           <h2>While you wait</h2>
           {clip ? (

@@ -77,6 +77,9 @@ export async function supabaseFetch(path: string, init: RequestInit = {}): Promi
   const { url, key } = supabaseConfig()
   const headers = new Headers()
   headers.set('apikey', key)
+  if (isServiceRoleJwt(key)) {
+    headers.set('authorization', `Bearer ${key}`)
+  }
   headers.set('user-agent', 'PowerGenieWebsite/1.0')
   if (init.headers) {
     new Headers(init.headers).forEach((value, name) => {

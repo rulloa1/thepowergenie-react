@@ -138,9 +138,38 @@ export async function updateManualLead(leadId: string, draft: LeadDraft, actor: 
 
 export async function archiveCustomerLead(leadId: string, actor: LeadActor, now = new Date()): Promise<LeadWriteResult> {
   const db = client();
+
+  // 1. Try server endpoint with service role (handles both powergenie_customers and hub_appointments)
+  try {
+    const res = await workflowApi.archiveLead(leadId);
+    if (res?.ok) {
+      await writeActivity(buildLeadActivity({
+        customerId: leadId,
+        actor,
+        type: 'hub_lead_archived',
+        message: 'Lead archived from the Dashboard. The row and bill file were kept.',
+        now,
+      })).catch(() => {});
+      return { ok: true };
+    }
+  } catch {
+    // Continue to client-side fallbacks
+  }
+
   if (!db) return { ok: false, error: 'The hub is not connected.' };
   const updated = await db.from('powergenie_customers').update(buildArchivePatch(actor, now)).eq('id', leadId).select('id').maybeSingle();
   if (updated.error || !updated.data) {
+    // Fallback: If this was a booking/appointment lead, cancel in hub_appointments
+    const apptUpdate = await db
+      .from('hub_appointments')
+      .update({ status: 'cancelled', cancelled_at: now.toISOString() })
+      .eq('id', leadId)
+      .select('id')
+      .maybeSingle();
+
+    if (!apptUpdate.error && apptUpdate.data) {
+      return { ok: true };
+    }
     return { ok: false, error: updated.error ? explainLeadWriteError(updated.error) : 'That lead could not be archived.' };
   }
   await writeActivity(buildLeadActivity({
@@ -160,14 +189,13 @@ export async function deleteCustomerLead(
   now = new Date(),
 ): Promise<LeadWriteResult> {
   const db = client();
-  if (!db) return { ok: false, error: 'The hub is not connected.' };
 
   // 1. Try server endpoint with service role (handles both powergenie_customers and hub_appointments)
   try {
     const res = await workflowApi.deleteLead(leadId);
     if (res?.ok) return { ok: true };
-  } catch {
-    // Continue to client-side fallbacks
+  } catch (err) {
+    console.warn('workflowApi.deleteLead failed, falling back:', err);
   }
 
   // 2. If it is an appointment booking or fallback, cancel via schedule Edge Function
@@ -180,12 +208,30 @@ export async function deleteCustomerLead(
         return { ok: true };
       }
     } catch {
-      // Continue to archive fallback
+      // Continue to appointment fallback
+    }
+
+    if (db) {
+      const apptUpdate = await db
+        .from('hub_appointments')
+        .update({ status: 'cancelled', cancelled_at: now.toISOString() })
+        .eq('id', leadId)
+        .select('id')
+        .maybeSingle();
+      if (!apptUpdate.error && apptUpdate.data) {
+        return { ok: true };
+      }
     }
   }
 
   // 3. Fallback: archive customer lead row in powergenie_customers
-  return archiveCustomerLead(leadId, actor, now);
+  const archiveResult = await archiveCustomerLead(leadId, actor, now);
+  if (archiveResult.ok) return { ok: true };
+
+  return {
+    ok: false,
+    error: archiveResult.error ? archiveResult.error.replace(/archived/gi, 'deleted') : 'That lead could not be deleted.',
+  };
 }
 
 export async function restoreCustomerLead(leadId: string, actor: LeadActor, now = new Date()): Promise<LeadWriteResult> {

@@ -2,6 +2,8 @@ import React, { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import {
   LiveKitRoom,
   VideoConference,
+  VideoTrack,
+  useTracks,
   MediaDeviceSelect,
   useParticipants,
   useRemoteParticipants,
@@ -12,6 +14,7 @@ import { ConnectionState, MediaDeviceFailure, Track, LocalAudioTrack } from 'liv
 import '@livekit/components-styles';
 import '@livekit/components-styles/prefabs';
 import './conference.css';
+import CallWrapUp from './CallWrapUp';
 import SpaceshipBackground from './SpaceshipBackground';
 import { Copy, FileText, Phone, Video, X } from 'lucide-react';
 import { lockPageScroll } from '../lib/scrollLock';
@@ -120,9 +123,8 @@ export function ConferenceCall({
             >
               <StartRoomDevices camera={startWithCamera} onProblem={setDeviceNote} />
               <RoomPresence />
-              {!isHost && <WaitingForHost />}
               <SpaceshipBackground host={isHost} onProblem={setDeviceNote} />
-              <VideoConference />
+              {isHost ? <VideoConference /> : <GuestConference />}
               <RoomAudioSettings onProblem={setDeviceNote} showVoiceSetup={adminVoice} />
             </LiveKitRoom>
           </div>
@@ -239,25 +241,25 @@ function RoomAudioSettings({ onProblem, showVoiceSetup }: { onProblem: (message:
   );
 }
 
-function WaitingForHost() {
-  const connectionState = useConnectionState();
+function GuestConference() {
+  const connection = useConnectionState();
   const participants = useRemoteParticipants();
-  if (connectionState !== ConnectionState.Connected || participants.some(({ identity }) => identity.startsWith('host-'))) {
-    return null;
-  }
-
-  return (
-    <div className="pg-conference-wait" role="status">
-      <div className="flex items-center gap-3">
-        <img src="/assets/conference/sunrun-wordmark.webp" alt="Sunrun" className="h-5 w-auto object-contain" />
-        <BrandMark className="h-7" />
+  const tracks = useTracks([Track.Source.Camera, Track.Source.ScreenShare]);
+  const host = participants.find(participant => participant.identity.startsWith('host-'));
+  const camera = tracks.find(track => track.participant === host && track.source === Track.Source.Camera && track.publication.isSubscribed && !track.publication.isMuted);
+  const sharing = tracks.some(track => track.source === Track.Source.ScreenShare && !track.publication.isMuted);
+  const [gallery, setGallery] = useState(false);
+  const showStage = connection === ConnectionState.Connected && !sharing && !gallery;
+  return <>
+    {!sharing && <button type="button" className="pg-view-switch" onClick={() => setGallery(value => !value)}>{gallery ? 'Show host stage' : 'Show participants'}</button>}
+    {showStage && <section className="pg-host-stage" aria-label="Host stage">
+      <div className="pg-host-scene">
+        {camera && <div className="pg-projection"><VideoTrack trackRef={camera} /></div>}
+        <p role="status">{host ? camera ? host.name || 'Host' : (host.name || 'Host') + ' · Camera off or connecting' : 'Waiting for host'}</p>
       </div>
-      <div>
-        <p className="m-0 text-sm font-bold">Waiting for host</p>
-        <p className="m-0 text-xs text-hub-soft">Keep this window open. Your host will appear when they connect.</p>
-      </div>
-    </div>
-  );
+    </section>}
+    <VideoConference />
+  </>;
 }
 
 function plainConnectionNote(message: string): string {
@@ -333,17 +335,20 @@ export function ConferenceSheet({
   customerId,
   customerName,
   sample,
+  initialInvitePath = null,
   onClose,
 }: {
   customerId: string;
   customerName: string;
   sample: boolean;
+  initialInvitePath?: string | null;
   onClose: () => void;
 }) {
   const [configured, setConfigured] = useState<boolean | null>(sample ? false : null);
   const [problem, setProblem] = useState<ConferenceProblem | null>(null);
-  const [invitePath, setInvitePath] = useState<string | null>(null);
+  const [invitePath, setInvitePath] = useState<string | null>(initialInvitePath);
   const [join, setJoin] = useState<JoinInfo | null>(null);
+  const [wrapUp, setWrapUp] = useState(false);
   const [hostCamera, setHostCamera] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -388,7 +393,8 @@ export function ConferenceSheet({
     }
   };
 
-  if (join) return <ConferenceCall join={join} isHost customerId={customerId} startWithCamera={hostCamera} onLeave={onClose} />;
+  if (wrapUp) return <CallWrapUp customerId={customerId} name={customerName} onClose={onClose} />;
+  if (join) return <ConferenceCall join={join} isHost customerId={customerId} startWithCamera={hostCamera} onLeave={() => { setJoin(null); setWrapUp(true); }} />;
 
   return (
     <div className="pg-room-overlay fixed inset-0 z-[85] flex items-end justify-center bg-hub-scrim sm:items-center" onClick={onClose}>

@@ -226,9 +226,14 @@ export async function listActiveRooms() {
   const customers = ids.length
     ? await selectRows<CustomerRow>('powergenie_customers', { id: inList(ids) }, { select: 'id,customer_name' })
     : []
+  const waiting = rooms.length ? await selectRows<{ room_id: string }>(
+    'hub_conference_guests', { room_id: inList(rooms.map(room => room.id)), status: 'eq.waiting' }, { select: 'room_id' },
+  ) : []
+  const pending = new Set(waiting.map(guest => guest.room_id))
   const names = new Map(customers.map((customer) => [customer.id, customer.customer_name]))
   return rooms.map((room) => ({
     customerId: room.customer_id,
+    waiting: pending.has(room.id),
     customerName: names.get(room.customer_id) || 'Customer',
     expiresAt: room.expires_at,
     invitePath: invitePath(room.invite_token),
@@ -356,6 +361,15 @@ export async function handleConference(request: Request, url: URL): Promise<Resp
 
   const member = await requireHubMember(request)
 
+  if (action === 'brief' && request.method === 'GET') {
+    const customer = await customerOrThrow(url.searchParams.get('customerId') || '')
+    const [proposals, calls] = await Promise.all([
+      selectRows<{ status: string }>('hub_proposals', { lead_id: `eq.${customer.id}`, status: 'neq.superseded' }, { select: 'status', order: 'updated_at.desc', limit: 1 }),
+      selectRows<{ title: string; detail: string | null }>('hub_tasks', { lead_id: `eq.${customer.id}`, kind: 'like.call_*' }, { select: 'title,detail', order: 'created_at.desc', limit: 1 }),
+    ])
+    return json({ proposal: proposals[0]?.status ?? null, lastCall: calls[0] ?? null })
+  }
+
   if (action === 'rooms' && request.method === 'GET') {
     try {
       return json({ rooms: await listActiveRooms() })
@@ -387,6 +401,24 @@ export async function handleConference(request: Request, url: URL): Promise<Resp
   if (!isRecord(body)) throw new HttpError(400, 'Invalid request.')
   if (typeof body.customerId !== 'string') throw new HttpError(400, 'Choose a customer first.')
   const customer = await customerOrThrow(body.customerId)
+
+  if (action === 'wrap-up') {
+    const outcomes = ['Needs bill', 'Proposal reviewed', 'No-show', 'Other']
+    if (typeof body.outcome !== 'string' || !outcomes.includes(body.outcome) ||
+        typeof body.note !== 'string' || body.note.length > 600 ||
+        typeof body.entryId !== 'string' || !GUEST_ID.test(body.entryId) ||
+        (body.dueAt !== null && (typeof body.dueAt !== 'string' || !Number.isFinite(Date.parse(body.dueAt))))) {
+      throw new HttpError(400, 'Check the outcome, note, and follow-up date.')
+    }
+    const now = new Date().toISOString()
+    await insertReturning('hub_tasks', {
+      lead_id: customer.id, kind: 'call_' + body.entryId, title: body.outcome,
+      detail: body.note.trim() || null, due_at: body.dueAt || now,
+      done_at: body.dueAt ? null : now, done_by: body.dueAt ? null : member.id,
+      done_by_name: body.dueAt ? null : member.fullName || member.email,
+    }, true)
+    return json({ ok: true })
+  }
 
   if (action === 'admit' || action === 'decline') {
     const room = await activeRoom(customer.id)

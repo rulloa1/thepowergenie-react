@@ -45,7 +45,17 @@ export function assertSameOrigin(request: Request): void {
   }
   const host = request.headers.get('host')
   const forwarded = request.headers.get('x-forwarded-host')?.split(',')[0]?.trim()
-  if (originHost === urlHost || originHost === host || originHost === forwarded) return
+  const strip = (h: string | null | undefined) => (h || '').trim().toLowerCase().replace(/^www\./i, '')
+  const normOrigin = strip(originHost)
+  if (
+    originHost === urlHost ||
+    originHost === host ||
+    originHost === forwarded ||
+    normOrigin === strip(urlHost) ||
+    normOrigin === strip(host) ||
+    normOrigin === strip(forwarded) ||
+    normOrigin === 'thepowergenie.theroyeffect.com'
+  ) return
   throw new HttpError(403, 'Request blocked.')
 }
 

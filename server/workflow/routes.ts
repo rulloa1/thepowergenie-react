@@ -169,14 +169,39 @@ export async function handleWorkflow(request: Request, url: URL): Promise<Respon
     case 'cancel-followup':
       await cancelFollowup(idFrom(body.followupId, 'message'))
       return json({ ok: true })
+    case 'archive-lead': {
+      const leadId = idFrom(body.leadId, 'lead')
+      const now = new Date().toISOString()
+      await patchRows('hub_appointments', { id: `eq.${leadId}` }, { status: 'cancelled', cancelled_at: now }).catch(() => 0)
+      await patchRows('powergenie_customers', { id: `eq.${leadId}` }, {
+        archived_at: now,
+        archived_by: actor.id,
+        updated_at: now,
+      }).catch(() => 0)
+      return json({ ok: true })
+    }
     case 'delete-lead': {
       const leadId = idFrom(body.leadId, 'lead')
       const now = new Date().toISOString()
-      // Try to cancel from hub_appointments
-      await patchRows('hub_appointments', { id: `eq.${leadId}` }, { status: 'cancelled', cancelled_at: now }).catch(() => 0)
-      // Try hard delete or archive from powergenie_customers
-      const deletedCount = await deleteRows('powergenie_customers', { id: `eq.${leadId}` }).catch(() => 0)
-      if (!deletedCount) {
+      // 1. Clean up from hub_appointments & appointment files if booking lead
+      await deleteRows('hub_appointment_files', { appointment_id: `eq.${leadId}` }).catch(() => 0)
+      const apptDeleted = await deleteRows('hub_appointments', { id: `eq.${leadId}` }).catch(() => 0)
+      if (!apptDeleted) {
+        await patchRows('hub_appointments', { id: `eq.${leadId}` }, { status: 'cancelled', cancelled_at: now }).catch(() => 0)
+      }
+      // 2. Remove related records for this lead
+      await deleteRows('hub_lead_seen', { lead_id: `eq.${leadId}` }).catch(() => 0)
+      await deleteRows('hub_sequences', { lead_id: `eq.${leadId}` }).catch(() => 0)
+      await deleteRows('hub_conference_rooms', { customer_id: `eq.${leadId}` }).catch(() => 0)
+      await deleteRows('hub_tasks', { lead_id: `eq.${leadId}` }).catch(() => 0)
+      await deleteRows('hub_followups', { lead_id: `eq.${leadId}` }).catch(() => 0)
+      await deleteRows('hub_proposals', { lead_id: `eq.${leadId}` }).catch(() => 0)
+      await deleteRows('hub_lead_workflow', { lead_id: `eq.${leadId}` }).catch(() => 0)
+      await deleteRows('powergenie_files', { customer_id: `eq.${leadId}` }).catch(() => 0)
+      await deleteRows('powergenie_activity', { customer_id: `eq.${leadId}` }).catch(() => 0)
+      // 3. Delete or archive customer record
+      const custDeleted = await deleteRows('powergenie_customers', { id: `eq.${leadId}` }).catch(() => 0)
+      if (!custDeleted) {
         await patchRows('powergenie_customers', { id: `eq.${leadId}` }, {
           archived_at: now,
           archived_by: actor.id,
