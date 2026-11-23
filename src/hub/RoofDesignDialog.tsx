@@ -25,7 +25,10 @@ import {
   type BatteryChoice,
   type RoofDesignSpec,
   buildDefaultRoofDesign,
+  getSavedRoofDesign,
+  parseRoofDesignFromNotes,
   recalculateRoofDesign,
+  saveLeadRoofDesign,
 } from './roofDesign';
 import { Button, Notice, Spinner, cn, inputClass, labelClass } from './ui';
 import type { Lead } from './useLeadFeed';
@@ -48,12 +51,23 @@ export default function RoofDesignDialog({
   const titleId = useId();
   const dialogRef = useRef<HTMLDivElement>(null);
 
-  // Initial spec based on lead or defaults
+  // Initial spec based on saved customer layout, notes, lead, or defaults
   const [spec, setSpec] = useState<RoofDesignSpec>(() => {
+    const saved =
+      lead?.roofDesign ||
+      (lead?.id ? getSavedRoofDesign(lead.id) : null) ||
+      parseRoofDesignFromNotes(lead?.notes);
+    if (saved) return saved;
     const annualKwh = lead?.kwh ? lead.kwh * 10 : lead?.avgMonthlyKwh ? lead.avgMonthlyKwh * 12 : 12500;
     const address = lead?.address || '4102 Westheimer Rd, Houston, TX 77027';
     return buildDefaultRoofDesign(address, annualKwh, null, lead?.id, lead?.name);
   });
+
+  const hasSavedDesign = Boolean(
+    lead?.roofDesign ||
+    (lead?.id && getSavedRoofDesign(lead.id)) ||
+    parseRoofDesignFromNotes(lead?.notes),
+  );
 
   const [applying, setApplying] = useState(false);
   const [statusNote, setStatusNote] = useState<string | null>(null);
@@ -107,6 +121,9 @@ export default function RoofDesignDialog({
     setApplying(true);
     setStatusNote(null);
     try {
+      if (lead?.id) {
+        saveLeadRoofDesign(lead.id, spec);
+      }
       await onApplyToLead(spec, lead?.id);
       setStatusNote('Roof design saved successfully!');
       setTimeout(() => {
@@ -209,9 +226,16 @@ Confidential & Proprietary — Prepared by The Power Genie / Sunrun
                 <Compass className="h-4 w-4" />
               </span>
               <div>
-                <h2 id={titleId} className="m-0 truncate text-base font-bold text-hub-ink sm:text-lg">
-                  {lead ? `Roof Design — ${lead.name}` : 'Solar Roof Design Studio'}
-                </h2>
+                <div className="flex items-center gap-2">
+                  <h2 id={titleId} className="m-0 truncate text-base font-bold text-hub-ink sm:text-lg">
+                    {lead ? `Roof Design — ${lead.name}` : 'Solar Roof Design Studio'}
+                  </h2>
+                  {hasSavedDesign && (
+                    <span className="hidden sm:inline-flex items-center rounded-md bg-emerald-500/15 px-2 py-0.5 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                      Saved layout
+                    </span>
+                  )}
+                </div>
                 <div className="flex items-center gap-1.5 text-xs text-hub-soft">
                   <MapPin className="h-3 w-3 shrink-0 text-hub-accent-ink" />
                   {editingAddress ? (

@@ -53,7 +53,12 @@ import WorkflowPanel from './WorkflowPanel';
 import RoofDesignDialog from './RoofDesignDialog';
 import CreateProposalDialog from './CreateProposalDialog';
 import type { BuiltProposal } from './proposalBuilder';
-import type { RoofDesignSpec } from './roofDesign';
+import {
+  type RoofDesignSpec,
+  saveLeadRoofDesign,
+  serializeRoofDesign,
+  stripRoofDesignFromNotes,
+} from './roofDesign';
 import { PipelineBar, PipelineSummary } from './PipelineStage';
 import { ConferenceRoomButton } from './ConferenceRoomButton';
 import { dueText, nextPipelineStep, savingsText } from './customerGlance';
@@ -835,13 +840,19 @@ export default function LeadsTab({
   const handleApplyRoofDesign = async (spec: RoofDesignSpec, leadId?: string) => {
     if (!leadId) return;
     const target = feed.leads.find((l) => l.id === leadId);
+    saveLeadRoofDesign(leadId, spec);
     const designSummary = `[Roof Design: ${spec.systemKw} kW DC, ${spec.panelCount} panels, ${spec.annualProductionKwh.toLocaleString()} kWh/yr, ${spec.batteryName}]`;
-    const updatedNotes = target?.notes ? `${target.notes}\n${designSummary}` : designSummary;
+    const cleanNotes = target?.notes ? stripRoofDesignFromNotes(target.notes) : '';
+    const token = serializeRoofDesign(spec);
+    const updatedNotes = cleanNotes
+      ? `${cleanNotes}\n${designSummary}\n${token}`
+      : `${designSummary}\n${token}`;
 
     if (feed.updateLead) {
       feed.updateLead(leadId, {
         stage: 'panel_design',
         notes: updatedNotes,
+        roofDesign: spec,
       });
     }
 
@@ -888,7 +899,7 @@ export default function LeadsTab({
         pastDue: null,
         currentCharges: null,
         totalDue: null,
-        notes: `Roof Design: ${spec.systemKw} kW DC (${spec.panelCount} panels), ${spec.batteryName}, ${spec.offsetPct}% offset.`,
+        notes: `Roof Design: ${spec.systemKw} kW DC (${spec.panelCount} panels), ${spec.batteryName}, ${spec.offsetPct}% offset.\n${serializeRoofDesign(spec)}`,
         utility: null,
         stage: 'panel_design',
         createdBy: null,
@@ -900,6 +911,7 @@ export default function LeadsTab({
         ratePlan: null,
         cancelled: false,
         unseen: false,
+        roofDesign: spec,
       },
     });
   };

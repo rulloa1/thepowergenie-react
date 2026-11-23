@@ -250,3 +250,68 @@ export function recalculateRoofDesign(
     updatedAt: new Date().toISOString(),
   };
 }
+
+const ROOF_DESIGN_TOKEN_REGEX = /<!--roof-design:([\s\S]*?)-->/;
+const ROOF_DESIGN_STORAGE_PREFIX = 'powergenie:roof-design:';
+
+export function serializeRoofDesign(spec: RoofDesignSpec): string {
+  try {
+    return `<!--roof-design:${JSON.stringify(spec)}-->`;
+  } catch {
+    return '';
+  }
+}
+
+export function parseRoofDesignFromNotes(notes?: string | null): RoofDesignSpec | null {
+  if (!notes) return null;
+  const match = ROOF_DESIGN_TOKEN_REGEX.exec(notes);
+  if (!match || !match[1]) return null;
+  try {
+    const parsed = JSON.parse(match[1]);
+    if (parsed && typeof parsed === 'object' && typeof parsed.panelCount === 'number' && Array.isArray(parsed.planes)) {
+      return parsed as RoofDesignSpec;
+    }
+  } catch {
+    // Ignore invalid JSON
+  }
+  return null;
+}
+
+export function stripRoofDesignFromNotes(notes?: string | null): string {
+  if (!notes) return '';
+  return notes.replace(ROOF_DESIGN_TOKEN_REGEX, '').trim();
+}
+
+export function saveLeadRoofDesign(leadId: string, spec: RoofDesignSpec): void {
+  if (!leadId || typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(`${ROOF_DESIGN_STORAGE_PREFIX}${leadId}`, JSON.stringify(spec));
+  } catch {
+    // LocalStorage write fail ignored
+  }
+}
+
+export function getSavedRoofDesign(leadId: string): RoofDesignSpec | null {
+  if (!leadId || typeof window === 'undefined') return null;
+  try {
+    const raw = window.localStorage.getItem(`${ROOF_DESIGN_STORAGE_PREFIX}${leadId}`);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === 'object' && typeof parsed.panelCount === 'number' && Array.isArray(parsed.planes)) {
+      return parsed as RoofDesignSpec;
+    }
+  } catch {
+    // LocalStorage read fail ignored
+  }
+  return null;
+}
+
+export function clearSavedRoofDesign(leadId: string): void {
+  if (!leadId || typeof window === 'undefined') return;
+  try {
+    window.localStorage.removeItem(`${ROOF_DESIGN_STORAGE_PREFIX}${leadId}`);
+  } catch {
+    // LocalStorage remove fail ignored
+  }
+}
+

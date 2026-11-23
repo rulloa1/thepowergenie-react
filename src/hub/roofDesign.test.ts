@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { buildDefaultRoofDesign, recalculateRoofDesign } from './roofDesign';
+import {
+  buildDefaultRoofDesign,
+  parseRoofDesignFromNotes,
+  recalculateRoofDesign,
+  serializeRoofDesign,
+  stripRoofDesignFromNotes,
+} from './roofDesign';
 
 describe('roofDesign calculation engine', () => {
   it('builds a balanced default roof design for an address', () => {
@@ -37,5 +43,21 @@ describe('roofDesign calculation engine', () => {
     expect(noBattery.batteryCapacityKwh).toBe(0);
     expect(noBattery.continuousPowerKw).toBe(0);
     expect(noBattery.estimatedBackupHours).toBe(0);
+  });
+
+  it('serializes, parses, and strips roof designs in lead notes roundtrip', () => {
+    const base = buildDefaultRoofDesign('1422 Yale St, Houston, TX 77008', 12000, 24);
+    const token = serializeRoofDesign(base);
+    expect(token).toContain('<!--roof-design:');
+
+    const notes = `Initial notes from customer consult.\n${token}`;
+    const parsed = parseRoofDesignFromNotes(notes);
+    expect(parsed).not.toBeNull();
+    expect(parsed?.panelCount).toBe(24);
+    expect(parsed?.address).toBe('1422 Yale St, Houston, TX 77008');
+
+    const clean = stripRoofDesignFromNotes(notes);
+    expect(clean).toBe('Initial notes from customer consult.');
+    expect(parseRoofDesignFromNotes(clean)).toBeNull();
   });
 });

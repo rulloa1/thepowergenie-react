@@ -150,7 +150,7 @@ async function proposalUrl(customerId: string, origin: string): Promise<string |
   try {
     const rows = await selectRows<ProposalRow>(
       'hub_proposals',
-      { lead_id: `eq.${customerId}`, status: 'in.(approved,sent)' },
+      { lead_id: `eq.${customerId}`, status: 'in.(approved,sent,draft)' },
       { select: 'public_token', order: 'updated_at.desc', limit: 1 },
     )
     const token = rows[0]?.public_token

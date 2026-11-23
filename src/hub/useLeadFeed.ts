@@ -3,6 +3,11 @@ import type { UsageMonth } from '../../shared/types';
 import { supabase } from '../lib/supabase';
 import { isManualCreatedBy, isMissingArchiveColumn } from './leadRecord';
 import { DEMO_LEADS } from './demoLeads';
+import {
+  type RoofDesignSpec,
+  parseRoofDesignFromNotes,
+  getSavedRoofDesign,
+} from './roofDesign';
 
 export type LeadSource = 'customer' | 'booking';
 
@@ -45,6 +50,7 @@ export type Lead = {
   referralState?: string | null;
   ownerEmailStatus?: string | null;
   workflowOption?: 'option_b_ownership' | 'option_a_ppa';
+  roofDesign?: RoofDesignSpec | null;
 };
 
 export type LeadFeed = {
@@ -247,6 +253,7 @@ export function toLeads(customers: CustomerRow[], files: FileRow[], appointments
       ratePlan: text(row.rate_plan),
       cancelled: false,
       unseen: !seen.has(`customer:${row.id}`),
+      roofDesign: parseRoofDesignFromNotes(row.notes) || (row.id ? getSavedRoofDesign(row.id) : null) || null,
     };
   });
 
@@ -292,6 +299,7 @@ export function toLeads(customers: CustomerRow[], files: FileRow[], appointments
       ratePlan: null,
       cancelled: row.status === 'cancelled',
       unseen: !seen.has(`booking:${row.id}`),
+      roofDesign: parseRoofDesignFromNotes(row.note) || (row.id ? getSavedRoofDesign(row.id) : null) || null,
     };
   });
 

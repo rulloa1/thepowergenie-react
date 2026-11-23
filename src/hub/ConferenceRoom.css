@@ -134,3 +134,26 @@
 .pg-host-stage + .lk-video-conference { flex: 0 1 auto; overflow: auto; }
 .pg-host-stage + .lk-video-conference .lk-grid-layout-wrapper,
 .pg-host-stage + .lk-video-conference .lk-focus-layout-wrapper { display: none; }
+
+.pg-presentation-stage {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  background: #050c16;
+}
+
+.pg-presentation-stage + .lk-video-conference {
+  flex: 0 1 auto;
+  overflow: auto;
+}
+
+.pg-presentation-stage + .lk-video-conference .lk-grid-layout-wrapper,
+.pg-presentation-stage + .lk-video-conference .lk-focus-layout-wrapper {
+  display: none;
+}
+
+.pg-presentation-pip {
+  pointer-events: auto;
+}

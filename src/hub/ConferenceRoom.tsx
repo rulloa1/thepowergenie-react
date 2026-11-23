@@ -16,7 +16,7 @@ import '@livekit/components-styles/prefabs';
 import './conference.css';
 import CallWrapUp from './CallWrapUp';
 import { BackgroundProcessor, supportsBackgroundProcessors } from '@livekit/track-processors';
-import { Copy, FileText, Phone, Video, X } from 'lucide-react';
+import { Copy, FileText, Phone, SlidersHorizontal, Video, X } from 'lucide-react';
 import { lockPageScroll } from '../lib/scrollLock';
 import type { Profile } from './Dashboard';
 import { conferenceApi, ConferenceError, type JoinInfo, type WaitingGuest } from './conferenceApi';
@@ -58,6 +58,7 @@ export function ConferenceCall({
     } }),
   }), [isHost, spaceshipSupported]);
   const [side, setSide] = useState<'call' | 'proposal' | 'chat'>('call');
+  const [presentMode, setPresentMode] = useState<'off' | 'proposal'>('off');
   const [copied, setCopied] = useState(false);
   const [connectionNote, setConnectionNote] = useState<string | null>(null);
   const [deviceNote, setDeviceNote] = useState<string | null>(null);
@@ -101,6 +102,17 @@ export function ConferenceCall({
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          {isHost && join.proposalUrl && (
+            <Button
+              type="button"
+              variant={presentMode === 'proposal' ? 'primary' : 'ghost'}
+              className="min-h-11 px-3 text-[0.84rem]"
+              onClick={() => setPresentMode((cur) => (cur === 'proposal' ? 'off' : 'proposal'))}
+            >
+              <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
+              <span>{presentMode === 'proposal' ? 'Exit presentation' : 'Present proposal'}</span>
+            </Button>
+          )}
           {isHost && (
             <Button type="button" variant="ghost" className="min-h-11 px-3 text-[0.84rem]" onClick={() => void copy()}>
               <Copy className="h-4 w-4" aria-hidden="true" /> <span aria-live="polite">{copied ? 'Link copied' : 'Copy client link'}</span>
@@ -139,7 +151,17 @@ export function ConferenceCall({
               }
               <StartRoomDevices camera={startWithCamera && spaceshipSupported} onProblem={setDeviceNote} />
               <RoomPresence />
-              {isHost ? <VideoConference /> : <GuestConference />}
+              {presentMode === 'proposal' && join.proposalUrl ? (
+                <ProposalPresentationStage
+                  proposalUrl={join.proposalUrl}
+                  customerName={join.customerName}
+                  onExit={() => setPresentMode('off')}
+                />
+              ) : isHost ? (
+                <VideoConference />
+              ) : (
+                <GuestConference />
+              )}
               <RoomAudioSettings onProblem={setDeviceNote} showVoiceSetup={adminVoice} />
             </LiveKitRoom>
           </div>
@@ -152,7 +174,23 @@ export function ConferenceCall({
           </div>
           <div className={`min-h-0 flex-1 flex-col overflow-y-auto ${side === 'chat' ? 'hidden' : 'flex'} ${side === 'call' ? 'max-lg:hidden' : ''}`}>
             {join.proposalUrl ? (
-              <><a className="pg-signing-link" href={join.proposalUrl} target="_blank" rel="noopener noreferrer">Open proposal / Sunrun signing ↗</a><iframe title={`Proposal for ${join.customerName}`} src={join.proposalUrl} className="min-h-0 w-full flex-1 border-0 bg-white" /></>
+              <>
+                <div className="flex items-center justify-between gap-2 border-b border-hub-line p-2">
+                  <a className="pg-signing-link m-0 text-xs" href={join.proposalUrl} target="_blank" rel="noopener noreferrer">
+                    Open signing ↗
+                  </a>
+                  {isHost && (
+                    <button
+                      type="button"
+                      onClick={() => setPresentMode((m) => (m === 'proposal' ? 'off' : 'proposal'))}
+                      className="rounded-lg bg-hub-primary px-2.5 py-1 text-xs font-semibold text-hub-on-primary hover:opacity-90"
+                    >
+                      {presentMode === 'proposal' ? 'Stop stage' : 'Project to stage'}
+                    </button>
+                  )}
+                </div>
+                <iframe title={`Proposal for ${join.customerName}`} src={join.proposalUrl} className="min-h-0 w-full flex-1 border-0 bg-white" />
+              </>
             ) : (
               <div className="m-3 rounded-xl border border-hub-line bg-hub-surface p-4">
                 <FileText className="mb-3 h-5 w-5 text-hub-link" aria-hidden="true" />
@@ -253,6 +291,79 @@ function RoomAudioSettings({ onProblem, showVoiceSetup }: { onProblem: (message:
         <p>Speaker selection depends on your browser. Otherwise use your system sound settings.</p>
       </div>
     </details>
+  );
+}
+
+function ProposalPresentationStage({
+  proposalUrl,
+  customerName,
+  onExit,
+}: {
+  proposalUrl: string;
+  customerName: string;
+  onExit: () => void;
+}) {
+  return (
+    <>
+      <section className="pg-presentation-stage" aria-label="Proposal presentation stage">
+        <div className="pg-presentation-header flex items-center justify-between gap-3 border-b border-[#33566b] bg-[#0c2231] px-4 py-2 text-hub-ink">
+          <div className="flex items-center gap-2">
+            <span className="h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse" />
+            <strong className="text-sm font-bold text-white">Presenting Proposal</strong>
+            <span className="hidden text-xs text-[#a0c2d6] sm:inline">· {customerName}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <a
+              href={proposalUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 rounded-lg border border-[#33566b] bg-[#122c3e] px-2.5 py-1 text-xs font-semibold text-[#ecfaff] hover:bg-[#183950]"
+            >
+              <span>Open in tab</span>
+              <span aria-hidden="true">↗</span>
+            </a>
+            <button
+              type="button"
+              onClick={onExit}
+              className="inline-flex items-center gap-1 rounded-lg border border-[#33566b] bg-[#122c3e] px-2.5 py-1 text-xs font-semibold text-[#ecfaff] hover:bg-[#183950]"
+            >
+              <X className="h-3.5 w-3.5" />
+              <span>Exit presentation</span>
+            </button>
+          </div>
+        </div>
+        <div className="relative min-h-0 flex-1 bg-white">
+          <iframe
+            title={`Sunrun Proposal Presentation for ${customerName}`}
+            src={proposalUrl}
+            className="h-full w-full border-0 bg-white"
+          />
+          <PresentationPip />
+        </div>
+      </section>
+      <VideoConference />
+    </>
+  );
+}
+
+function PresentationPip() {
+  const tracks = useTracks([Track.Source.Camera]);
+  const active = tracks.filter((t) => t.publication.isSubscribed && !t.publication.isMuted);
+  if (active.length === 0) return null;
+  return (
+    <div className="pg-presentation-pip absolute bottom-3 right-3 z-30 flex max-w-[320px] flex-col gap-1.5 rounded-xl border border-[#33566b] bg-[#0b202fe6] p-2 shadow-2xl backdrop-blur">
+      <div className="flex items-center justify-between px-1 text-[10px] font-bold uppercase tracking-wider text-[#a0c2d6]">
+        <span>Live Video</span>
+        <span className="flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
+      </div>
+      <div className="flex gap-2 overflow-x-auto">
+        {active.slice(0, 3).map((track) => (
+          <div key={track.publication.trackSid} className="h-20 w-28 shrink-0 overflow-hidden rounded-lg bg-black border border-[#33566b]/60">
+            <VideoTrack trackRef={track} className="h-full w-full object-cover" />
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
