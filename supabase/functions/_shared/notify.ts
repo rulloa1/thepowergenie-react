@@ -73,6 +73,7 @@ export function leadAlertText(alert: LeadAlert): string {
     `kWh: ${kwh}`,
     `Amount: ${amount}`,
     `Appointment: ${oneLine(alert.appointment) || 'not provided'}`,
+    ...(alert.source === 'booking' ? ['Website solar consultation by phone or screen share. The service address is for the solar review.'] : []),
     `Bill attached: ${alert.billAttached ? 'yes' : 'no'}`,
     alert.dashboardUrl,
   ].join('\n')

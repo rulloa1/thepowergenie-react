@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react';
 import { billingMonths, previousBillingMonth } from '../../supabase/functions/_shared/billing-months';
 import type { Lead } from './useLeadFeed';
+import { formatDateTime } from './time';
+import ReferralCredit from './ReferralCredit';
 import { Button } from './ui';
 
 export function intakeGaps(lead: Lead, now = new Date()) {
@@ -21,12 +23,13 @@ export default function IntakeDesk({ leads, openLead }: { leads: Lead[]; openLea
   const [filter, setFilter] = useState('missing');
   const [rep, setRep] = useState('');
   const [state, setState] = useState('');
+  const [territory, setTerritory] = useState('');
   const [source, setSource] = useState('');
   const [copied, setCopied] = useState(false);
   const [limit, setLimit] = useState(5);
   const rows = useMemo(() => leads.filter(l => !l.cancelled && !l.archived).map(lead => ({ lead, missing: intakeGaps(lead) })), [leads]);
   const sources = [...new Set(rows.map(({lead}) => lead.referralRep || lead.sourceLabel))].sort();
-  const group = rows.filter(({lead}) => !source || source === (lead.referralRep || lead.sourceLabel));
+  const group = rows.filter(({lead}) => (!source || source === (lead.referralRep || lead.sourceLabel)) && (!territory || territory === lead.referralState));
   const list = group.filter(({missing}) => filter === 'missing' ? missing.length > 0 : !missing.length);
   const link = new URL('/book', window.location.origin);
   if (rep.trim()) link.searchParams.set('ref', rep.trim());
@@ -39,13 +42,17 @@ export default function IntakeDesk({ leads, openLead }: { leads: Lead[]; openLea
       </Button>)}
       <label className="today-picker">Referral source<select value={source} onChange={e => {setSource(e.target.value);setLimit(5);}}>
         <option value="">All sources</option>{sources.map(s => <option key={s}>{s}</option>)}</select></label>
+      <label className="today-picker">Referral state<select value={territory} onChange={e => {setTerritory(e.target.value);setLimit(5);}}>
+        <option value="">All states</option>{Array.from(new Set(rows.map(r => r.lead.referralState).filter((s): s is string => !!s))).sort().map(s => <option key={s}>{s}</option>)}</select></label>
     </div>
     {!list.length && <p>No matching records.</p>}
     {list.slice(0,limit).map(({ lead, missing }) => <div className="intake-row" key={lead.source + lead.id}>
       <div><button type="button" className="font-bold text-hub-link underline" onClick={() => openLead(lead.id)}>{lead.name}</button>
       <small className="block">{[lead.referralRep || lead.sourceLabel,lead.referralState].filter(Boolean).join(' · ')}</small>
-      <p>{missing.length ? 'Still needed: ' + missing.join(', ') : 'Contact details, bill and 12 months of usage on file.'}</p></div>
+      <p>{missing.length ? 'Still needed: ' + missing.join(', ') : 'Contact details, bill and 12 months of usage on file.'}</p>
+      <small>{lead.appointment ? 'Scheduled · ' + (lead.appointment.length === 10 ? lead.appointment : formatDateTime(lead.appointment) + ' CT') : 'No appointment on record'}</small></div>
       <div className="flex flex-wrap gap-3">{lead.phone && <a href={'tel:' + lead.phone}>Call</a>}{lead.email && <a href={'mailto:' + lead.email}>Email</a>}</div>
+      {lead.source === 'booking' && lead.referralRep && lead.address && <ReferralCredit id={lead.id} rep={lead.referralRep} />}
     </div>)}
     {list.length > limit && <Button variant="ghost" onClick={() => setLimit(limit + 10)}>Show more</Button>}
     <details className="mt-4"><summary className="cursor-pointer font-bold">Create a rep booking link</summary>

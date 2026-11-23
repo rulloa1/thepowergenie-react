@@ -303,7 +303,7 @@ async function book(admin: Admin, req: Request) {
     }).format(startDate),
     billAttached: !!bill,
     dashboardUrl: dashboardLeadUrl(siteOrigin(env('SITE_URL')), appt.id),
-  });
+  }, startDate.toISOString());
 
   return json({
     ok: true,

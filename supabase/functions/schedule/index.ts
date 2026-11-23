@@ -33,7 +33,7 @@ async function emailBooking(admin: Admin, a: { id: string; source: string; custo
   return notifyAppointment(admin, { id: a.id, source: a.source === 'public' ? 'booking' : 'dashboard', name: a.customer_name,
     email: a.email, phone: a.phone, address: a.address || '', kwh: a.kwh ?? null, amount: a.bill_amount ?? null,
     appointment: new Date(a.starts_at).toLocaleString('en-US', { timeZone: SLOT_TIME_ZONE, timeZoneName: 'short' }),
-    billAttached: !!count, dashboardUrl: dashboardLeadUrl(siteOrigin(env('SITE_URL')), a.id) }, includeTeam);
+    billAttached: !!count, dashboardUrl: dashboardLeadUrl(siteOrigin(env('SITE_URL')), a.id) }, a.starts_at, includeTeam);
 }
 
 const MINUTE = 60_000;
@@ -180,7 +180,7 @@ async function reschedule(admin: Admin, body: Record<string, unknown>) {
 
   const { data: appt, error } = await admin
     .from('hub_appointments')
-    .update({ starts_at: start.toISOString(), ends_at: end.toISOString() })
+    .update({ starts_at: start.toISOString(), ends_at: end.toISOString(), owner_email_status: null })
     .eq('id', id)
     .select('*')
     .single();
@@ -194,6 +194,7 @@ async function reschedule(admin: Admin, body: Record<string, unknown>) {
     .select('id', { count: 'exact', head: true })
     .eq('appointment_id', id);
   const syncError = await syncHubAppointment(admin, appt, { hasLightBill: (count ?? 0) > 0 });
+  await emailBooking(admin, appt, true);
   return json({ ok: true, warning: syncError });
 }
 

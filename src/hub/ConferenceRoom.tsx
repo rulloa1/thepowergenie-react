@@ -15,7 +15,7 @@ import '@livekit/components-styles';
 import '@livekit/components-styles/prefabs';
 import './conference.css';
 import CallWrapUp from './CallWrapUp';
-import SpaceshipBackground from './SpaceshipBackground';
+import { BackgroundProcessor, supportsBackgroundProcessors } from '@livekit/track-processors';
 import { Copy, FileText, Phone, Video, X } from 'lucide-react';
 import { lockPageScroll } from '../lib/scrollLock';
 import type { Profile } from './Dashboard';
@@ -44,6 +44,19 @@ export function ConferenceCall({
   startWithCamera?: boolean;
   onLeave: () => void;
 }) {
+  const spaceshipSupported = !isHost || supportsBackgroundProcessors();
+  const roomOptions = React.useMemo(() => ({
+    audioCaptureDefaults: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+    ...(isHost && { videoCaptureDefaults: {
+      resolution: { width: 1280, height: 720, frameRate: 24 },
+      processor: spaceshipSupported ? BackgroundProcessor({ mode: 'virtual-background', imagePath: new URL('/assets/conference/orbital-lounge.webp', window.location.origin).href }) : {
+        name: 'spaceship-unavailable',
+        async init() { throw new Error('This browser cannot separate the host from the camera background.'); },
+        async restart() { throw new Error('Spaceship camera unavailable.'); },
+        async destroy() {},
+      },
+    } }),
+  }), [isHost, spaceshipSupported]);
   const [side, setSide] = useState<'call' | 'proposal' | 'chat'>('call');
   const [copied, setCopied] = useState(false);
   const [connectionNote, setConnectionNote] = useState<string | null>(null);
@@ -110,7 +123,7 @@ export function ConferenceCall({
               token={join.token}
               connect
               audio={false}
-              options={{ audioCaptureDefaults: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } }}
+              options={roomOptions}
               video={false}
               onError={(error) => {
                 const failure = MediaDeviceFailure.getFailure(error);
@@ -121,9 +134,11 @@ export function ConferenceCall({
               onDisconnected={() => setConnectionNote('The video connection closed. Use Leave when you are finished.')}
               style={{ height: '100%', display: 'flex', flexDirection: 'column', minHeight: 0 }}
             >
-              <StartRoomDevices camera={startWithCamera} onProblem={setDeviceNote} />
+              {
+                !spaceshipSupported && <p role="status">Audio is available. Use a browser with hardware acceleration for the spaceship camera.</p>
+              }
+              <StartRoomDevices camera={startWithCamera && spaceshipSupported} onProblem={setDeviceNote} />
               <RoomPresence />
-              <SpaceshipBackground host={isHost} onProblem={setDeviceNote} />
               {isHost ? <VideoConference /> : <GuestConference />}
               <RoomAudioSettings onProblem={setDeviceNote} showVoiceSetup={adminVoice} />
             </LiveKitRoom>

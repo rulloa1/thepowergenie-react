@@ -129,13 +129,8 @@
 .pg-host-stage { flex: 1 1 0; min-height: 0; display: grid; place-items: center; container-type: size; background: #050c16; }
 .pg-host-scene { position: relative; isolation: isolate; width: min(100%, 179.1667cqh); aspect-ratio: 1376 / 768; background: url('/assets/conference/orbital-lounge.webp') center / contain no-repeat; }
 .pg-host-scene p { position: absolute; bottom: 5%; left: 50%; transform: translateX(-50%); margin: 0; width: max-content; max-width: 90%; text-align: center; padding: .35em .85em; border: 1px solid #628ca4; border-radius: .65rem; background: #081626ee; color: #ecfaff; font-weight: 650; font-size: clamp(.8rem, 2.5cqw, 1.35rem); }
-.pg-projection { position: absolute; inset: 13% 29% 19%; mix-blend-mode: screen; mask-image: radial-gradient(ellipse, black 43%, transparent 74%); }
-.pg-projection video { width: 100%; height: 100%; object-fit: cover; filter: grayscale(1) sepia(.85) hue-rotate(143deg) saturate(2) brightness(1.25); }
-.pg-projection::after { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(transparent 0 3px, #00587640 3px 4px); pointer-events: none; }
-@media (prefers-reduced-motion: no-preference) {
-  .pg-projection { animation: pg-project-in 450ms ease-out both; }
-  @keyframes pg-project-in { from { opacity: 0; transform: translateY(3%); } to { opacity: 1; transform: translateY(0); } }
-}
+.pg-projection { position: absolute; inset: 0; }
+.pg-projection video { width: 100%; height: 100%; object-fit: contain; }
 .pg-host-stage + .lk-video-conference { flex: 0 1 auto; overflow: auto; }
 .pg-host-stage + .lk-video-conference .lk-grid-layout-wrapper,
 .pg-host-stage + .lk-video-conference .lk-focus-layout-wrapper { display: none; }
