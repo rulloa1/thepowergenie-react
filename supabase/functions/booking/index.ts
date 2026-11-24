@@ -87,7 +87,7 @@ async function listSlots(admin: Admin) {
   const now = new Date();
   try {
     const busy = await busyTime(admin, now);
-    return json({ timeZone: SLOT_TIME_ZONE, slotMinutes: DEFAULT_RULES.slotMinutes, slots: generateSlots(now, busy) });
+    return json({ supportsReferralFields: true, timeZone: SLOT_TIME_ZONE, slotMinutes: DEFAULT_RULES.slotMinutes, slots: generateSlots(now, busy) });
   } catch (e) {
     console.error('[booking:list]', e);
     // Fail closed: if a required calendar can't confirm it is free, don't offer times.
@@ -224,7 +224,7 @@ async function book(admin: Admin, req: Request) {
       avg_monthly_kwh: fields?.avgMonthlyKwh ?? null,
       usage_history: usageHistory.length ? usageHistory : null,
     })
-    .select('id')
+    .select('id, referral_rep, referral_state')
     .single();
 
   if (insertError || !appt) {
@@ -310,6 +310,8 @@ async function book(admin: Admin, req: Request) {
     start: startDate.toISOString(),
     end: endDate.toISOString(),
     timeZone: SLOT_TIME_ZONE,
+    referralRep: appt.referral_rep,
+    referralState: appt.referral_state,
     meterStatus,
   });
 }
