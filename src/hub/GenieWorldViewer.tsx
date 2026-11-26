@@ -33,6 +33,16 @@ const KEY_MAP: Record<string, string> = {
   KeyE: 'key_e',
 };
 
+export interface GenieWorldSyncState {
+  weatherPreset?: 'sunny' | 'sunset' | 'overcast' | 'dusk';
+  cameraYaw?: number;
+  cameraPitch?: number;
+  cameraX?: number;
+  cameraY?: number;
+  cameraZ?: number;
+  steeringText?: string;
+}
+
 export interface GenieWorldViewerProps {
   address?: string | null;
   leadName?: string | null;
@@ -42,6 +52,10 @@ export interface GenieWorldViewerProps {
   offsetPct?: number | null;
   initialPrompt?: string | null;
   inline?: boolean;
+  syncState?: GenieWorldSyncState | null;
+  onSyncChange?: (state: GenieWorldSyncState) => void;
+  followHost?: boolean;
+  onToggleFollowHost?: (following: boolean) => void;
   onClose: () => void;
 }
 
@@ -54,6 +68,10 @@ export default function GenieWorldViewer({
   offsetPct = 102,
   initialPrompt,
   inline = false,
+  syncState,
+  onSyncChange,
+  followHost = false,
+  onToggleFollowHost,
   onClose,
 }: GenieWorldViewerProps) {
   const safePanelCount = panelCount || 24;
@@ -77,6 +95,31 @@ export default function GenieWorldViewer({
     send: (msg: any) => Promise<void>;
     complete: () => Promise<void>;
   } | null>(null);
+
+  const syncStateRef = useRef(syncState);
+  syncStateRef.current = syncState;
+
+  const followHostRef = useRef(followHost);
+  followHostRef.current = followHost;
+
+  const onSyncChangeRef = useRef(onSyncChange);
+  onSyncChangeRef.current = onSyncChange;
+
+  const onToggleFollowHostRef = useRef(onToggleFollowHost);
+  onToggleFollowHostRef.current = onToggleFollowHost;
+
+  // React to guest receiving syncState from host
+  useEffect(() => {
+    if (!syncState || !followHost) return;
+    if (syncState.weatherPreset && syncState.weatherPreset !== weatherPreset) {
+      setWeatherPreset(syncState.weatherPreset);
+    }
+    if (syncState.steeringText) {
+      setHudNote(`Host steered world: "${syncState.steeringText}"`);
+      const timer = setTimeout(() => setHudNote(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [syncState, followHost, weatherPreset]);
 
   useEffect(() => {
     if (!inline) return lockPageScroll();
