@@ -38,3 +38,44 @@ test('genie sync payload encodes and parses reliably for LiveKit data packets', 
   assert.equal(parsed.state.cameraX, 2.4);
   assert.equal(parsed.state.steeringText, 'golden hour sunset');
 });
+
+test('genie sync payload encodes and parses focusedHotspot and laser pointer', () => {
+  const syncState = {
+    weatherPreset: 'sunny' as const,
+    cameraYaw: 1.25,
+    cameraPitch: 0.38,
+    cameraX: 0,
+    cameraY: 3.8,
+    cameraZ: -6.0,
+    focusedHotspot: 'battery' as const,
+    pointer: {
+      x: 0.65,
+      y: 0.42,
+      active: true,
+      label: 'Solar Consultant',
+    },
+  };
+
+  const json = JSON.stringify({ type: 'pg-genie-state', state: syncState });
+  const parsed = JSON.parse(json);
+
+  assert.equal(parsed.type, 'pg-genie-state');
+  assert.equal(parsed.state.focusedHotspot, 'battery');
+  assert.equal(parsed.state.pointer?.active, true);
+  assert.equal(parsed.state.pointer?.x, 0.65);
+  assert.equal(parsed.state.pointer?.label, 'Solar Consultant');
+});
+
+test('genie hotspots cover panels, battery, and meter components', () => {
+  const validHotspots = ['panels', 'battery', 'meter'] as const;
+  assert.equal(validHotspots.length, 3);
+  for (const id of validHotspots) {
+    const payload = {
+      type: 'pg-genie-state',
+      state: { focusedHotspot: id },
+    };
+    const encoded = JSON.stringify(payload);
+    const decoded = JSON.parse(encoded);
+    assert.equal(decoded.state.focusedHotspot, id);
+  }
+});

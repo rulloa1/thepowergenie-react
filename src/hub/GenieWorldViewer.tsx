@@ -1,8 +1,15 @@
 import React, { useEffect, useId, useRef, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import {
+  Activity,
+  ArrowRight,
+  BatteryCharging,
+  ChevronRight,
   Compass,
   Eye,
+  Gauge,
+  Info,
+  Layers,
   Maximize2,
   Minimize2,
   Radio,
@@ -33,6 +40,15 @@ const KEY_MAP: Record<string, string> = {
   KeyE: 'key_e',
 };
 
+export type GenieHotspotId = 'panels' | 'battery' | 'meter';
+
+export interface GeniePointerState {
+  x: number; // 0 to 1 relative
+  y: number; // 0 to 1 relative
+  active: boolean;
+  label?: string;
+}
+
 export interface GenieWorldSyncState {
   weatherPreset?: 'sunny' | 'sunset' | 'overcast' | 'dusk';
   cameraYaw?: number;
@@ -41,6 +57,8 @@ export interface GenieWorldSyncState {
   cameraY?: number;
   cameraZ?: number;
   steeringText?: string;
+  focusedHotspot?: GenieHotspotId | null;
+  pointer?: GeniePointerState | null;
 }
 
 export interface GenieWorldViewerProps {
@@ -90,6 +108,22 @@ export default function GenieWorldViewer({
   const [weatherPreset, setWeatherPreset] = useState<'sunny' | 'sunset' | 'overcast' | 'dusk'>('sunny');
   const [hudNote, setHudNote] = useState<string | null>('Use W/A/S/D or Arrow keys to walk around. Drag to look.');
 
+  const [focusedHotspot, setFocusedHotspot] = useState<GenieHotspotId | null>(null);
+  const [pointerDot, setPointerDot] = useState<GeniePointerState | null>(null);
+
+  const focusedHotspotRef = useRef(focusedHotspot);
+  focusedHotspotRef.current = focusedHotspot;
+
+  const pointerDotRef = useRef(pointerDot);
+  pointerDotRef.current = pointerDot;
+
+  const targetCamRef = useRef<{ x: number; y: number; z: number; yaw: number; pitch: number } | null>(null);
+  const screenPinsRef = useRef<{
+    panels: { x: number; y: number; depth: number } | null;
+    battery: { x: number; y: number; depth: number } | null;
+    meter: { x: number; y: number; depth: number } | null;
+  }>({ panels: null, battery: null, meter: null });
+
   // Live session holder
   const liveSessionRef = useRef<{
     send: (msg: any) => Promise<void>;
@@ -108,18 +142,134 @@ export default function GenieWorldViewer({
   const onToggleFollowHostRef = useRef(onToggleFollowHost);
   onToggleFollowHostRef.current = onToggleFollowHost;
 
+  const energyFlow = React.useMemo(() => {
+    switch (weatherPreset) {
+      case 'sunset':
+        return {
+          solarKw: +(safeSystemKw * 0.28).toFixed(1),
+          batteryKw: -1.8,
+          homeKw: 3.8,
+          gridKw: 0.0,
+          statusLabel: 'Peak Demand · Battery Discharging',
+        };
+      case 'dusk':
+        return {
+          solarKw: 0.0,
+          batteryKw: -3.2,
+          homeKw: 3.2,
+          gridKw: 0.0,
+          statusLabel: 'Night Mode · 100% Stored Backup',
+        };
+      case 'overcast':
+        return {
+          solarKw: +(safeSystemKw * 0.35).toFixed(1),
+          batteryKw: 0.8,
+          homeKw: 2.6,
+          gridKw: +(Math.max(0, safeSystemKw * 0.35 - 3.4)).toFixed(1),
+          statusLabel: 'Diffuse Daylight Production',
+        };
+      case 'sunny':
+      default:
+        return {
+          solarKw: +(safeSystemKw * 0.84).toFixed(1),
+          batteryKw: 4.5,
+          homeKw: 2.4,
+          gridKw: +(Math.max(0, safeSystemKw * 0.84 - 2.4 - 4.5)).toFixed(1),
+          statusLabel: 'Peak Production · Rapid Charging',
+        };
+    }
+  }, [weatherPreset, safeSystemKw]);
+
+  const HOTSPOT_INFO: Record<GenieHotspotId, {
+    title: string;
+    badge: string;
+    badgeClass: string;
+    specs: { label: string; value: string }[];
+    description: string;
+    cam: { x: number; y: number; z: number; yaw: number; pitch: number };
+  }> = {
+    panels: {
+      title: 'Tier-1 Monocrystalline Solar Array',
+      badge: `${safeSystemKw} kW DC Array`,
+      badgeClass: 'bg-amber-500/20 text-amber-300 border-amber-500/40',
+      specs: [
+        { label: 'System Capacity', value: `${safeSystemKw} kW DC` },
+        { label: 'Module Count', value: `${safePanelCount} Monocrystalline Panels` },
+        { label: 'Estimated Offset', value: `${offsetPct}% Net Production` },
+        { label: 'Warranty Term', value: '25-Year Production Guarantee' },
+      ],
+      description: 'Optimized Texas high-heat coefficient with dark shingle architectural aesthetics and zero-roof-penetration flashing.',
+      cam: { x: 0, y: 3.8, z: -6.0, yaw: 0, pitch: 0.38 },
+    },
+    battery: {
+      title: 'Tesla Powerwall 3 Storage',
+      badge: '13.5 kWh Usable',
+      badgeClass: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
+      specs: [
+        { label: 'Battery Chemistry', value: 'Lithium Iron Phosphate (LFP)' },
+        { label: 'Continuous Output', value: '11.5 kW On-Grid / Backup' },
+        { label: 'Switchover Latency', value: '< 20 ms Seamless Backup' },
+        { label: 'Storm Watch', value: 'Automatic ERCOT Severe Weather Prep' },
+      ],
+      description: 'Integrated solar inverter and whole-home backup. Keeps air conditioning, refrigeration, and medical devices powered during outages.',
+      cam: { x: 4.6, y: -0.2, z: -2.0, yaw: -1.15, pitch: 0.05 },
+    },
+    meter: {
+      title: 'Bi-Directional Smart Net Meter',
+      badge: 'CenterPoint / Oncor Sync',
+      badgeClass: 'bg-sky-500/20 text-sky-300 border-sky-500/40',
+      specs: [
+        { label: 'Metering Type', value: 'Bi-Directional Net Metering' },
+        { label: 'Grid Export Tariff', value: '1:1 Energy Buyback Credits' },
+        { label: 'Safety Disconnect', value: 'Rapid Shutdown & Islanding Guard' },
+        { label: 'Interconnection', value: 'Utility Permission to Operate (PTO)' },
+      ],
+      description: 'Monitors net energy flow in real time. Surpluses are credited to the homeowner’s electric account.',
+      cam: { x: 4.5, y: -0.4, z: -4.5, yaw: -1.45, pitch: 0.02 },
+    },
+  };
+
+  const focusHotspot = (id: GenieHotspotId | null) => {
+    setFocusedHotspot(id);
+    if (id) {
+      targetCamRef.current = HOTSPOT_INFO[id].cam;
+      setHudNote(`Inspecting ${HOTSPOT_INFO[id].title}`);
+      const timer = setTimeout(() => setHudNote(null), 3000);
+    } else {
+      targetCamRef.current = null;
+    }
+
+    onSyncChangeRef.current?.({
+      weatherPreset,
+      focusedHotspot: id,
+      ...(id ? HOTSPOT_INFO[id].cam : {}),
+    });
+  };
+
   // React to guest receiving syncState from host
   useEffect(() => {
-    if (!syncState || !followHost) return;
+    if (!syncState) return;
+    if (syncState.pointer !== undefined) {
+      setPointerDot(syncState.pointer);
+    }
+    if (!followHost) return;
     if (syncState.weatherPreset && syncState.weatherPreset !== weatherPreset) {
       setWeatherPreset(syncState.weatherPreset);
+    }
+    if (syncState.focusedHotspot !== undefined && syncState.focusedHotspot !== focusedHotspot) {
+      setFocusedHotspot(syncState.focusedHotspot);
+      if (syncState.focusedHotspot) {
+        targetCamRef.current = HOTSPOT_INFO[syncState.focusedHotspot].cam;
+      } else {
+        targetCamRef.current = null;
+      }
     }
     if (syncState.steeringText) {
       setHudNote(`Host steered world: "${syncState.steeringText}"`);
       const timer = setTimeout(() => setHudNote(null), 3000);
       return () => clearTimeout(timer);
     }
-  }, [syncState, followHost, weatherPreset]);
+  }, [syncState, followHost, weatherPreset, focusedHotspot]);
 
   useEffect(() => {
     if (!inline) return lockPageScroll();
@@ -308,6 +458,10 @@ export default function GenieWorldViewer({
 
     if (newPreset !== weatherPreset) setWeatherPreset(newPreset);
 
+    if (/battery|powerwall|storage/i.test(trimmed)) focusHotspot('battery');
+    else if (/panel|array|solar|module/i.test(trimmed)) focusHotspot('panels');
+    else if (/meter|utility|grid|buyback/i.test(trimmed)) focusHotspot('meter');
+
     // Notify sync state listeners
     onSyncChangeRef.current?.({
       weatherPreset: newPreset,
@@ -340,6 +494,7 @@ export default function GenieWorldViewer({
       if (followHostRef.current && onToggleFollowHostRef.current) {
         onToggleFollowHostRef.current(false);
       }
+      targetCamRef.current = null;
       isDragging = true;
       lastMouseX = e.clientX;
       lastMouseY = e.clientY;
@@ -355,9 +510,115 @@ export default function GenieWorldViewer({
     };
     const onMouseUp = () => { isDragging = false; };
 
+    const onCanvasClick = (e: MouseEvent) => {
+      const rect = canvas.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+      const pins = screenPinsRef.current;
+      if (!pins) return;
+
+      for (const [id, pin] of Object.entries(pins) as [GenieHotspotId, { x: number; y: number; z: number } | null][]) {
+        if (pin && Math.hypot(mx - pin.x, my - pin.y) < 32) {
+          focusHotspot(id);
+          return;
+        }
+      }
+    };
+
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let lastPinchDist = 0;
+
+    const onTouchStart = (e: TouchEvent) => {
+      if (followHostRef.current && onToggleFollowHostRef.current) onToggleFollowHostRef.current(false);
+      targetCamRef.current = null;
+
+      if (e.touches.length === 1) {
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+        lastMouseX = e.touches[0].clientX;
+        lastMouseY = e.touches[0].clientY;
+        isDragging = true;
+      } else if (e.touches.length === 2) {
+        lastPinchDist = Math.hypot(
+          e.touches[0].clientX - e.touches[1].clientX,
+          e.touches[0].clientY - e.touches[1].clientY
+        );
+      }
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (e.touches.length === 1 && isDragging) {
+        const dx = e.touches[0].clientX - lastMouseX;
+        const dy = e.touches[0].clientY - lastMouseY;
+        lastMouseX = e.touches[0].clientX;
+        lastMouseY = e.touches[0].clientY;
+        cameraYaw += dx * 0.007;
+        cameraPitch = Math.max(-0.6, Math.min(0.6, cameraPitch - dy * 0.007));
+      } else if (e.touches.length === 2) {
+        const dist = Math.hypot(
+          e.touches[0].clientX - e.touches[1].clientX,
+          e.touches[0].clientY - e.touches[1].clientY
+        );
+        const diff = dist - lastPinchDist;
+        lastPinchDist = dist;
+        cameraZ = Math.min(-2, Math.max(-20, cameraZ + diff * 0.03));
+      }
+    };
+
+    const onTouchEnd = (e: TouchEvent) => {
+      isDragging = false;
+      if (e.changedTouches.length === 1) {
+        const endX = e.changedTouches[0].clientX;
+        const endY = e.changedTouches[0].clientY;
+        if (Math.hypot(endX - touchStartX, endY - touchStartY) < 14) {
+          const rect = canvas.getBoundingClientRect();
+          const mx = endX - rect.left;
+          const my = endY - rect.top;
+          const pins = screenPinsRef.current;
+          if (pins) {
+            for (const [id, pin] of Object.entries(pins) as [GenieHotspotId, { x: number; y: number; z: number } | null][]) {
+              if (pin && Math.hypot(mx - pin.x, my - pin.y) < 32) {
+                focusHotspot(id);
+                return;
+              }
+            }
+          }
+        }
+      }
+    };
+
+    let lastPointerTime = 0;
+    const onPointerMove = (e: MouseEvent) => {
+      if (!onSyncChangeRef.current) return;
+      const rect = canvas.getBoundingClientRect();
+      const relX = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+      const relY = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
+
+      const now = performance.now();
+      if (now - lastPointerTime > 45) {
+        lastPointerTime = now;
+        onSyncChangeRef.current({
+          pointer: { x: relX, y: relY, active: true, label: 'Consultant' },
+        });
+      }
+    };
+
+    const onPointerLeave = () => {
+      if (onSyncChangeRef.current) {
+        onSyncChangeRef.current({ pointer: { x: 0, y: 0, active: false } });
+      }
+    };
+
     canvas.addEventListener('mousedown', onMouseDown);
     window.addEventListener('mousemove', onMouseMove);
     window.addEventListener('mouseup', onMouseUp);
+    canvas.addEventListener('click', onCanvasClick);
+    canvas.addEventListener('touchstart', onTouchStart, { passive: true });
+    canvas.addEventListener('touchmove', onTouchMove, { passive: true });
+    canvas.addEventListener('touchend', onTouchEnd);
+    canvas.addEventListener('mousemove', onPointerMove);
+    canvas.addEventListener('mouseleave', onPointerLeave);
 
     const render = () => {
       const w = canvas.width = canvas.clientWidth || 1280;
@@ -371,34 +632,46 @@ export default function GenieWorldViewer({
         if (typeof ss.cameraZ === 'number') cameraZ += (ss.cameraZ - cameraZ) * 0.25;
         if (typeof ss.cameraYaw === 'number') cameraYaw += (ss.cameraYaw - cameraYaw) * 0.25;
         if (typeof ss.cameraPitch === 'number') cameraPitch += (ss.cameraPitch - cameraPitch) * 0.25;
+      } else if (targetCamRef.current) {
+        // Smoothly glide camera toward focused component
+        cameraX += (targetCamRef.current.x - cameraX) * 0.12;
+        cameraY += (targetCamRef.current.y - cameraY) * 0.12;
+        cameraZ += (targetCamRef.current.z - cameraZ) * 0.12;
+        cameraYaw += (targetCamRef.current.yaw - cameraYaw) * 0.12;
+        cameraPitch += (targetCamRef.current.pitch - cameraPitch) * 0.12;
       }
 
       // Handle active key movement
       const speed = 0.12;
       if (activeKeys.has('key_w') || activeKeys.has('arrow_up')) {
+        targetCamRef.current = null;
         if (followHostRef.current && onToggleFollowHostRef.current) onToggleFollowHostRef.current(false);
         cameraX += Math.sin(cameraYaw) * speed;
         cameraZ += Math.cos(cameraYaw) * speed;
       }
       if (activeKeys.has('key_s') || activeKeys.has('arrow_down')) {
+        targetCamRef.current = null;
         if (followHostRef.current && onToggleFollowHostRef.current) onToggleFollowHostRef.current(false);
         cameraX -= Math.sin(cameraYaw) * speed;
         cameraZ -= Math.cos(cameraYaw) * speed;
       }
       if (activeKeys.has('key_a') || activeKeys.has('arrow_left')) {
+        targetCamRef.current = null;
         if (followHostRef.current && onToggleFollowHostRef.current) onToggleFollowHostRef.current(false);
         cameraX -= Math.cos(cameraYaw) * speed;
         cameraZ += Math.sin(cameraYaw) * speed;
       }
       if (activeKeys.has('key_d') || activeKeys.has('arrow_right')) {
+        targetCamRef.current = null;
         if (followHostRef.current && onToggleFollowHostRef.current) onToggleFollowHostRef.current(false);
         cameraX += Math.cos(cameraYaw) * speed;
         cameraZ -= Math.sin(cameraYaw) * speed;
       }
       if (activeKeys.has('space')) {
+        targetCamRef.current = null;
         if (followHostRef.current && onToggleFollowHostRef.current) onToggleFollowHostRef.current(false);
         cameraY = Math.min(6, cameraY + 0.08); // Elevate to view roof
-      } else if (!followHostRef.current) {
+      } else if (!followHostRef.current && !targetCamRef.current) {
         cameraY = Math.max(-1.2, cameraY - 0.04); // Settle back to ground level
       }
 
@@ -673,6 +946,127 @@ export default function GenieWorldViewer({
       ctx.fillText('N', 0, -23);
       ctx.restore();
 
+      // Project 3D Component Coordinates onto 2D Screen
+      const pinPanels = project(0, hh + 0.8, hz - hd * 0.5);
+      const pinBattery = project(hx + hw + 0.15, 1.1, hz - hd * 0.4);
+      const pinMeter = project(hx + hw + 0.15, 0.85, hz - hd * 0.85);
+
+      screenPinsRef.current = {
+        panels: pinPanels,
+        battery: pinBattery,
+        meter: pinMeter,
+      };
+
+      // Draw Animated Power Flow Conduits & Flow Lines
+      const animSec = Date.now() / 1000;
+      if (pinPanels && pinBattery && pinPanels.depth > 0 && pinBattery.depth > 0) {
+        ctx.save();
+        ctx.strokeStyle = weatherPreset === 'dusk' ? 'rgba(52, 211, 153, 0.5)' : 'rgba(251, 191, 36, 0.6)';
+        ctx.lineWidth = 2.5;
+        ctx.setLineDash([6, 6]);
+        ctx.lineDashOffset = -animSec * 28;
+        ctx.beginPath();
+        ctx.moveTo(pinPanels.x, pinPanels.y);
+        const pConduit = project(hx + hw + 0.1, hh, hz - hd * 0.4);
+        if (pConduit) ctx.lineTo(pConduit.x, pConduit.y);
+        ctx.lineTo(pinBattery.x, pinBattery.y);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      if (pinBattery && pinMeter && pinBattery.depth > 0 && pinMeter.depth > 0) {
+        ctx.save();
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.55)';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([4, 4]);
+        ctx.lineDashOffset = -animSec * 20;
+        ctx.beginPath();
+        ctx.moveTo(pinBattery.x, pinBattery.y);
+        ctx.lineTo(pinMeter.x, pinMeter.y);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // Draw Interactive 3D Component Beacons
+      const drawPin = (pin: { x: number; y: number; depth: number } | null, id: GenieHotspotId, color: string, label: string) => {
+        if (!pin || pin.depth <= 0.4) return;
+        const isSelected = focusedHotspotRef.current === id;
+        const pulse = Math.sin(Date.now() / 250) * 3;
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(pin.x, pin.y, 15 + pulse, 0, Math.PI * 2);
+        ctx.fillStyle = color + '22';
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.arc(pin.x, pin.y, 10, 0, Math.PI * 2);
+        ctx.fillStyle = isSelected ? '#ffffff' : color;
+        ctx.fill();
+        ctx.strokeStyle = '#0f172a';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.font = 'bold 11px system-ui, sans-serif';
+        const tw = ctx.measureText(label).width;
+        const pillW = tw + 16;
+        const pillH = 22;
+        const pillX = pin.x + 14;
+        const pillY = pin.y - 11;
+
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
+        ctx.beginPath();
+        ctx.roundRect(pillX, pillY, pillW, pillH, 6);
+        ctx.fill();
+        ctx.strokeStyle = isSelected ? color : 'rgba(148, 163, 184, 0.35)';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        ctx.fillStyle = isSelected ? '#ffffff' : color;
+        ctx.fillText(label, pillX + 8, pillY + 15);
+        ctx.restore();
+      };
+
+      drawPin(pinPanels, 'panels', '#f59e0b', `☀️ ${safeSystemKw} kW Array`);
+      drawPin(pinBattery, 'battery', '#10b981', '⚡ Powerwall 3');
+      drawPin(pinMeter, 'meter', '#38bdf8', '📊 Net Meter');
+
+      // Draw Synchronized Consultant Laser Pointer
+      if (pointerDotRef.current?.active) {
+        const px = pointerDotRef.current.x * w;
+        const py = pointerDotRef.current.y * h;
+        const pPulse = Math.sin(Date.now() / 150) * 4;
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(px, py, 14 + pPulse, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(239, 68, 68, 0.25)';
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.arc(px, py, 5, 0, Math.PI * 2);
+        ctx.fillStyle = '#ef4444';
+        ctx.fill();
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        const tag = pointerDotRef.current.label || 'Consultant';
+        ctx.font = 'bold 10px system-ui, sans-serif';
+        const tagW = ctx.measureText(tag).width + 12;
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+        ctx.beginPath();
+        ctx.roundRect(px + 8, py - 18, tagW, 18, 4);
+        ctx.fill();
+        ctx.strokeStyle = '#ef4444';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        ctx.fillStyle = '#fecaca';
+        ctx.fillText(tag, px + 14, py - 5);
+        ctx.restore();
+      }
+
       animId = requestAnimationFrame(render);
     };
 
@@ -682,6 +1076,12 @@ export default function GenieWorldViewer({
       canvas.removeEventListener('mousedown', onMouseDown);
       window.removeEventListener('mousemove', onMouseMove);
       window.removeEventListener('mouseup', onMouseUp);
+      canvas.removeEventListener('click', onCanvasClick);
+      canvas.removeEventListener('touchstart', onTouchStart);
+      canvas.removeEventListener('touchmove', onTouchMove);
+      canvas.removeEventListener('touchend', onTouchEnd);
+      canvas.removeEventListener('mousemove', onPointerMove);
+      canvas.removeEventListener('mouseleave', onPointerLeave);
     };
   }, [status, activeKeys, weatherPreset, safePanelCount, safeSystemKw]);
 
@@ -704,6 +1104,7 @@ export default function GenieWorldViewer({
       role="dialog"
       aria-modal="true"
       aria-labelledby={titleId}
+      onClick={(e) => e.stopPropagation()}
       className={
         inline
           ? 'relative flex h-full w-full flex-col overflow-hidden bg-slate-950 font-[family:var(--sw-font-body)] text-white select-none'
@@ -812,13 +1213,98 @@ export default function GenieWorldViewer({
 
         {/* HUD Notification Toast */}
         {hudNote && (
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 rounded-full border border-slate-700/80 bg-slate-900/90 px-4 py-1.5 text-xs font-medium text-slate-200 shadow-xl backdrop-blur">
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 rounded-full border border-slate-700/80 bg-slate-900/90 px-4 py-1.5 text-xs font-medium text-slate-200 shadow-xl backdrop-blur animate-in fade-in zoom-in-95">
             {hudNote}
           </div>
         )}
 
+        {/* Live Energy Flow Telemetry HUD (Top-Left) */}
+        <div className="absolute top-4 left-4 z-20 hidden sm:flex flex-col gap-1.5 rounded-xl border border-slate-800/80 bg-slate-900/85 p-3 backdrop-blur shadow-2xl pointer-events-auto">
+          <div className="flex items-center justify-between gap-3 border-b border-slate-800 pb-1.5">
+            <span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-amber-400">
+              <Zap className="h-3.5 w-3.5 fill-amber-400/20" /> Live Energy Flow
+            </span>
+            <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-semibold text-emerald-300">
+              ● Self-Powered
+            </span>
+          </div>
+          <div className="grid grid-cols-3 gap-2 pt-0.5 text-center">
+            <div className="rounded-lg bg-slate-950/60 p-1.5 border border-amber-500/20">
+              <div className="text-[10px] text-slate-400">Solar Gen</div>
+              <div className="text-xs font-bold text-amber-300">{(safeSystemKw * 0.78).toFixed(1)} kW</div>
+            </div>
+            <div className="rounded-lg bg-slate-950/60 p-1.5 border border-emerald-500/20">
+              <div className="text-[10px] text-slate-400">Powerwall</div>
+              <div className="text-xs font-bold text-emerald-300">+3.1 kW</div>
+            </div>
+            <div className="rounded-lg bg-slate-950/60 p-1.5 border border-sky-500/20">
+              <div className="text-[10px] text-slate-400">Net Export</div>
+              <div className="text-xs font-bold text-sky-300">+2.8 kW</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Focused Component Telemetry Card (Bottom-Right) */}
+        {focusedHotspot && HOTSPOT_INFO[focusedHotspot] && (
+          <div className="absolute bottom-20 right-4 z-20 max-w-sm w-full rounded-2xl border border-slate-700/80 bg-slate-900/90 p-4 shadow-2xl backdrop-blur transition-all animate-in fade-in slide-in-from-bottom-2 pointer-events-auto">
+            <div className="flex items-start justify-between gap-2 border-b border-slate-800 pb-2.5">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className={`inline-block h-2.5 w-2.5 rounded-full ${
+                    focusedHotspot === 'panels' ? 'bg-amber-400' : focusedHotspot === 'battery' ? 'bg-emerald-400' : 'bg-sky-400'
+                  }`} />
+                  <h3 className="m-0 text-sm font-bold text-white">
+                    {HOTSPOT_INFO[focusedHotspot].title}
+                  </h3>
+                </div>
+                <span className={`mt-1 inline-block rounded-full border px-2 py-0.5 text-[10px] font-semibold ${HOTSPOT_INFO[focusedHotspot].badgeClass}`}>
+                  {HOTSPOT_INFO[focusedHotspot].badge}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => focusHotspot(null)}
+                className="rounded-lg p-1 text-slate-400 hover:bg-slate-800 hover:text-white"
+                title="Dismiss details"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <p className="mt-2 text-xs leading-relaxed text-slate-300">
+              {HOTSPOT_INFO[focusedHotspot].description}
+            </p>
+
+            <div className="mt-3 grid grid-cols-2 gap-2 rounded-xl bg-slate-950/70 p-2.5 border border-slate-800/80">
+              {HOTSPOT_INFO[focusedHotspot].specs.map((spec, idx) => (
+                <div key={idx} className="flex flex-col">
+                  <span className="text-[10px] text-slate-400">{spec.label}</span>
+                  <span className="text-xs font-semibold text-slate-100">{spec.value}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-3 flex items-center justify-between gap-2 pt-1">
+              <span className="text-[10px] text-slate-400">
+                Click beacon or drag to orbit
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  const list: GenieHotspotId[] = ['panels', 'battery', 'meter'];
+                  const nextIdx = (list.indexOf(focusedHotspot) + 1) % list.length;
+                  focusHotspot(list[nextIdx]);
+                }}
+                className="inline-flex items-center gap-1 rounded-lg bg-amber-500/20 px-2.5 py-1 text-xs font-semibold text-amber-300 border border-amber-500/40 hover:bg-amber-500/30"
+              >
+                Next Component <ChevronRight className="h-3 w-3" />
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* On-Screen Keyboard / D-Pad Guide */}
-        <div className="absolute bottom-20 left-4 z-20 flex flex-col gap-1 rounded-xl border border-slate-800/80 bg-slate-900/80 p-2.5 backdrop-blur text-[11px] text-slate-300">
+        <div className="absolute bottom-20 left-4 z-20 flex flex-col gap-1 rounded-xl border border-slate-800/80 bg-slate-900/80 p-2.5 backdrop-blur text-[11px] text-slate-300 pointer-events-auto">
           <div className="flex items-center justify-between font-bold text-slate-400 text-[10px] uppercase">
             <span>Controls</span>
             <span>WASD / Arrows</span>
@@ -865,28 +1351,48 @@ export default function GenieWorldViewer({
           </div>
         </div>
 
-        {/* Quick Atmosphere Preset Buttons */}
-        <div className="absolute top-4 right-4 z-20 flex flex-col gap-1.5">
+        {/* Quick Atmosphere & Component Preset Buttons */}
+        <div className="absolute top-4 right-4 z-20 flex flex-col gap-1.5 pointer-events-auto">
           <button
             type="button"
-            onClick={() => handleSteer('Golden hour sunset warm light across the solar roof')}
+            onClick={() => handleSteer(weatherPreset === 'sunny' ? 'Golden hour sunset warm light across the solar roof' : 'Clear bright blue sky sunny day')}
             className="flex items-center gap-1.5 rounded-lg border border-slate-700/80 bg-slate-900/80 px-2.5 py-1 text-xs font-semibold text-amber-300 hover:bg-slate-800 backdrop-blur"
           >
-            <Sun className="h-3.5 w-3.5 text-amber-400" /> Sunset Light
+            <Sun className="h-3.5 w-3.5 text-amber-400" />
+            <span>{weatherPreset === 'sunset' ? 'Clear Sun' : 'Sunset Light'}</span>
           </button>
           <button
             type="button"
-            onClick={() => handleSteer('Inspect south roof Tier-1 solar panels close up')}
-            className="flex items-center gap-1.5 rounded-lg border border-slate-700/80 bg-slate-900/80 px-2.5 py-1 text-xs font-semibold text-sky-300 hover:bg-slate-800 backdrop-blur"
+            onClick={() => focusHotspot(focusedHotspot === 'panels' ? null : 'panels')}
+            className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-semibold backdrop-blur transition-all ${
+              focusedHotspot === 'panels'
+                ? 'bg-amber-500/25 text-amber-200 border-amber-400 ring-1 ring-amber-400/50'
+                : 'border-slate-700/80 bg-slate-900/80 text-sky-300 hover:bg-slate-800'
+            }`}
           >
-            <Eye className="h-3.5 w-3.5 text-sky-400" /> Focus Panels
+            <Eye className="h-3.5 w-3.5 text-sky-400" /> ☀️ Solar Array
           </button>
           <button
             type="button"
-            onClick={() => handleSteer('Walk up to Tesla Powerwall 3 battery on garage wall')}
-            className="flex items-center gap-1.5 rounded-lg border border-slate-700/80 bg-slate-900/80 px-2.5 py-1 text-xs font-semibold text-emerald-300 hover:bg-slate-800 backdrop-blur"
+            onClick={() => focusHotspot(focusedHotspot === 'battery' ? null : 'battery')}
+            className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-semibold backdrop-blur transition-all ${
+              focusedHotspot === 'battery'
+                ? 'bg-emerald-500/25 text-emerald-200 border-emerald-400 ring-1 ring-emerald-400/50'
+                : 'border-slate-700/80 bg-slate-900/80 text-emerald-300 hover:bg-slate-800'
+            }`}
           >
-            <Zap className="h-3.5 w-3.5 text-emerald-400" /> Inspect Battery
+            <Zap className="h-3.5 w-3.5 text-emerald-400" /> ⚡ Powerwall 3
+          </button>
+          <button
+            type="button"
+            onClick={() => focusHotspot(focusedHotspot === 'meter' ? null : 'meter')}
+            className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-semibold backdrop-blur transition-all ${
+              focusedHotspot === 'meter'
+                ? 'bg-sky-500/25 text-sky-200 border-sky-400 ring-1 ring-sky-400/50'
+                : 'border-slate-700/80 bg-slate-900/80 text-sky-300 hover:bg-slate-800'
+            }`}
+          >
+            <Activity className="h-3.5 w-3.5 text-sky-400" /> 📊 Smart Meter
           </button>
         </div>
       </div>

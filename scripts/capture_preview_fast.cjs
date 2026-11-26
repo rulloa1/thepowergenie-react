@@ -7,6 +7,13 @@ async function run() {
   const browser = await chromium.launch({ headless: true });
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 
+  page.on('console', (msg) => {
+    if (msg.type() === 'error') console.log('BROWSER CONSOLE ERROR:', msg.text());
+  });
+  page.on('pageerror', (err) => {
+    console.log('BROWSER UNCAUGHT ERROR:', err.message);
+  });
+
   console.log('1. Navigating to dashboard...');
   await page.goto('http://localhost:3000/dashboard', { waitUntil: 'networkidle' });
 
@@ -23,10 +30,10 @@ async function run() {
 
   // Click top "Roof design" button
   console.log('3. Opening Roof Design Studio...');
-  const topRoofBtn = page.getByRole('button', { name: 'Roof design' }).first();
+  const topRoofBtn = page.getByRole('button', { name: /Roof design/i }).first();
   await topRoofBtn.waitFor({ state: 'visible', timeout: 15000 });
   await topRoofBtn.click();
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(2500);
 
   // Take Roof Design Studio screenshot
   const p2 = path.join(outDir, 'roof_studio_preview.png');
@@ -39,7 +46,13 @@ async function run() {
   await genieBtn.waitFor({ state: 'visible', timeout: 10000 });
   await genieBtn.click();
   console.log('Rendering 3D solar canvas...');
-  await page.waitForTimeout(4000);
+  await page.waitForTimeout(3000);
+  const batteryBtn = page.getByRole('button', { name: /Powerwall 3/i });
+  if (await batteryBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+    console.log('Clicking Powerwall 3 preset to show telemetry card...');
+    await batteryBtn.click();
+    await page.waitForTimeout(1500);
+  }
 
   // Take 3D World Viewer Screenshot
   const p3 = path.join(outDir, 'genie_3d_world_preview.png');
@@ -66,12 +79,19 @@ async function run() {
   await topConfBtn.click();
   await page.waitForTimeout(2000);
 
-  // Click Start Sample Call if present
-  const startCall = page.getByRole('button', { name: /Start sample call|Join room/i }).first();
-  if (await startCall.isVisible({ timeout: 5000 }).catch(() => false)) {
-    console.log('Starting sample conference call...');
-    await startCall.click();
-    await page.waitForTimeout(3000);
+  // Click Marcus Sterling's Conference room button to open conference desk sheet
+  console.log('Joining customer conference room...');
+  const customerConfBtn = page.getByRole('button', { name: /Conference room/i }).nth(1);
+  if (await customerConfBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
+    await customerConfBtn.click();
+    await page.waitForTimeout(1500);
+
+    const startSampleCallBtn = page.getByRole('button', { name: /Start sample call|Join room/i }).first();
+    if (await startSampleCallBtn.isVisible({ timeout: 4000 }).catch(() => false)) {
+      console.log('Starting sample conference call...');
+      await startSampleCallBtn.click();
+      await page.waitForTimeout(3000);
+    }
   }
 
   // Project 3D World

@@ -208,8 +208,8 @@ Confidential & Proprietary — Prepared by The Power Genie / Sunrun
   return createPortal(
     <div
       className="fixed inset-0 z-[95] flex items-stretch justify-center bg-hub-scrim p-0 sm:items-center sm:p-4"
-      onClick={() => {
-        if (!busy && !applying) onClose();
+      onClick={(e) => {
+        if (!busy && !applying && !genieOpen && e.target === e.currentTarget) onClose();
       }}
     >
       <div
