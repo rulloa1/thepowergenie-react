@@ -22,7 +22,7 @@ import type { Profile } from './Dashboard';
 import { conferenceApi, ConferenceError, type JoinInfo, type WaitingGuest } from './conferenceApi';
 import { classifyConferenceProblem, conferenceProblemCopy, type ConferenceProblem } from './conferenceSetup';
 import { BrandMark, Button, Notice, Spinner } from './ui';
-import GenieWorldViewer from './GenieWorldViewer';
+import GenieWorldViewer, { type GenieWorldSyncState } from './GenieWorldViewer';
 import './ConferenceRoom.css';
 
 const ChatTab = lazy(() => import('./ChatTab'));
@@ -62,6 +62,9 @@ export function ConferenceCall({
   }), [isHost, spaceshipSupported]);
   const [side, setSide] = useState<ConferenceSideTab>('call');
   const [presentMode, setPresentMode] = useState<'off' | 'proposal' | 'genie'>('off');
+  const [hostGenieSync, setHostGenieSync] = useState<GenieWorldSyncState | null>(null);
+  const [receivedGenieSync, setReceivedGenieSync] = useState<GenieWorldSyncState | null>(null);
+  const [guestFollowHost, setGuestFollowHost] = useState(true);
   const [copied, setCopied] = useState(false);
   const [connectionNote, setConnectionNote] = useState<string | null>(null);
   const [deviceNote, setDeviceNote] = useState<string | null>(null);
@@ -190,11 +193,17 @@ export function ConferenceCall({
                 isHost={isHost}
                 presentMode={presentMode}
                 setPresentMode={setPresentMode}
+                genieSyncState={isHost ? hostGenieSync : null}
+                onGenieSyncReceived={!isHost ? setReceivedGenieSync : undefined}
               />
               {presentMode === 'genie' ? (
                 <GeniePresentationStage
                   customerName={join.customerName}
                   onExit={() => setPresentMode('off')}
+                  syncState={isHost ? hostGenieSync : receivedGenieSync}
+                  onSyncChange={isHost ? setHostGenieSync : undefined}
+                  followHost={!isHost ? guestFollowHost : false}
+                  onToggleFollowHost={!isHost ? setGuestFollowHost : undefined}
                 />
               ) : presentMode === 'proposal' && join.proposalUrl ? (
                 <ProposalPresentationStage
@@ -272,6 +281,8 @@ export function ConferenceCall({
               <GenieWorldViewer
                 leadName={join.customerName}
                 inline
+                syncState={isHost ? hostGenieSync : receivedGenieSync}
+                onSyncChange={isHost ? setHostGenieSync : undefined}
                 onClose={() => setSide('call')}
               />
             </div>
@@ -322,10 +333,14 @@ function ConferencePresentationSync({
   isHost,
   presentMode,
   setPresentMode,
+  genieSyncState,
+  onGenieSyncReceived,
 }: {
   isHost: boolean;
   presentMode: 'off' | 'proposal' | 'genie';
   setPresentMode: (mode: 'off' | 'proposal' | 'genie') => void;
+  genieSyncState?: GenieWorldSyncState | null;
+  onGenieSyncReceived?: (state: GenieWorldSyncState) => void;
 }) {
   const room = useRoomContext();
   const connection = useConnectionState();
@@ -341,6 +356,18 @@ function ConferencePresentationSync({
       // Ignore broadcast errors
     }
   }, [isHost, connection, presentMode, room]);
+
+  // Host broadcasts Genie 3D camera / weather sync updates
+  useEffect(() => {
+    if (!isHost || connection !== ConnectionState.Connected || !genieSyncState || presentMode !== 'genie') return;
+    try {
+      const encoder = new TextEncoder();
+      const payload = encoder.encode(JSON.stringify({ type: 'pg-genie-state', state: genieSyncState }));
+      void room.localParticipant.publishData(payload, { reliable: false });
+    } catch {
+      // Ignore broadcast errors
+    }
+  }, [isHost, connection, genieSyncState, presentMode, room]);
 
   // Host re-broadcasts when a new participant connects to ensure state synchronization
   useEffect(() => {
@@ -362,7 +389,7 @@ function ConferencePresentationSync({
     };
   }, [isHost, connection, presentMode, room]);
 
-  // Guest listens for presentation mode changes from host
+  // Guest listens for presentation mode and Genie 3D sync changes from host
   useEffect(() => {
     const onData = (payload: Uint8Array) => {
       try {
@@ -370,6 +397,8 @@ function ConferencePresentationSync({
         const data = JSON.parse(text);
         if (data?.type === 'pg-present' && (data.mode === 'off' || data.mode === 'proposal' || data.mode === 'genie')) {
           setPresentMode(data.mode);
+        } else if (data?.type === 'pg-genie-state' && data.state && onGenieSyncReceived) {
+          onGenieSyncReceived(data.state);
         }
       } catch {
         // Ignore malformed payload
@@ -379,7 +408,7 @@ function ConferencePresentationSync({
     return () => {
       room.off(RoomEvent.DataReceived, onData);
     };
-  }, [room, setPresentMode]);
+  }, [room, setPresentMode, onGenieSyncReceived]);
 
   return null;
 }
@@ -441,9 +470,17 @@ function RoomAudioSettings({ onProblem, showVoiceSetup }: { onProblem: (message:
 function GeniePresentationStage({
   customerName,
   onExit,
+  syncState,
+  onSyncChange,
+  followHost,
+  onToggleFollowHost,
 }: {
   customerName: string;
   onExit: () => void;
+  syncState?: GenieWorldSyncState | null;
+  onSyncChange?: (state: GenieWorldSyncState) => void;
+  followHost?: boolean;
+  onToggleFollowHost?: (following: boolean) => void;
 }) {
   return (
     <>
@@ -451,6 +488,10 @@ function GeniePresentationStage({
         <GenieWorldViewer
           leadName={customerName}
           inline
+          syncState={syncState}
+          onSyncChange={onSyncChange}
+          followHost={followHost}
+          onToggleFollowHost={onToggleFollowHost}
           onClose={onExit}
         />
         <PresentationPip />

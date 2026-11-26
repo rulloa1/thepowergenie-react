@@ -300,10 +300,19 @@ export default function GenieWorldViewer({
     }
 
     // Also update simulated engine atmosphere if active
-    if (/sunset|dusk|evening|golden hour/i.test(trimmed)) setWeatherPreset('sunset');
-    else if (/night|dark|moon/i.test(trimmed)) setWeatherPreset('dusk');
-    else if (/overcast|cloud|rain|storm/i.test(trimmed)) setWeatherPreset('overcast');
-    else if (/sun|bright|day|clear/i.test(trimmed)) setWeatherPreset('sunny');
+    let newPreset = weatherPreset;
+    if (/sunset|dusk|evening|golden hour/i.test(trimmed)) newPreset = 'sunset';
+    else if (/night|dark|moon/i.test(trimmed)) newPreset = 'dusk';
+    else if (/overcast|cloud|rain|storm/i.test(trimmed)) newPreset = 'overcast';
+    else if (/sun|bright|day|clear/i.test(trimmed)) newPreset = 'sunny';
+
+    if (newPreset !== weatherPreset) setWeatherPreset(newPreset);
+
+    // Notify sync state listeners
+    onSyncChangeRef.current?.({
+      weatherPreset: newPreset,
+      steeringText: trimmed,
+    });
 
     setSteeringText('');
   };
@@ -325,8 +334,12 @@ export default function GenieWorldViewer({
     let isDragging = false;
     let lastMouseX = 0;
     let lastMouseY = 0;
+    let lastSyncTime = 0;
 
     const onMouseDown = (e: MouseEvent) => {
+      if (followHostRef.current && onToggleFollowHostRef.current) {
+        onToggleFollowHostRef.current(false);
+      }
       isDragging = true;
       lastMouseX = e.clientX;
       lastMouseY = e.clientY;
@@ -350,28 +363,59 @@ export default function GenieWorldViewer({
       const w = canvas.width = canvas.clientWidth || 1280;
       const h = canvas.height = canvas.clientHeight || 720;
 
+      // If following host and synced camera is active, smoothly lerp to host position
+      if (followHostRef.current && syncStateRef.current) {
+        const ss = syncStateRef.current;
+        if (typeof ss.cameraX === 'number') cameraX += (ss.cameraX - cameraX) * 0.25;
+        if (typeof ss.cameraY === 'number') cameraY += (ss.cameraY - cameraY) * 0.25;
+        if (typeof ss.cameraZ === 'number') cameraZ += (ss.cameraZ - cameraZ) * 0.25;
+        if (typeof ss.cameraYaw === 'number') cameraYaw += (ss.cameraYaw - cameraYaw) * 0.25;
+        if (typeof ss.cameraPitch === 'number') cameraPitch += (ss.cameraPitch - cameraPitch) * 0.25;
+      }
+
       // Handle active key movement
       const speed = 0.12;
       if (activeKeys.has('key_w') || activeKeys.has('arrow_up')) {
+        if (followHostRef.current && onToggleFollowHostRef.current) onToggleFollowHostRef.current(false);
         cameraX += Math.sin(cameraYaw) * speed;
         cameraZ += Math.cos(cameraYaw) * speed;
       }
       if (activeKeys.has('key_s') || activeKeys.has('arrow_down')) {
+        if (followHostRef.current && onToggleFollowHostRef.current) onToggleFollowHostRef.current(false);
         cameraX -= Math.sin(cameraYaw) * speed;
         cameraZ -= Math.cos(cameraYaw) * speed;
       }
       if (activeKeys.has('key_a') || activeKeys.has('arrow_left')) {
+        if (followHostRef.current && onToggleFollowHostRef.current) onToggleFollowHostRef.current(false);
         cameraX -= Math.cos(cameraYaw) * speed;
         cameraZ += Math.sin(cameraYaw) * speed;
       }
       if (activeKeys.has('key_d') || activeKeys.has('arrow_right')) {
+        if (followHostRef.current && onToggleFollowHostRef.current) onToggleFollowHostRef.current(false);
         cameraX += Math.cos(cameraYaw) * speed;
         cameraZ -= Math.sin(cameraYaw) * speed;
       }
       if (activeKeys.has('space')) {
+        if (followHostRef.current && onToggleFollowHostRef.current) onToggleFollowHostRef.current(false);
         cameraY = Math.min(6, cameraY + 0.08); // Elevate to view roof
-      } else {
+      } else if (!followHostRef.current) {
         cameraY = Math.max(-1.2, cameraY - 0.04); // Settle back to ground level
+      }
+
+      // Emit host camera sync if onSyncChange is active
+      if (onSyncChangeRef.current && (isDragging || activeKeys.size > 0)) {
+        const now = performance.now();
+        if (now - lastSyncTime > 75) {
+          lastSyncTime = now;
+          onSyncChangeRef.current({
+            weatherPreset,
+            cameraYaw,
+            cameraPitch,
+            cameraX,
+            cameraY,
+            cameraZ,
+          });
+        }
       }
 
       // Sky Background according to weather preset
@@ -694,6 +738,23 @@ export default function GenieWorldViewer({
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3">
+          {/* Guest Follow Host / Free Explore Toggle */}
+          {onToggleFollowHost && (
+            <button
+              type="button"
+              onClick={() => onToggleFollowHost(!followHost)}
+              className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold backdrop-blur border transition-all ${
+                followHost
+                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                  : 'bg-slate-800/80 text-slate-300 border-slate-700 hover:bg-slate-700/80'
+              }`}
+              title={followHost ? 'Click to explore freely' : 'Click to follow consultant'}
+            >
+              <Radio className={`h-3.5 w-3.5 ${followHost ? 'text-amber-400 animate-pulse' : 'text-slate-400'}`} />
+              <span className="hidden sm:inline">{followHost ? 'Following Consultant' : 'Free Explore'}</span>
+            </button>
+          )}
+
           {/* 120s Bounded Session Countdown */}
           <div className="flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-800/80 px-2.5 py-1 text-xs font-mono font-bold text-amber-300">
             <Radio className="h-3.5 w-3.5 animate-pulse text-amber-400" />
