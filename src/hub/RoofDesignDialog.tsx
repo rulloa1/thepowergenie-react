@@ -31,6 +31,7 @@ import {
 } from './roofDesign';
 import { Button, Notice, Spinner, cn, inputClass, labelClass } from './ui';
 import type { Lead } from './useLeadFeed';
+import GenieWorldViewer from './GenieWorldViewer';
 import RoofAerial, { reviewedRoofAerial } from './RoofAerial';
 
 interface RoofDesignDialogProps {
@@ -71,6 +72,7 @@ export default function RoofDesignDialog({
   );
 
   const [applying, setApplying] = useState(false);
+  const [genieOpen, setGenieOpen] = useState(false);
   const [statusNote, setStatusNote] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'blueprint' | 'satellite' | 'solar_heat'>('satellite');
   const [editingAddress, setEditingAddress] = useState(false);
@@ -275,6 +277,14 @@ Confidential & Proprietary — Prepared by The Power Genie / Sunrun
           </div>
 
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setGenieOpen(true)}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-xs font-semibold text-amber-600 hover:bg-amber-500/20 dark:text-amber-400"
+              title="Explore this solar design in an interactive 3D world with Genie 4"
+            >
+              <Sparkles className="h-3.5 w-3.5 text-amber-500" /> 3D World (Genie 4)
+            </button>
             <button
               type="button"
               onClick={handleDownloadSpec}
@@ -845,6 +855,17 @@ Confidential & Proprietary — Prepared by The Power Genie / Sunrun
           </div>
         </div>
       </div>
+      {genieOpen && (
+        <GenieWorldViewer
+          address={spec.address}
+          leadName={spec.leadName}
+          systemKw={spec.systemKw}
+          panelCount={spec.panelCount}
+          batteryName={spec.batteryName}
+          offsetPct={spec.offsetPct}
+          onClose={() => setGenieOpen(false)}
+        />
+      )}
     </div>,
     document.body,
   );

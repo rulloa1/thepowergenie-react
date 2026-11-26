@@ -26,6 +26,7 @@ import {
 } from './engine.js'
 import { fetchRoofImage, googleKey } from './google.js'
 import { prepareRoofAerial } from './aerial.js'
+import { createGenieSession } from './genie.js'
 import { renderMessagePage, renderProposalHtml } from './proposalHtml.js'
 import { emailSignInSteps } from './memberEmail.js'
 
@@ -218,6 +219,11 @@ export async function handleWorkflow(request: Request, url: URL): Promise<Respon
         }).catch(() => 0)
       }
       return json({ ok: true })
+    }
+    case 'genie-session': {
+      const prompt = typeof body.prompt === 'string' ? body.prompt.trim() : undefined
+      const session = await createGenieSession(prompt)
+      return json(session)
     }
     default:
       throw new HttpError(404, 'Not found.')

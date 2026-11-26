@@ -125,6 +125,14 @@ export const workflowApi = {
   glance: (leadIds: string[]) => call<{ savings: Array<{ leadId: string; monthly: number | null }> }>('glance', { query: { ids: leadIds.join(',') } }),
   settings: () => call<{ pricing: PricingSettings; googleReady: boolean }>('settings'),
   saveSettings: (pricing: PricingSettings) => call<{ pricing: PricingSettings }>('settings', { method: 'POST', body: { pricing } }),
+  genieSession: (leadId?: string, prompt?: string) =>
+    call<{
+      interactionId: string;
+      authToken: string;
+      simulated: boolean;
+      model: string;
+      expiresInSeconds?: number;
+    }>('genie-session', { method: 'POST', body: { leadId, prompt } }),
 };
 
 /** Lets the leads list, task strip and lead panels refresh each other. */

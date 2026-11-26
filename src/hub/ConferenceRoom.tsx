@@ -16,12 +16,13 @@ import '@livekit/components-styles/prefabs';
 import './conference.css';
 import CallWrapUp from './CallWrapUp';
 import { BackgroundProcessor, supportsBackgroundProcessors } from '@livekit/track-processors';
-import { Copy, FileText, Phone, SlidersHorizontal, Video, X } from 'lucide-react';
+import { Copy, FileText, Phone, SlidersHorizontal, Sparkles, Video, X } from 'lucide-react';
 import { lockPageScroll } from '../lib/scrollLock';
 import type { Profile } from './Dashboard';
 import { conferenceApi, ConferenceError, type JoinInfo, type WaitingGuest } from './conferenceApi';
 import { classifyConferenceProblem, conferenceProblemCopy, type ConferenceProblem } from './conferenceSetup';
 import { BrandMark, Button, Notice, Spinner } from './ui';
+import GenieWorldViewer from './GenieWorldViewer';
 import './ConferenceRoom.css';
 
 const ChatTab = lazy(() => import('./ChatTab'));
@@ -58,7 +59,7 @@ export function ConferenceCall({
     } }),
   }), [isHost, spaceshipSupported]);
   const [side, setSide] = useState<'call' | 'proposal' | 'chat'>('call');
-  const [presentMode, setPresentMode] = useState<'off' | 'proposal'>('off');
+  const [presentMode, setPresentMode] = useState<'off' | 'proposal' | 'genie'>('off');
   const [copied, setCopied] = useState(false);
   const [connectionNote, setConnectionNote] = useState<string | null>(null);
   const [deviceNote, setDeviceNote] = useState<string | null>(null);
@@ -102,6 +103,17 @@ export function ConferenceCall({
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          {isHost && (
+            <Button
+              type="button"
+              variant={presentMode === 'genie' ? 'accent' : 'ghost'}
+              className="min-h-11 px-3 text-[0.84rem]"
+              onClick={() => setPresentMode((cur) => (cur === 'genie' ? 'off' : 'genie'))}
+            >
+              <Sparkles className="h-4 w-4 text-amber-400" aria-hidden="true" />
+              <span>{presentMode === 'genie' ? 'Exit 3D World' : '3D World (Genie 4)'}</span>
+            </Button>
+          )}
           {isHost && join.proposalUrl && (
             <Button
               type="button"
@@ -151,7 +163,12 @@ export function ConferenceCall({
               }
               <StartRoomDevices camera={startWithCamera && spaceshipSupported} onProblem={setDeviceNote} />
               <RoomPresence />
-              {presentMode === 'proposal' && join.proposalUrl ? (
+              {presentMode === 'genie' ? (
+                <GeniePresentationStage
+                  customerName={join.customerName}
+                  onExit={() => setPresentMode('off')}
+                />
+              ) : presentMode === 'proposal' && join.proposalUrl ? (
                 <ProposalPresentationStage
                   proposalUrl={join.proposalUrl}
                   customerName={join.customerName}
@@ -291,6 +308,28 @@ function RoomAudioSettings({ onProblem, showVoiceSetup }: { onProblem: (message:
         <p>Speaker selection depends on your browser. Otherwise use your system sound settings.</p>
       </div>
     </details>
+  );
+}
+
+function GeniePresentationStage({
+  customerName,
+  onExit,
+}: {
+  customerName: string;
+  onExit: () => void;
+}) {
+  return (
+    <>
+      <section className="pg-presentation-stage relative" aria-label="3D Solar World stage">
+        <GenieWorldViewer
+          leadName={customerName}
+          inline
+          onClose={onExit}
+        />
+        <PresentationPip />
+      </section>
+      <VideoConference />
+    </>
   );
 }
 

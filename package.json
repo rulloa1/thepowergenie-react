@@ -14,10 +14,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@livekit/track-processors": "0.8.3",
     "@ai-sdk/react": "^4.0.152",
+    "@google/genai": "^3.6.1",
     "@livekit/components-react": "^2.9.25",
     "@livekit/components-styles": "^1.2.0",
+    "@livekit/track-processors": "0.8.3",
     "@supabase/supabase-js": "^2.118.0",
     "@tailwindcss/vite": "^4.3.3",
     "@vercel/analytics": "^2.0.1",
