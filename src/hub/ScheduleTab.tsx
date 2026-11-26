@@ -1,3 +1,4 @@
+import { ownerEmailLabel } from './ownerEmailLabel';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle,
@@ -548,7 +549,7 @@ function AppointmentCard({
           </a>
         )}
         {isOwner && !cancelled && <div className="flex flex-wrap items-center gap-2">
-          <span role="status">Owner booking email · {emailStatus === 'accepted' ? 'Accepted by email provider' : emailStatus === 'failed' ? 'Send failed' : emailStatus === 'unconfigured' ? 'Email setup needed' : 'No send recorded'}</span>
+          <span role="status">Owner booking email · {ownerEmailLabel(emailStatus)}</span>
           {emailStatus !== 'accepted' && <Button variant="ghost" onClick={retryEmail} disabled={emailBusy}>{emailBusy ? 'Sending…' : 'Send booking email'}</Button>}
           {emailError && <span role="alert">{emailError}</span>}
         </div>}

@@ -25,6 +25,7 @@ import {
   type ProposalRow,
 } from './engine.js'
 import { fetchRoofImage, googleKey } from './google.js'
+import { prepareRoofAerial } from './aerial.js'
 import { renderMessagePage, renderProposalHtml } from './proposalHtml.js'
 import { emailSignInSteps } from './memberEmail.js'
 
@@ -138,6 +139,14 @@ export async function handleWorkflow(request: Request, url: URL): Promise<Respon
   if (!isRecord(body)) throw new HttpError(400, 'Invalid request.')
 
   switch (action) {
+    case 'aerial': {
+      enforceRateLimit(`wf-aerial:${member.id}`, 20, TEN_MINUTES)
+      const leadId = idFrom(body.leadId, 'lead')
+      const booking = body.source === 'booking'
+      const lead = await selectOne<{ service_address?: string | null; address?: string | null }>(booking ? 'hub_appointments' : 'powergenie_customers', { id: `eq.${leadId}` }, booking ? 'address' : 'service_address')
+      if (!lead) throw new HttpError(404, 'That customer was not found.')
+      return json(await prepareRoofAerial((booking ? lead.address : lead.service_address) || null))
+    }
     case 'settings':
       return json({ pricing: await saveSettings(body.pricing, actor) })
     case 'run': {

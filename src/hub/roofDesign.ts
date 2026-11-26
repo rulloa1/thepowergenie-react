@@ -14,6 +14,7 @@ export interface RoofPlane {
 export type BatteryChoice = 'none' | 'powerwall_1' | 'powerwall_2';
 
 export interface RoofDesignSpec {
+  aerial?: import('../../shared/roofAerial').RoofAerialReview;
   id: string;
   address: string;
   leadId?: string;

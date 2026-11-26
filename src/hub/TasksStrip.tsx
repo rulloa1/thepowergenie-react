@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { CheckCircle2, ClipboardList, Settings2 } from 'lucide-react';
+import { CheckCircle2, ChevronDown, ClipboardList, Settings2 } from 'lucide-react';
 import { Button, Notice, cn } from './ui';
 import { WORKFLOW_CHANGED, announceWorkflowChange, dueLabel, workflowApi, type WorkflowTask } from './workflowApi';
 
@@ -56,11 +56,12 @@ export default function TasksStrip({ onOpenLead, onOpenPricing, sample = false }
       )}
       {error && <Notice tone="error">{error}</Notice>}
       <details className="rounded-2xl border border-hub-line bg-hub-surface p-3.5">
-        <summary className="cursor-pointer list-none text-base font-bold text-hub-ink">
+        <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 text-base font-bold text-hub-ink">
           <span className="inline-flex items-center gap-2">
             <ClipboardList className="h-4 w-4 text-hub-accent-ink" aria-hidden="true" /> Tasks
             <span className="text-sm font-semibold text-hub-soft">{list.length}</span>
           </span>
+          <ChevronDown className="h-4 w-4 text-hub-soft" aria-hidden="true" />
         </summary>
         {list.length > SHOWN && (
           <button type="button" className="mt-2 text-[0.82rem] font-semibold text-hub-link hover:underline" onClick={() => setAll(!all)}>

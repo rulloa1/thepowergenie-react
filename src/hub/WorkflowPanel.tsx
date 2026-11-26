@@ -17,6 +17,7 @@ import {
   X,
 } from 'lucide-react';
 import type { LeadOverrides } from '../../shared/workflow';
+import RoofAerial from './RoofAerial';
 import { lockPageScroll } from '../lib/scrollLock';
 import { HTML_PREVIEW_SANDBOX } from './htmlDocument';
 import { stageLabel } from './leadRecord';
@@ -180,12 +181,14 @@ export default function WorkflowPanel({
   autoOpen,
   onOpenPricing,
   onOpenRoofDesign,
+  leadAddress,
 }: {
   leadId: string;
   leadName: string;
   autoOpen: boolean;
   onOpenPricing: () => void;
   onOpenRoofDesign?: () => void;
+  leadAddress?: string | null;
 }) {
   const [open, setOpen] = useState(autoOpen);
   const [data, setData] = useState<LeadWorkflow | null>(null);
@@ -368,6 +371,7 @@ export default function WorkflowPanel({
               )}
               {wf?.optedOut && <div className="mt-3"><Notice tone="info">This customer opted out of emails and texts. Nothing automatic goes to them.</Notice></div>}
 
+              <RoofAerial key={`${leadId}:${leadAddress}`} leadId={leadId} address={leadAddress} onContinue={onOpenRoofDesign} />
               <dl className="mt-3 grid grid-cols-1 gap-2.5 sm:grid-cols-3">
                 <div className="rounded-xl border border-hub-line p-3">
                   <dt className="text-[0.72rem] font-semibold uppercase tracking-wide text-hub-soft">Yearly usage</dt>

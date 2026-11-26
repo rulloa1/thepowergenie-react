@@ -1,5 +1,6 @@
 import React, { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import './customers.css';
 import {
   AlertTriangle,
   Check,
@@ -22,6 +23,7 @@ import {
   RefreshCw,
   RotateCcw,
   Settings2,
+  Search,
   Share2,
   ShieldCheck,
   Trash2,
@@ -649,6 +651,7 @@ export default function LeadsTab({
   const [actionNote, setActionNote] = useState<string | null>(null);
   const [pricingOpen, setPricingOpen] = useState(false);
   const [stageFilter, setStageFilter] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
   const [conferenceLead, setConferenceLead] = useState<Lead | null>(null);
   const [roofDesigner, setRoofDesigner] = useState<{ open: boolean; lead: Lead | null } | null>(null);
   const [proposalCreator, setProposalCreator] = useState<{ open: boolean; lead: Lead | null } | null>(null);
@@ -659,9 +662,14 @@ export default function LeadsTab({
   const glance = useCustomerGlance(feed.sample, customerIds);
   const inView = leadsForView(feed.leads, view);
   const customersInView = inView.filter((lead) => lead.source === 'customer');
-  const shown = stageFilter
+  const stageMatches = stageFilter
     ? customersInView.filter((lead) => (lead.stage || 'bill_received') === stageFilter)
     : inView;
+  const searchTerms = query.toLocaleLowerCase().match(/[\p{L}\p{N}]+/gu) || [];
+  const shown = stageMatches.filter(lead => {
+    const text = [lead.name, lead.address, lead.phone, lead.phone?.replace(/\D/g, ''), lead.email].filter(Boolean).join(' ').toLocaleLowerCase();
+    return searchTerms.every(term => text.includes(term));
+  });
 
   // Stages change from the workflow panel and the task list; refresh the cards.
   const { refresh } = feed;
@@ -724,6 +732,7 @@ export default function LeadsTab({
     if (!lead) return;
     setView(lead.archived ? 'archived' : 'active');
     setStageFilter(null);
+    setQuery('');
     scrolled.current = null;
     select(lead);
   };
@@ -840,7 +849,6 @@ export default function LeadsTab({
   const handleApplyRoofDesign = async (spec: RoofDesignSpec, leadId?: string) => {
     if (!leadId) return;
     const target = feed.leads.find((l) => l.id === leadId);
-    saveLeadRoofDesign(leadId, spec);
     const designSummary = `[Roof Design: ${spec.systemKw} kW DC, ${spec.panelCount} panels, ${spec.annualProductionKwh.toLocaleString()} kWh/yr, ${spec.batteryName}]`;
     const cleanNotes = target?.notes ? stripRoofDesignFromNotes(target.notes) : '';
     const token = serializeRoofDesign(spec);
@@ -848,9 +856,18 @@ export default function LeadsTab({
       ? `${cleanNotes}\n${designSummary}\n${token}`
       : `${designSummary}\n${token}`;
 
+    if (!feed.sample) {
+      if (!supabase || !target) throw new Error('That customer is no longer available. Refresh the list before saving the roof design.');
+      const saved = await supabase.from(target.source === 'customer' ? 'powergenie_customers' : 'hub_appointments')
+        .update(target.source === 'customer' ? { notes: updatedNotes, stage: 'panel_design' } : { note: updatedNotes })
+        .eq('id', leadId).select('id').maybeSingle();
+      if (saved.error || !saved.data) throw new Error('The roof design could not be saved to the customer record. Check your access and try again.');
+    }
+    saveLeadRoofDesign(leadId, spec);
+
     if (feed.updateLead) {
       feed.updateLead(leadId, {
-        stage: 'panel_design',
+        stage: target?.source === 'customer' ? 'panel_design' : target?.stage || null,
         notes: updatedNotes,
         roofDesign: spec,
       });
@@ -975,13 +992,18 @@ export default function LeadsTab({
   const missing = !feed.loading && !!openId && feed.leads.every((lead) => lead.id !== openId);
 
   return (
-    <section aria-label="Customers" className="rounded-3xl bg-hub-surface p-4 sm:p-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
+    <section aria-label="Customers" className="customers-workspace rounded-3xl bg-hub-surface p-4 sm:p-6">
+      <div className="customers-heading">
         <div>
           <h2 className="m-0 text-2xl font-bold tracking-tight text-hub-ink">Customers</h2>
-          <p className="m-0 mt-1 max-w-prose text-base leading-relaxed text-hub-soft">Name, address, stage, and what is due next. Open a name for the bill, meter, and notes.</p>
+          <p className="m-0 mt-2 max-w-prose text-sm leading-relaxed text-hub-soft">Your customers, next steps, and solar proposals in one place.</p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="customers-actions">
+          {feed.writesEnabled && (
+            <Button type="button" variant="accent" className="customers-add" onClick={() => { setFormError(null); setEditor({ mode: 'create', lead: null }); }}>
+              <Plus className="h-4 w-4" /> Add customer
+            </Button>
+          )}
           <Button
             type="button"
             variant="ghost"
@@ -998,11 +1020,6 @@ export default function LeadsTab({
           >
             <FileText className="h-4 w-4 text-hub-primary" /> Create proposal
           </Button>
-          {feed.writesEnabled && (
-            <Button type="button" variant="accent" className="min-h-12 w-full px-4 text-base sm:w-auto" onClick={() => { setFormError(null); setEditor({ mode: 'create', lead: null }); }}>
-              <Plus className="h-4 w-4" /> Add customer
-            </Button>
-          )}
           <details className="relative">
             <summary className="flex min-h-12 cursor-pointer list-none items-center rounded-xl border border-hub-line bg-hub-surface px-4 text-base font-bold text-hub-ink">More</summary>
             <div className="absolute right-0 z-20 mt-2 grid min-w-44 gap-1 rounded-xl border border-hub-line bg-hub-surface p-2 shadow-xl">
@@ -1041,9 +1058,10 @@ export default function LeadsTab({
 
       {profile.role === 'owner' && <TodayAgenda feed={feed} tasks={glance.tasks} tasksReady={glance.tasksReady} openLead={openLeadById} openRoom={setConferenceLead} />}
       {profile.role === 'owner' && !feed.loading && !feed.error && <IntakeDesk leads={feed.leads} openLead={openLeadById} />}
-      <TasksStrip sample={feed.sample} onOpenLead={openLeadById} onOpenPricing={() => setPricingOpen(true)} />
+      <div className="customers-tasks"><TasksStrip sample={feed.sample} onOpenLead={openLeadById} onOpenPricing={() => setPricingOpen(true)} /></div>
 
-      <div className="mt-4 flex gap-2" role="tablist" aria-label="Lead lists">
+      <div className="customers-toolbar">
+      <div className="customers-views flex gap-1" role="tablist" aria-label="Lead lists">
         <button
           type="button"
           role="tab"
@@ -1054,7 +1072,7 @@ export default function LeadsTab({
             view === 'active' ? 'bg-hub-primary text-hub-on-primary' : 'border border-hub-line bg-hub-muted text-hub-soft',
           )}
         >
-          Active
+          Active <span className="customers-view-count">{feed.leads.filter(lead => !lead.archived).length}</span>
         </button>
         <button
           type="button"
@@ -1070,14 +1088,29 @@ export default function LeadsTab({
         </button>
       </div>
 
+      <div className="customers-search">
+        <label htmlFor="customer-search">Search customers</label>
+        <div className="customers-search-field">
+          <Search size={18} aria-hidden="true" />
+          <input id="customer-search" type="search" autoComplete="off" placeholder="Name, address, phone, or email" value={query} onChange={event => setQuery(event.target.value)} />
+          {query && <button type="button" onClick={() => setQuery('')} aria-label="Clear customer search"><X size={16} /></button>}
+        </div>
+      </div>
       {view === 'active' && customersInView.length > 0 && (
+        <div className="customers-stage">
         <PipelineSummary
           stages={customersInView.map((lead) => lead.stage)}
           total={inView.length}
           selected={stageFilter}
           onSelect={setStageFilter}
         />
+        </div>
       )}
+      </div>
+      <div className="customers-results">
+        <p role="status" aria-live="polite">Showing <strong>{shown.length}</strong> of {inView.length} {view === 'archived' ? 'archived' : 'active'} customers</p>
+        {(query || stageFilter) && <button type="button" onClick={() => { setQuery(''); setStageFilter(null); }}>Clear filters</button>}
+      </div>
 
       {feed.error && <div className="mt-4"><Notice tone="error">{feed.error}</Notice></div>}
       {!feed.sample && !feed.loading && !feed.error && !feed.writesEnabled && (
@@ -1096,15 +1129,18 @@ export default function LeadsTab({
       {feed.loading && !shown.length ? (
         <div className="py-10 text-center text-hub-soft"><Spinner /></div>
       ) : shown.length === 0 && !feed.error ? (
-        <p className="py-10 text-center text-hub-soft">
-          {stageFilter
+        <div className="customers-empty">
+          <Search size={24} aria-hidden="true" />
+          <h3>{query ? 'No matching customers' : stageFilter ? 'No customers at this stage' : view === 'archived' ? 'No archived customers' : 'Your customer list starts here'}</h3>
+          <p>{query ? 'Try another name, address, phone number, or email.' : stageFilter
             ? `No leads at ${stageLabel(stageFilter)} right now.`
             : view === 'archived'
             ? 'No archived leads.'
-            : 'No leads yet. Add one here, or wait for a website consult or a /book appointment.'}
-        </p>
+            : 'Add a customer or share your consultation booking link.'}</p>
+          {(query || stageFilter) && <Button type="button" variant="ghost" onClick={() => { setQuery(''); setStageFilter(null); }}>Clear filters</Button>}
+        </div>
       ) : (
-        <ul className="m-0 mt-4 grid list-none gap-3 p-0">
+        <ul className="customers-list m-0 grid list-none gap-3 p-0">
           {shown.map((lead) => {
             const selected = openId === lead.id;
             return (
@@ -1113,7 +1149,7 @@ export default function LeadsTab({
                 id={`lead-${lead.source}-${lead.id}`}
                 data-lead-id={lead.id}
                 className={cn(
-                  'scroll-mt-24 rounded-2xl border px-4 py-3.5',
+                  'customers-card scroll-mt-24 rounded-2xl border px-4 py-3.5',
                   lead.cancelled ? 'border-hub-line bg-hub-muted opacity-70' : 'border-hub-line bg-hub-surface',
                   selected && 'ring-2 ring-hub-focus',
                 )}
@@ -1125,7 +1161,7 @@ export default function LeadsTab({
                   const savings = savingsText(glance.savings.get(lead.id));
                   return (
                     <div>
-                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="customers-card-heading">
                         <button type="button" onClick={() => toggle(lead)} aria-expanded={selected} className="min-w-0 flex-1 text-left">
                           <span className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                             <span className={cn('text-xl font-bold leading-tight text-hub-ink', lead.cancelled && 'line-through')}>{lead.name}</span>
@@ -1133,7 +1169,7 @@ export default function LeadsTab({
                           </span>
                           <span className="mt-1 block text-base leading-snug text-hub-soft">{lead.address || 'No address yet'}</span>
                         </button>
-                        <div className="flex flex-wrap items-center gap-2">
+                        <div className="customers-card-actions flex flex-wrap items-center gap-2">
                           <Button
                             type="button"
                             variant="ghost"
@@ -1189,11 +1225,11 @@ export default function LeadsTab({
                           )}
                         </div>
                       </div>
-                      <button type="button" onClick={() => toggle(lead)} className="mt-4 w-full text-left">
-                        <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
+                      <button type="button" onClick={() => toggle(lead)} aria-expanded={selected} className="customers-card-summary mt-4 w-full text-left">
+                        <dl className="customers-facts grid grid-cols-2 gap-x-4 gap-y-3">
                           <div>
                             <dt className="text-sm font-semibold text-hub-soft">Stage</dt>
-                            <dd className="m-0 text-lg font-bold text-hub-ink">{stageLabel(lead.stage || (lead.source === 'customer' ? 'bill_received' : null))}</dd>
+                            <dd className="m-0 text-lg font-bold text-hub-ink">{lead.stage || lead.source === 'customer' ? stageLabel(lead.stage || 'bill_received') : 'New inquiry'}</dd>
                           </div>
                           <div>
                             <dt className="text-sm font-semibold text-hub-soft">Next step</dt>
@@ -1208,7 +1244,7 @@ export default function LeadsTab({
                             <dd className="m-0 text-lg font-bold text-hub-ink">{savings}</dd>
                           </div>
                         </dl>
-                        <span className="mt-3 block text-base font-semibold text-hub-link">{selected ? 'Hide details' : 'Show bill, meter, and notes'}</span>
+                        <span className="customers-details-link mt-3 flex items-center gap-2 text-sm font-semibold text-hub-link">{selected ? 'Hide details' : 'View customer details'}{selected ? <ChevronUp size={15} /> : <ChevronDown size={15} />}</span>
                       </button>
                     </div>
                   );
@@ -1290,6 +1326,7 @@ export default function LeadsTab({
                 {lead.source === 'customer' && !lead.archived && (
                   <WorkflowPanel
                     leadId={lead.id}
+                    leadAddress={lead.address}
                     leadName={lead.name}
                     autoOpen={false}
                     onOpenPricing={() => setPricingOpen(true)}

@@ -148,12 +148,12 @@ export async function lookupRoof(address: string | null): Promise<RoofLookup> {
 }
 
 /** Satellite picture behind the panel drawing. Fetched per view, not stored. */
-export async function fetchRoofImage(center: { lat: number; lng: number }, zoom: number): Promise<{ bytes: ArrayBuffer; type: string } | null> {
+export async function fetchRoofImage(center: { lat: number; lng: number }, zoom: number, format?: 'jpg'): Promise<{ bytes: ArrayBuffer; type: string } | null> {
   const key = googleKey()
   if (!key) return null
   const url =
     `https://maps.googleapis.com/maps/api/staticmap?center=${center.lat},${center.lng}` +
-    `&zoom=${zoom}&size=640x640&scale=2&maptype=satellite&key=${encodeURIComponent(key)}`
+    `&zoom=${zoom}&size=640x640&scale=2&maptype=satellite${format ? `&format=${format}` : ''}&key=${encodeURIComponent(key)}`
   try {
     const response = await fetch(url, { signal: AbortSignal.timeout(TIMEOUT) })
     const type = response.headers.get('content-type') || ''

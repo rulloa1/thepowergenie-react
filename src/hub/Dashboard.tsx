@@ -437,7 +437,7 @@ function HubApp({
   const [tab, setTab] = useState<Tab>(initialTab);
   const [addingAppointment, setAddingAppointment] = useState(false);
   const leads = useLeadFeed(profile.id);
-  const focus = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066CC] focus-visible:ring-offset-2 focus-visible:ring-offset-[#E8F4FD]';
+  const focus = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-hub-focus focus-visible:ring-offset-2 focus-visible:ring-offset-hub-bg';
   const tabs = hubNavFor(profile.role).map((item) => ({ ...item, icon: TAB_ICONS[item.id] }));
 
   useEffect(() => {
@@ -463,8 +463,9 @@ function HubApp({
 
   return (
     <div className="hub-desk hub-dashboard flex min-h-[100dvh] flex-col font-[family:var(--sw-font-body)]">
+      <a href="#dashboard-content" className="dashboard-skip">Skip to workspace</a>
       {isDemo && (
-        <div className="border-b border-[#E8C56B] bg-[#FFF8E8] px-4 py-2 text-center text-sm text-[#5C4308]">
+        <div className="dashboard-sample border-b border-[#E8C56B] bg-[#FFF8E8] px-4 py-2 text-center text-sm text-[#5C4308]">
           <p className="m-0 flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
             <span>Sample desk. Nothing here is saved. Sign in to work the real customers.</span>
             <button type="button" onClick={onExitDemo} className={cn('min-h-11 cursor-pointer rounded-lg px-2 font-bold underline underline-offset-2', focus)}>
@@ -474,29 +475,29 @@ function HubApp({
         </div>
       )}
       <header className="sticky top-0 z-30 border-b border-[color-mix(in_srgb,var(--sw-ink)_8%,transparent)] bg-[color-mix(in_srgb,var(--sw-bg)_82%,transparent)] shadow-[inset_0_-3px_0_var(--pg-orange)] backdrop-blur-md">
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-2.5 sm:px-6">
+        <div className="dashboard-topbar mx-auto flex items-center justify-between gap-3 px-4 py-2.5 sm:px-6">
           <div className="flex min-w-0 items-center gap-3">
             <a href="/" className={cn('rounded-xl', focus)} title="The Power Genie home">
               <BrandMark className="h-9 shadow-[0_4px_12px_rgba(7,27,39,0.18)]" />
             </a>
             <span className="hidden text-base font-bold text-[var(--sw-ink)] sm:inline">Dashboard</span>
           </div>
-          <div className="flex items-center gap-2.5">
+          <div className="dashboard-account flex min-w-0 items-center gap-2.5">
             {!isDemo && (
-              <Button type="button" onClick={() => {
+              <Button type="button" className="dashboard-book" aria-label="Add appointment" title="Add appointment" onClick={() => {
                 go('schedule');
                 setAddingAppointment(true);
                 document.getElementById('a-date')?.focus();
               }}>
-                <CalendarPlus className="h-4 w-4" aria-hidden="true" /> Add appointment
+                <CalendarPlus className="h-4 w-4" aria-hidden="true" /><span>Add appointment</span>
               </Button>
             )}
-            <div className="flex items-center gap-2">
+            <div className="dashboard-profile flex min-w-0 items-center gap-2">
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#0B2233] text-[0.78rem] font-bold text-white" aria-hidden="true">
                 {(profile.full_name || profile.email).slice(0, 2).toUpperCase()}
               </div>
               <span className="hidden text-left text-[0.82rem] leading-tight sm:block">
-                <span className="block font-bold text-[var(--sw-ink)]">{profile.full_name || profile.email}</span>
+                <span className="block max-w-48 truncate font-bold text-[var(--sw-ink)]">{profile.full_name || profile.email}</span>
                 <span className="text-[0.72rem] font-semibold text-[var(--sw-ink-soft)]">{roleLabel(profile.role)}</span>
               </span>
             </div>
@@ -521,7 +522,7 @@ function HubApp({
             )}
           </div>
         </div>
-        <nav className="mx-auto flex max-w-5xl flex-wrap gap-1 px-2 py-2 sm:gap-2 sm:px-5" aria-label="Dashboard sections">
+        <nav className="dashboard-nav mx-auto flex gap-1 px-2 py-2 sm:gap-2 sm:px-5" aria-label="Dashboard sections">
           {tabs.map(({ id, label, icon: Icon }) => {
             const active = tab === id;
             return (
@@ -530,6 +531,8 @@ function HubApp({
                 type="button"
                 onClick={() => go(id)}
                 aria-current={active ? 'page' : undefined}
+                aria-controls="dashboard-content"
+                aria-label={`${label}${id === 'leads' && leads.unseen > 0 ? `, ${leads.unseen} new leads` : ''}`}
                 className={cn(
                   'inline-flex min-h-12 shrink-0 cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-full px-3 py-2 text-base font-bold transition sm:px-4',
                   focus,
@@ -539,10 +542,11 @@ function HubApp({
                 )}
               >
                 <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
-                <span>{label}</span>
+                <span className="dashboard-nav-label">{label}</span>
+                <span className="dashboard-nav-short" aria-hidden="true">{id === 'conference' ? 'Room' : id === 'schedule' ? 'Schedule' : label}</span>
                 {id === 'leads' && leads.unseen > 0 && (
                   <span className={cn(
-                    'inline-flex min-w-5 items-center justify-center rounded-full px-1.5 text-[0.68rem] font-black',
+                    'dashboard-unseen inline-flex min-w-5 items-center justify-center rounded-full px-1.5 text-[0.68rem] font-black',
                     active ? 'bg-white text-[var(--sw-ink)]' : 'bg-[var(--pg-orange)] text-white',
                   )}>
                     {leads.unseen > 99 ? '99+' : leads.unseen}
@@ -556,7 +560,8 @@ function HubApp({
         {!isDemo && <GuestAlerts />}
       </header>
 
-      <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col px-4 py-5 sm:px-6">
+      <main id="dashboard-content" tabIndex={-1} className="dashboard-content mx-auto flex w-full flex-1 flex-col px-4 py-5 sm:px-6">
+        <h1 className="sr-only">Dashboard — {tabs.find(item => item.id === tab)?.label}</h1>
         <Suspense fallback={<div className="py-10 text-center"><Spinner /></div>}>
           {tab === 'leads' && <LeadsTab feed={leads} profile={profile} />}
           {tab === 'chat' && <ChatTab profile={profile} />}

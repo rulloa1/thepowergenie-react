@@ -5,10 +5,18 @@ import { readMeterRequest } from '../lib/esiId';
 import { callFunction, supabase } from '../lib/supabase';
 import { usageStatusCopy } from '../lib/usage';
 import { BrandMark, Button, Notice, NotConfigured, Spinner, cn, inputClass, labelClass } from './ui';
+import { readBookingReferral, referralNoteHeader } from './bookingReferral';
 import BillingHistoryFields from './BillingHistoryFields';
 import { SlotPicker, type SlotPickerHandle } from './SlotPicker';
 import { formatBytes, formatDay, formatShortDay, formatTime } from './time';
 import { trackInfoPageVisit } from '../lib/visitTrack';
+
+interface BookingReceipt {
+  ok: boolean;
+  meterStatus?: string | null;
+  referralRep?: string | null;
+  referralState?: string | null;
+}
 
 interface Slot {
   start: string;
@@ -29,6 +37,8 @@ export function availableBookingSlot(state: LoadState, slots: Slot[], selected: 
 
 export default function BookingPage() {
   const [state, setState] = useState<LoadState>(supabase ? 'loading' : 'not_configured');
+  const [supportsReferralFields, setSupportsReferralFields] = useState(false);
+  const [receipt, setReceipt] = useState<BookingReceipt | null>(null);
   const [slots, setSlots] = useState<Slot[]>([]);
   const [slot, setSlot] = useState<Slot | null>(null);
   const [bill, setBill] = useState<File | null>(null);
@@ -47,15 +57,19 @@ export default function BookingPage() {
     trackInfoPageVisit('/book Consultation & Light Bill Intake');
   }, []);
 
+  const referral = readBookingReferral(new URLSearchParams(window.location.search));
+  const noteHeader = supportsReferralFields ? '' : referralNoteHeader(referral.rep, referral.state);
+
   const load = useCallback(async () => {
     if (!supabase) return;
     setState('loading');
-    const { data, error } = await callFunction<{ slots: Slot[] }>('booking', { method: 'GET' });
+    const { data, error } = await callFunction<{ slots: Slot[]; supportsReferralFields?: boolean }>('booking', { method: 'GET' });
     if (error) {
       setState(error.code === 'not_configured' ? 'not_configured' : error.code === 'calendar_unavailable' ? 'unavailable' : 'error');
       return;
     }
     const list = data?.slots ?? [];
+    setSupportsReferralFields(data?.supportsReferralFields === true);
     setSlots(list);
     setState('ready');
     setSlot((current) => (current && list.some((s) => s.start === current.start) ? current : null));
@@ -103,9 +117,9 @@ export default function BookingPage() {
       return;
     }
     fd.set('start', bookingSlot.start);
-    const referral = new URLSearchParams(window.location.search);
-    fd.set('ref', referral.get('ref') || '');
-    fd.set('state', referral.get('state') || '');
+    fd.set('ref', referral.rep);
+    fd.set('state', referral.state);
+    if (noteHeader) fd.set('note', noteHeader + String(fd.get('note') || ''));
     fd.delete('bill');
     if (bill) fd.set('bill', bill, bill.name);
     if (meterCheck.value) {
@@ -115,7 +129,7 @@ export default function BookingPage() {
       fd.set('meterConsent', 'yes');
     }
     setSubmitting(true);
-    const { data, error } = await callFunction<{ ok: boolean; meterStatus?: string | null }>('booking', { body: fd });
+    const { data, error } = await callFunction<BookingReceipt>('booking', { body: fd });
     setSubmitting(false);
     if (error) {
       setFormError(error.message);
@@ -125,6 +139,7 @@ export default function BookingPage() {
       }
       return;
     }
+    setReceipt(data);
     setMeterStatus(data?.meterStatus ?? null);
     setBooked(bookingSlot);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -151,7 +166,7 @@ export default function BookingPage() {
 
       <main className="mx-auto min-w-0 max-w-5xl px-4 pb-24 pt-8 sm:px-6 sm:pt-12">
         {booked ? (
-          <Confirmation slot={booked} hadBill={!!bill} meterStatus={meterStatus} />
+          <Confirmation receipt={receipt} slot={booked} hadBill={!!bill} meterStatus={meterStatus} />
         ) : (
           <>
             <div className="flex flex-wrap items-center gap-2">
@@ -313,7 +328,7 @@ export default function BookingPage() {
                     <label htmlFor="b-note" className={labelClass}>
                       Anything we should know? <span className="font-normal text-[#64748B]">(optional notes, high bills, solar goals)</span>
                     </label>
-                    <textarea id="b-note" name="note" rows={3} maxLength={1000} placeholder="e.g. Disconnect notice issued, high summer AC bill, interested in Powerwall 3..." className={cn(inputClass, 'resize-y')} />
+                    <textarea id="b-note" name="note" rows={3} maxLength={1000 - noteHeader.length} placeholder="e.g. Disconnect notice issued, high summer AC bill, interested in Powerwall 3..." className={cn(inputClass, 'resize-y')} />
                   </div>
 
                   <BillingHistoryFields />
@@ -407,7 +422,7 @@ export default function BookingPage() {
   );
 }
 
-function Confirmation({ slot, hadBill, meterStatus }: { slot: Slot; hadBill: boolean; meterStatus: string | null }) {
+function Confirmation({ receipt, slot, hadBill, meterStatus }: { receipt: BookingReceipt | null; slot: Slot; hadBill: boolean; meterStatus: string | null }) {
   return (
     <div className="mx-auto max-w-lg rounded-3xl border border-[#E2E8F0] bg-white p-7 text-center shadow-[0_12px_40px_rgba(10,20,40,0.06)] sm:p-10">
       <span className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-[#DCFCE7] shadow-sm">
@@ -428,7 +443,8 @@ function Confirmation({ slot, hadBill, meterStatus }: { slot: Slot; hadBill: boo
       </div>
 
       <p className="mt-5 text-[0.94rem] leading-relaxed text-[#4A5568]">
-        Horace Lawrence (Sunrun Solar Advisor) has been notified and will reach out with your video conference link or phone call.
+        Your appointment is saved in Horace Lawrence’s dashboard.
+        {(receipt?.referralRep || receipt?.referralState) && <span className="block">Referral: {[receipt.referralRep, receipt.referralState].filter(Boolean).join(' · ')}</span>}
         {hadBill ? ' Thank you for attaching your electric bill — Horace will prepare your preliminary roof & solar sizing model beforehand.' : ''}
         {meterStatus ? ` ${usageStatusCopy(meterStatus)}` : ''}
       </p>

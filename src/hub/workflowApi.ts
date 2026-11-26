@@ -1,5 +1,6 @@
 import type { LeadOverrides, PricingSettings, SavingsResult, SystemSize, UsageEstimate } from '../../shared/workflow';
 import { supabase } from '../lib/supabase';
+import type { PreparedRoofAerial } from '../../shared/roofAerial';
 
 export type WorkflowTask = {
   id: string;
@@ -109,6 +110,7 @@ async function call<T>(action: string, init: { method?: 'GET' | 'POST'; query?: 
 }
 
 export const workflowApi = {
+  aerial: (leadId: string, source: 'customer' | 'booking' = 'customer') => call<PreparedRoofAerial>('aerial', { method: 'POST', body: { leadId, source } }),
   lead: (leadId: string) => call<LeadWorkflow>('lead', { query: { id: leadId } }),
   run: (leadId: string) => call<LeadWorkflow>('run', { method: 'POST', body: { leadId } }),
   overrides: (leadId: string, overrides: LeadOverrides) => call<LeadWorkflow>('overrides', { method: 'POST', body: { leadId, overrides } }),

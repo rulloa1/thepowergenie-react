@@ -50,6 +50,7 @@
 }
 .hub-dashboard > header {
   background: #09172bf2;
+  backdrop-filter: none;
   border-color: #25466e;
   box-shadow: inset 0 -2px #268cff, 0 4px 28px #1265cb22;
 }
@@ -73,9 +74,49 @@
 .hub-dashboard input,
 .hub-dashboard select,
 .hub-dashboard textarea { color-scheme: dark; }
-@media (max-width: 640px) {
-  .hub-dashboard > header nav { gap: 4px; }
-  .hub-dashboard > header nav button { flex: 1 0 auto; min-height: 44px; font-size: 14px; }
+.hub-dashboard { --dashboard-width: 1240px; }
+.hub-dashboard .dashboard-topbar,
+.hub-dashboard .dashboard-nav,
+.hub-dashboard .dashboard-content { width: 100%; max-width: var(--dashboard-width); }
+.hub-dashboard .dashboard-topbar { min-height: 76px; }
+.hub-dashboard .dashboard-nav { padding-top: 0; padding-bottom: 12px; }
+.hub-dashboard .dashboard-nav button { position: relative; min-height: 46px; border: 1px solid transparent; border-radius: 12px; background: transparent; color: var(--hub-soft); font-size: 14px; }
+.hub-dashboard .dashboard-nav button:hover { background: var(--hub-muted); color: var(--hub-ink); }
+.hub-dashboard .dashboard-nav button[aria-current='page'] { border-color: var(--hub-accent-line); background: var(--hub-accent-soft); color: var(--hub-accent-ink); box-shadow: none; }
+.dashboard-nav-short { display: none; }
+.hub-dashboard .dashboard-unseen { background: var(--hub-accent-fill); color: var(--hub-on-accent); font-variant-numeric: tabular-nums; }
+.hub-dashboard .dashboard-content { gap: 20px; padding-top: 28px; padding-bottom: 40px; }
+.hub-dashboard .dashboard-content > section { border-radius: 16px; padding: clamp(20px, 2.5vw, 32px); box-shadow: none; }
+.hub-dashboard .dashboard-content > section > div:first-child { row-gap: 20px; }
+.hub-dashboard .dashboard-content h2 { font-size: clamp(23px, 2vw, 28px); line-height: 1.2; letter-spacing: -.02em; }
+.hub-dashboard .dashboard-content p { overflow-wrap: anywhere; }
+.hub-dashboard .dashboard-content :is(input, select, textarea) { min-width: 0; }
+.hub-dashboard .dashboard-content button { max-width: 100%; }
+.dashboard-content:focus { outline: none; }
+.dashboard-content:focus-visible { outline: 2px solid var(--hub-focus); outline-offset: -2px; }
+.dashboard-skip { position: fixed; top: 8px; left: 16px; z-index: 120; padding: 12px 16px; border-radius: 8px; background: var(--hub-primary); color: var(--hub-on-primary); font-weight: 700; transform: translateY(-160%); }
+.dashboard-skip:focus { transform: translateY(0); }
+.hub-dashboard ::selection { background: var(--hub-primary); color: var(--hub-on-primary); }
+.hub-dashboard :is(input, textarea) { caret-color: var(--hub-focus); }
+@media (max-width: 767px) {
+  .hub-dashboard { isolation: auto; background: transparent; }
+  .hub-dashboard + footer { padding-bottom: calc(100px + env(safe-area-inset-bottom)); }
+  .hub-dashboard > header { z-index: 50; }
+  .hub-dashboard .dashboard-topbar { min-height: 64px; padding: 10px 16px; }
+  .hub-dashboard .dashboard-profile { display: none; }
+  .hub-dashboard .dashboard-book { width: 44px; min-height: 44px; padding: 0; border-radius: 12px; }
+  .dashboard-book > span { display: none; }
+  .hub-dashboard .dashboard-account { gap: 8px; }
+  .hub-dashboard .dashboard-topbar img { max-width: 130px; height: auto; max-height: 36px; }
+  .hub-dashboard .dashboard-nav { position: fixed; bottom: 0; left: 0; right: 0; z-index: 40; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 3px; padding: 8px 8px max(8px, env(safe-area-inset-bottom)); border-top: 1px solid var(--hub-line); background: var(--hub-topbar); }
+  .hub-dashboard .dashboard-nav button { min-width: 0; min-height: 58px; flex-direction: column; gap: 5px; padding: 6px 1px; border-radius: 10px; font-size: 11px; line-height: 1.2; }
+  .dashboard-nav-label { display: none; }
+  .dashboard-nav-short { display: block; }
+  .hub-dashboard .dashboard-unseen { position: absolute; top: 3px; right: 8px; min-width: 17px; height: 17px; padding: 0 4px; font-size: 10px; }
+  .hub-dashboard .dashboard-content { padding: 16px 12px calc(96px + env(safe-area-inset-bottom)); gap: 16px; }
+  .hub-dashboard .dashboard-content > section { padding: 20px 16px; border-radius: 14px; }
+  .hub-dashboard .dashboard-sample { padding: 6px 12px; font-size: 12px; }
+  .dashboard-sample button { font-size: 12px; }
 }
 .today-agenda,.today-wrap { background: #112438; color: #eaf5ff; border: 1px solid #36556b; border-radius: 1rem; padding: clamp(1rem,2vw,1.5rem); }
 .today-agenda { margin-top: 1rem; }

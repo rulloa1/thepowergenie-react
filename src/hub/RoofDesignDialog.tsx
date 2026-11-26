@@ -28,10 +28,10 @@ import {
   getSavedRoofDesign,
   parseRoofDesignFromNotes,
   recalculateRoofDesign,
-  saveLeadRoofDesign,
 } from './roofDesign';
 import { Button, Notice, Spinner, cn, inputClass, labelClass } from './ui';
 import type { Lead } from './useLeadFeed';
+import RoofAerial, { reviewedRoofAerial } from './RoofAerial';
 
 interface RoofDesignDialogProps {
   lead: Lead | null;
@@ -57,10 +57,11 @@ export default function RoofDesignDialog({
       lead?.roofDesign ||
       (lead?.id ? getSavedRoofDesign(lead.id) : null) ||
       parseRoofDesignFromNotes(lead?.notes);
-    if (saved) return saved;
+    if (saved) return { ...saved, aerial: (lead?.id && reviewedRoofAerial(lead.id, lead.source, saved.address)) || saved.aerial };
     const annualKwh = lead?.kwh ? lead.kwh * 10 : lead?.avgMonthlyKwh ? lead.avgMonthlyKwh * 12 : 12500;
     const address = lead?.address || '4102 Westheimer Rd, Houston, TX 77027';
-    return buildDefaultRoofDesign(address, annualKwh, null, lead?.id, lead?.name);
+    const initial = buildDefaultRoofDesign(address, annualKwh, null, lead?.id, lead?.name);
+    return { ...initial, aerial: lead?.id ? reviewedRoofAerial(lead.id, lead.source, address) : undefined };
   });
 
   const hasSavedDesign = Boolean(
@@ -71,7 +72,7 @@ export default function RoofDesignDialog({
 
   const [applying, setApplying] = useState(false);
   const [statusNote, setStatusNote] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<'blueprint' | 'satellite' | 'solar_heat'>('blueprint');
+  const [viewMode, setViewMode] = useState<'blueprint' | 'satellite' | 'solar_heat'>('satellite');
   const [editingAddress, setEditingAddress] = useState(false);
   const [tempAddress, setTempAddress] = useState(spec.address);
 
@@ -111,7 +112,7 @@ export default function RoofDesignDialog({
 
   const saveAddress = () => {
     if (tempAddress.trim()) {
-      setSpec((prev) => recalculateRoofDesign(prev, { address: tempAddress.trim() }));
+      setSpec((prev) => ({ ...recalculateRoofDesign(prev, { address: tempAddress.trim() }), aerial: undefined }));
       setEditingAddress(false);
     }
   };
@@ -121,9 +122,6 @@ export default function RoofDesignDialog({
     setApplying(true);
     setStatusNote(null);
     try {
-      if (lead?.id) {
-        saveLeadRoofDesign(lead.id, spec);
-      }
       await onApplyToLead(spec, lead?.id);
       setStatusNote('Roof design saved successfully!');
       setTimeout(() => {
@@ -183,8 +181,11 @@ First Year Cumulative Savings: $${spec.firstYearSavings}
 25-Year Estimated Savings: $${spec.twentyFiveYearSavings.toLocaleString()}
 Annual CO2 Avoided: ${spec.co2TonsYear} Metric Tons (~${spec.treesEquivalent} Trees Planted)
 
-BUILDING & FIRE CODE COMPLIANCE:
-NEC 2023 / NFPA 1 Fire Pathway Clearance: COMPLIANT (3.0 ft ridge setback)
+ROOF AERIAL PREPARATION:
+${spec.aerial ? `Property image reviewed: ${spec.aerial.address}\nSource: ${spec.aerial.source}\nPrepared: ${spec.aerial.preparedAt}\nReviewed: ${spec.aerial.verifiedAt}` : 'Property aerial has not been reviewed.'}
+
+BUILDING & FIRE CODE REVIEW:
+Preliminary layout only. Roof measurements and jurisdiction-specific setbacks require verification.
 Structural Roof Inspection Status: Pending physical field survey by Horace Lawrence
 
 ========================================================================
@@ -311,7 +312,7 @@ Confidential & Proprietary — Prepared by The Power Genie / Sunrun
                       : 'text-slate-300 hover:text-white',
                   )}
                 >
-                  LiDAR Blueprint
+                  Concept layout
                 </button>
                 <button
                   type="button"
@@ -323,7 +324,7 @@ Confidential & Proprietary — Prepared by The Power Genie / Sunrun
                       : 'text-slate-300 hover:text-white',
                   )}
                 >
-                  Solar Irradiance
+                  Illustrative sun view
                 </button>
                 <button
                   type="button"
@@ -340,14 +341,18 @@ Confidential & Proprietary — Prepared by The Power Genie / Sunrun
               </div>
 
               <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
-                <span className="inline-block h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span>NEC 3-ft Setback OK</span>
+                <span>Preliminary · verify setbacks</span>
               </div>
             </div>
 
             {/* Interactive Roof Visualizer SVG */}
             <div className="relative flex flex-1 items-center justify-center overflow-hidden rounded-2xl border border-slate-700/60 bg-[#0B1A2C] p-2 min-h-[300px]">
-              <svg
+              {viewMode === 'satellite' ? <div className="max-h-[540px] w-full overflow-y-auto"><RoofAerial
+                key={`${lead?.id}:${spec.address}`}
+                leadId={lead?.id} source={lead?.source} address={lead?.address}
+                addressChanged={Boolean(lead && spec.address.trim() !== (lead.address || '').trim())}
+                onReview={aerial => setSpec(previous => ({ ...previous, aerial }))}
+              /></div> : <svg
                 viewBox="0 0 600 480"
                 className="h-full w-full max-h-[460px] select-none"
                 xmlns="http://www.w3.org/2000/svg"
@@ -419,8 +424,6 @@ Confidential & Proprietary — Prepared by The Power Genie / Sunrun
                   fill={
                     viewMode === 'solar_heat'
                       ? 'url(#heat-south)'
-                      : viewMode === 'satellite'
-                      ? '#1F344D'
                       : '#132A44'
                   }
                   stroke="#38BDF8"
@@ -441,8 +444,6 @@ Confidential & Proprietary — Prepared by The Power Genie / Sunrun
                   fill={
                     viewMode === 'solar_heat'
                       ? 'url(#heat-sw)'
-                      : viewMode === 'satellite'
-                      ? '#1A2F45'
                       : '#10243C'
                   }
                   stroke="#38BDF8"
@@ -455,8 +456,6 @@ Confidential & Proprietary — Prepared by The Power Genie / Sunrun
                   fill={
                     viewMode === 'solar_heat'
                       ? 'url(#heat-se)'
-                      : viewMode === 'satellite'
-                      ? '#1A2F45'
                       : '#10243C'
                   }
                   stroke="#38BDF8"
@@ -466,7 +465,7 @@ Confidential & Proprietary — Prepared by The Power Genie / Sunrun
                 {/* Main Roof Ridge Line */}
                 <line x1="120" y1="240" x2="480" y2="240" stroke="#FDE047" strokeWidth="2.5" />
                 <text x="300" y="235" fill="#FDE047" fontSize="10" fontWeight="bold" textAnchor="middle">
-                  RIDGE LINE (3-FT FIRE SETBACK BUFFER)
+                  CONCEPT RIDGE LINE — VERIFY ON ROOF
                 </text>
 
                 {/* Fire Setback Buffer Lines (NFPA 1 / NEC 2023) */}
@@ -585,12 +584,12 @@ Confidential & Proprietary — Prepared by The Power Genie / Sunrun
                 <g transform="translate(20, 440)">
                   <rect x="0" y="0" width="12" height="12" fill="#132644" stroke="#93C5FD" strokeWidth="1" />
                   <text x="18" y="10" fill="#94A3B8" fontSize="10">
-                    Sunrun 400W Mono Panel
+                    Illustrative panel
                   </text>
 
                   <rect x="155" y="0" width="12" height="12" fill="#10B981" opacity="0.8" />
                   <text x="173" y="10" fill="#94A3B8" fontSize="10">
-                    Setback Buffer Clear
+                    Setback requires review
                   </text>
 
                   <rect x="290" y="0" width="12" height="12" fill="#F59E0B" opacity="0.8" />
@@ -598,7 +597,7 @@ Confidential & Proprietary — Prepared by The Power Genie / Sunrun
                     Optimal Irradiance (1,740 kWh/m²)
                   </text>
                 </g>
-              </svg>
+              </svg>}
             </div>
 
             {/* Quick Stats Strip below Canvas */}

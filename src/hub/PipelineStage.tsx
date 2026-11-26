@@ -68,7 +68,7 @@ export function PipelineSummary({
   const lost = counts.get('lost') || 0;
   return (
     <div className="mt-5 max-w-sm" aria-label="Pipeline">
-      <label htmlFor="customer-stage-filter" className="mb-1.5 block text-base font-semibold text-hub-ink">Show</label>
+      <label htmlFor="customer-stage-filter" className="mb-1.5 block text-base font-semibold text-hub-ink">Sales stage</label>
       <select
         id="customer-stage-filter"
         value={selected ?? ''}
