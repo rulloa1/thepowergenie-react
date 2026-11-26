@@ -10,7 +10,7 @@ import {
   useConnectionState,
   useRoomContext,
 } from '@livekit/components-react';
-import { ConnectionState, MediaDeviceFailure, Track, LocalAudioTrack } from 'livekit-client';
+import { ConnectionState, MediaDeviceFailure, Track, LocalAudioTrack, RoomEvent } from 'livekit-client';
 import '@livekit/components-styles';
 import '@livekit/components-styles/prefabs';
 import './conference.css';
@@ -26,6 +26,8 @@ import GenieWorldViewer from './GenieWorldViewer';
 import './ConferenceRoom.css';
 
 const ChatTab = lazy(() => import('./ChatTab'));
+
+export type ConferenceSideTab = 'call' | 'proposal' | 'genie' | 'chat';
 
 function inviteHref(path: string): string {
   return `${window.location.origin}${path}`;
@@ -58,7 +60,7 @@ export function ConferenceCall({
       },
     } }),
   }), [isHost, spaceshipSupported]);
-  const [side, setSide] = useState<'call' | 'proposal' | 'chat'>('call');
+  const [side, setSide] = useState<ConferenceSideTab>('call');
   const [presentMode, setPresentMode] = useState<'off' | 'proposal' | 'genie'>('off');
   const [copied, setCopied] = useState(false);
   const [connectionNote, setConnectionNote] = useState<string | null>(null);
@@ -125,6 +127,27 @@ export function ConferenceCall({
               <span>{presentMode === 'proposal' ? 'Exit presentation' : 'Present proposal'}</span>
             </Button>
           )}
+          {/* Mobile responsive tab toggles */}
+          <div className="flex items-center gap-1 lg:hidden">
+            <Button
+              type="button"
+              variant={side === 'proposal' ? 'primary' : 'ghost'}
+              className="min-h-11 px-2.5 text-xs"
+              onClick={() => setSide((cur) => (cur === 'proposal' ? 'call' : 'proposal'))}
+            >
+              <FileText className="h-3.5 w-3.5" />
+              <span>Proposal</span>
+            </Button>
+            <Button
+              type="button"
+              variant={side === 'genie' ? 'accent' : 'ghost'}
+              className="min-h-11 px-2.5 text-xs"
+              onClick={() => setSide((cur) => (cur === 'genie' ? 'call' : 'genie'))}
+            >
+              <Sparkles className="h-3.5 w-3.5 text-amber-400" />
+              <span>3D Solar</span>
+            </Button>
+          </div>
           {isHost && (
             <Button type="button" variant="ghost" className="min-h-11 px-3 text-[0.84rem]" onClick={() => void copy()}>
               <Copy className="h-4 w-4" aria-hidden="true" /> <span aria-live="polite">{copied ? 'Link copied' : 'Copy client link'}</span>
@@ -163,6 +186,11 @@ export function ConferenceCall({
               }
               <StartRoomDevices camera={startWithCamera && spaceshipSupported} onProblem={setDeviceNote} />
               <RoomPresence />
+              <ConferencePresentationSync
+                isHost={isHost}
+                presentMode={presentMode}
+                setPresentMode={setPresentMode}
+              />
               {presentMode === 'genie' ? (
                 <GeniePresentationStage
                   customerName={join.customerName}
@@ -186,10 +214,17 @@ export function ConferenceCall({
         <aside className={`flex w-full flex-col border-hub-line lg:w-[340px] lg:shrink-0 lg:flex-none lg:border-l ${side === 'call' ? 'shrink-0' : 'min-h-0 flex-1'}`}>
           {isHost && customerId && <div className="pg-conference-queue max-h-[28dvh] shrink-0 overflow-y-auto empty:hidden"><WaitingList customerId={customerId} /></div>}
           <div className="hidden gap-1 border-b border-hub-line p-2 lg:flex" role="tablist" aria-label="Room sections">
-            <SideTab current={side === 'chat' ? 'chat' : 'proposal'} id="proposal" onSelect={setSide}>Proposal</SideTab>
-            {isHost && <SideTab current={side} id="chat" onSelect={setSide}>Team chat</SideTab>}
+            <SideTab current={side === 'call' ? 'proposal' : side} id="proposal" onSelect={setSide}>Proposal</SideTab>
+            <SideTab current={side === 'call' ? 'proposal' : side} id="genie" onSelect={setSide}>
+              <span className="flex items-center justify-center gap-1">
+                <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+                <span>3D Solar</span>
+              </span>
+            </SideTab>
+            {isHost && <SideTab current={side === 'call' ? 'proposal' : side} id="chat" onSelect={setSide}>Team chat</SideTab>}
           </div>
-          <div className={`min-h-0 flex-1 flex-col overflow-y-auto ${side === 'chat' ? 'hidden' : 'flex'} ${side === 'call' ? 'max-lg:hidden' : ''}`}>
+          {/* Proposal tab */}
+          <div className={`min-h-0 flex-1 flex-col overflow-y-auto ${side === 'proposal' || side === 'call' ? 'flex' : 'hidden'} ${side === 'call' ? 'max-lg:hidden' : ''}`}>
             {join.proposalUrl ? (
               <>
                 <div className="flex items-center justify-between gap-2 border-b border-hub-line p-2">
@@ -216,6 +251,32 @@ export function ConferenceCall({
               </div>
             )}
           </div>
+          {/* 3D Solar Genie 4 World tab */}
+          <div className={`min-h-0 flex-1 flex-col overflow-hidden ${side === 'genie' ? 'flex' : 'hidden'}`}>
+            <div className="flex items-center justify-between gap-2 border-b border-hub-line p-2 bg-hub-surface">
+              <span className="flex items-center gap-1.5 text-xs font-bold text-hub-ink">
+                <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+                <span>Genie 4 Live 3D World</span>
+              </span>
+              {isHost && (
+                <button
+                  type="button"
+                  onClick={() => setPresentMode((m) => (m === 'genie' ? 'off' : 'genie'))}
+                  className="rounded-lg bg-hub-accent px-2.5 py-1 text-xs font-semibold text-hub-accent-ink hover:opacity-90"
+                >
+                  {presentMode === 'genie' ? 'Stop stage' : 'Project to stage'}
+                </button>
+              )}
+            </div>
+            <div className="relative min-h-0 flex-1">
+              <GenieWorldViewer
+                leadName={join.customerName}
+                inline
+                onClose={() => setSide('call')}
+              />
+            </div>
+          </div>
+          {/* Staff Chat tab */}
           {isHost && (
             <div className={`min-h-0 flex-1 flex-col lg:min-h-0 ${side === 'chat' ? 'flex' : 'hidden'}`}>
               <p className="m-0 border-b border-hub-line px-3 py-2 text-[0.78rem] text-hub-soft">Team chat is visible to staff only. Use the call toolbar to chat with everyone.</p>
@@ -255,6 +316,72 @@ function RoomPresence() {
   const participants = useParticipants();
   const connection = useConnectionState();
   return <div className="pg-presence" role="status"><span className="pg-connection">{connection} · {participants.length} in room</span></div>;
+}
+
+function ConferencePresentationSync({
+  isHost,
+  presentMode,
+  setPresentMode,
+}: {
+  isHost: boolean;
+  presentMode: 'off' | 'proposal' | 'genie';
+  setPresentMode: (mode: 'off' | 'proposal' | 'genie') => void;
+}) {
+  const room = useRoomContext();
+  const connection = useConnectionState();
+
+  // Host broadcasts presentation mode changes to room participants
+  useEffect(() => {
+    if (!isHost || connection !== ConnectionState.Connected) return;
+    try {
+      const encoder = new TextEncoder();
+      const payload = encoder.encode(JSON.stringify({ type: 'pg-present', mode: presentMode }));
+      void room.localParticipant.publishData(payload, { reliable: true });
+    } catch {
+      // Ignore broadcast errors
+    }
+  }, [isHost, connection, presentMode, room]);
+
+  // Host re-broadcasts when a new participant connects to ensure state synchronization
+  useEffect(() => {
+    if (!isHost || connection !== ConnectionState.Connected) return;
+    const onParticipantConnected = () => {
+      if (presentMode !== 'off') {
+        try {
+          const encoder = new TextEncoder();
+          const payload = encoder.encode(JSON.stringify({ type: 'pg-present', mode: presentMode }));
+          void room.localParticipant.publishData(payload, { reliable: true });
+        } catch {
+          // Ignore broadcast errors
+        }
+      }
+    };
+    room.on(RoomEvent.ParticipantConnected, onParticipantConnected);
+    return () => {
+      room.off(RoomEvent.ParticipantConnected, onParticipantConnected);
+    };
+  }, [isHost, connection, presentMode, room]);
+
+  // Guest listens for presentation mode changes from host
+  useEffect(() => {
+    const onData = (payload: Uint8Array) => {
+      try {
+        const text = new TextDecoder().decode(payload);
+        const data = JSON.parse(text);
+        if (data?.type === 'pg-present' && (data.mode === 'off' || data.mode === 'proposal' || data.mode === 'genie')) {
+          setPresentMode(data.mode);
+        }
+      } catch {
+        // Ignore malformed payload
+      }
+    };
+    room.on(RoomEvent.DataReceived, onData);
+    return () => {
+      room.off(RoomEvent.DataReceived, onData);
+    };
+  }, [room, setPresentMode]);
+
+  return null;
 }
 
 function RoomAudioSettings({ onProblem, showVoiceSetup }: { onProblem: (message: string) => void; showVoiceSetup: boolean }) {
@@ -434,10 +561,31 @@ function plainConnectionNote(message: string): string {
   return message
 }
 
-function SideTab({ current, id, onSelect, children }: { current: string; id: 'call' | 'proposal' | 'chat'; onSelect: (id: 'call' | 'proposal' | 'chat') => void; children: React.ReactNode }) {
+function SideTab({
+  current,
+  id,
+  onSelect,
+  children,
+}: {
+  current: ConferenceSideTab;
+  id: ConferenceSideTab;
+  onSelect: (id: ConferenceSideTab) => void;
+  children: React.ReactNode;
+}) {
   const on = current === id;
   return (
-    <button type="button" aria-pressed={on} onClick={() => onSelect(id)} className="min-h-11 flex-1 rounded-lg px-2 text-[0.84rem] font-bold">
+    <button
+      type="button"
+      role="tab"
+      aria-selected={on}
+      aria-pressed={on}
+      onClick={() => onSelect(id)}
+      className={`min-h-11 flex-1 rounded-lg px-2 text-[0.84rem] font-bold transition-colors ${
+        on
+          ? 'bg-hub-primary text-hub-on-primary shadow-sm'
+          : 'text-hub-soft hover:bg-hub-surface hover:text-hub-ink'
+      }`}
+    >
       {children}
     </button>
   );
